@@ -7,7 +7,6 @@
 *.pyc
 *.log
 log_tensorboard
-saved/
 *.lprof
 *.egg-info/
 docs/build/
