@@ -294,18 +294,18 @@ class Config(object):
             ModelType.DECISIONTREE,
         }:
             self._update_internal_config_dict(context_aware_init)
-            if dataset == "ml-100k":
+            if dataset == "ml-100k" or dataset == "ml-1m":
                 self._update_internal_config_dict(context_aware_on_ml_100k_init)
         elif self.internal_config_dict["MODEL_TYPE"] == ModelType.SEQUENTIAL:
             if model in ["DIN", "DIEN"]:
                 self._update_internal_config_dict(DIN_init)
-                if dataset == "ml-100k":
+                if dataset == "ml-100k" or dataset == "ml-1m":
                     self._update_internal_config_dict(DIN_on_ml_100k_init)
             elif model in ["GRU4RecKG", "KSR"]:
                 self._update_internal_config_dict(sequential_embedding_model_init)
             else:
                 self._update_internal_config_dict(sequential_init)
-                if dataset == "ml-100k" and model in [
+                if dataset == "ml-100k" or dataset == "ml-1m" and model in [
                     "GRU4RecF",
                     "SASRecF",
                     "FDSA",
@@ -627,9 +627,9 @@ class Config(object):
 
         np.bool = np.bool_
         np.int = np.int_
-        np.float = np.float_
-        np.complex = np.complex_
+        np.float = np.float64
+        np.complex = np.complex128
         np.object = np.object_
         np.str = np.str_
         np.long = np.int_
-        np.unicode = np.unicode_
+        np.unicode = np.str_
