@@ -43,10 +43,15 @@ if __name__ == "__main__":
         args.config_files.strip().split(" ") if args.config_files else None
     )
 
+    parameter_dict = {
+        'train_neg_sample_args': None,
+    }   
+    
     run(
         args.model,
         args.dataset,
         config_file_list=config_file_list,
+        config_dict=parameter_dict,
         nproc=args.nproc,
         world_size=args.world_size,
         ip=args.ip,
