@@ -114,6 +114,22 @@ class Trainer(AbstractTrainer):
         super(Trainer, self).__init__(config, model)
 
         self.logger = getLogger()
+        
+        self.logger.setLevel(logging.DEBUG)  # Set the root logger to debug
+
+        # Remove all existing handlers (to prevent duplicate logging)
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+
+        # Create console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)  # Console handler also listens to DEBUG level
+
+        formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s', datefmt='%d-%m-%Y %I:%M:%S %p')
+        console_handler.setFormatter(formatter)
+
+        # Add console handler to the logger
+        self.logger.addHandler(console_handler)
         self.tensorboard = get_tensorboard(self.logger)
         self.wandblogger = WandbLogger(config)
         self.learner = config["learner"]
@@ -1020,20 +1036,6 @@ class DecisionTreeTrainer(AbstractTrainer):
         super(DecisionTreeTrainer, self).__init__(config, model)
 
         self.logger = getLogger()
-        # Create a logger
-        logger = logging.getLogger()
-        logger.setLevel(logging.INFO)  # Set the logging level
-
-        # Create a console handler
-        console_handler = logging.StreamHandler(sys.stdout)  # Direct logs to stdout
-        console_handler.setLevel(logging.INFO)  # Set the handler level
-
-        # Create a formatter and attach it to the handler
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-
-        # Add the handler to the logger
-        logger.addHandler(console_handler)
         self.tensorboard = get_tensorboard(self.logger)
         self.label_field = config["LABEL_FIELD"]
         self.convert_token_to_onehot = self.config["convert_token_to_onehot"]
