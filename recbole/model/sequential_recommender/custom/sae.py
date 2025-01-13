@@ -23,8 +23,8 @@ class SAE(nn.Module):
 	
 	def __init__(self,args,d_in):
 		super(SAE, self).__init__()
-		self.k = 64
-		self.scale_size = 1
+		self.k = 16
+		self.scale_size = 32
 
 		self.device = args["device"]
 		self.dtype = torch.float32
