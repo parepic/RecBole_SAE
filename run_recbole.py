@@ -8,8 +8,16 @@
 # @Email  : chenyuwuxinn@gmail.com, houyupeng@ruc.edu.cn, zhlin@ruc.edu.cn
 
 import argparse
-
-from recbole.quick_start import run
+from recbole.quick_start import run_recbole, load_data_and_model, run
+from recbole.utils import (
+    init_logger,
+    get_model,
+    get_trainer,
+    init_seed,
+    set_color,
+    get_flops,
+    get_environment,
+)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -47,14 +55,36 @@ if __name__ == "__main__":
         'train_neg_sample_args': None,
     }   
     
-    run(
-        args.model,
-        args.dataset,
-        config_file_list=config_file_list,
-        config_dict=parameter_dict,
-        nproc=args.nproc,
-        world_size=args.world_size,
-        ip=args.ip,
-        port=args.port,
-        group_offset=args.group_offset,
-    )
+    # run(
+    #     args.model,
+    #     args.dataset,
+    #     config_file_list=config_file_list,
+    #     config_dict=parameter_dict,
+    #     nproc=args.nproc,
+    #     world_size=args.world_size,
+    #     ip=args.ip,
+    #     port=args.port,
+    #     group_offset=args.group_offset,
+    # )
+    
+    
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file='c:/Users/Dell/Desktop/TUDelft/thesis/recbole_sae/RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth'
+    )  # Here you can replace it by your model path.
+
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+
+
+    trainer.fit_SAE(config, 
+                    'c:/Users/Dell/Desktop/TUDelft/thesis/recbole_sae/RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth',
+                    train_data,
+                    dataset,
+                    valid_data=valid_data,
+                    show_progress=True
+                    )
+                    
+    # test_result = trainer.evaluate(
+    #     test_data, model_file='c:/Users/Dell/Desktop/TUDelft/thesis/recbole_sae/RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth', show_progress=config["show_progress"]
+    # )
+
+    # print(test_result)

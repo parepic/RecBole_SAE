@@ -45,6 +45,7 @@ from recbole.utils import (
     get_gpu_usage,
     WandbLogger,
 )
+from recbole.model.sequential_recommender.custom import SASRec_SAE
 from torch.nn.parallel import DistributedDataParallel
 
 
@@ -216,6 +217,7 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
+        self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
         total_loss = None
         iter_data = (
@@ -240,7 +242,7 @@ class Trainer(AbstractTrainer):
             if not self.config["single_spec"]:
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
-
+            print(self.device)
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 losses = loss_func(interaction)
 
@@ -514,6 +516,133 @@ class Trainer(AbstractTrainer):
                     break
 
                 valid_step += 1
+                
+    def fit_SAE(
+        self,
+        config,
+        checkpoint_file,
+        train_data,
+        dataset,
+        valid_data=None,
+        verbose=True,
+        saved=True,
+        show_progress=False,
+        callback_fn=None,
+    ):
+        r"""Train the model based on the train data and the valid data.
+
+        Args:
+            train_data (DataLoader): the train data
+            valid_data (DataLoader, optional): the valid data, default: None.
+                                               If it's None, the early_stopping is invalid.
+            verbose (bool, optional): whether to write training and evaluation information to logger, default: True
+            saved (bool, optional): whether to save the model parameters, default: True
+            show_progress (bool): Show the progress of training epoch and evaluate epoch. Defaults to ``False``.
+            callback_fn (callable): Optional callback function executed at end of epoch.
+                                    Includes (epoch_idx, valid_score) input arguments.
+
+        Returns:
+             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
+        """
+        sasrec_sae = SASRec_SAE(config, dataset, checkpoint_file)
+        self.model = sasrec_sae
+        self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=1e-4)
+
+        message_output = "Loading SASREC model structure and parameters from {}".format(
+            checkpoint_file
+        )
+        self.logger.info(message_output)
+        
+        if saved and self.start_epoch >= self.epochs:
+            self._save_checkpoint(-1, verbose=verbose)
+
+        self.eval_collector.data_collect(train_data)
+        if self.config["train_neg_sample_args"].get("dynamic", False):
+            train_data.get_model(self.model)
+        valid_step = 0
+
+        for epoch_idx in range(self.start_epoch, self.epochs):
+            # train
+            training_start_time = time()
+            train_loss = self._train_epoch(
+                train_data, epoch_idx, show_progress=show_progress
+            )
+            self.train_loss_dict[epoch_idx] = (
+                sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            )
+            training_end_time = time()
+            train_loss_output = self._generate_train_loss_output(
+                epoch_idx, training_start_time, training_end_time, train_loss
+            )
+            if verbose:
+                self.logger.info(train_loss_output)
+            self._add_train_loss_to_tensorboard(epoch_idx, train_loss)
+            self.wandblogger.log_metrics(
+                {"epoch": epoch_idx, "train_loss": train_loss, "train_step": epoch_idx},
+                head="train",
+            )
+
+            # eval
+            if self.eval_step <= 0 or not valid_data:
+                if saved:
+                    self._save_checkpoint(epoch_idx, verbose=verbose)
+                continue
+            if (epoch_idx + 1) % self.eval_step == 0:
+                valid_start_time = time()
+                valid_score, valid_result = self._valid_epoch(
+                    valid_data, show_progress=show_progress
+                )
+
+                (
+                    self.best_valid_score,
+                    self.cur_step,
+                    stop_flag,
+                    update_flag,
+                ) = early_stopping(
+                    valid_score,
+                    self.best_valid_score,
+                    self.cur_step,
+                    max_step=self.stopping_step,
+                    bigger=self.valid_metric_bigger,
+                )
+                valid_end_time = time()
+                valid_score_output = (
+                    set_color("epoch %d evaluating", "green")
+                    + " ["
+                    + set_color("time", "blue")
+                    + ": %.2fs, "
+                    + set_color("valid_score", "blue")
+                    + ": %f]"
+                ) % (epoch_idx, valid_end_time - valid_start_time, valid_score)
+                valid_result_output = (
+                    set_color("valid result", "blue") + ": \n" + dict2str(valid_result)
+                )
+                if verbose:
+                    self.logger.info(valid_score_output)
+                    self.logger.info(valid_result_output)
+                self.tensorboard.add_scalar("Vaild_score", valid_score, epoch_idx)
+                self.wandblogger.log_metrics(
+                    {**valid_result, "valid_step": valid_step}, head="valid"
+                )
+
+                if update_flag:
+                    if saved:
+                        self._save_checkpoint(epoch_idx, verbose=verbose)
+                    self.best_valid_result = valid_result
+
+                if callback_fn:
+                    callback_fn(epoch_idx, valid_score)
+
+                if stop_flag:
+                    stop_output = "Finished training, best eval result in epoch %d" % (
+                        epoch_idx - self.cur_step * self.eval_step
+                    )
+                    if verbose:
+                        self.logger.info(stop_output)
+                    break
+
+                valid_step += 1
+
 
         self._add_hparam_to_tensorboard(self.best_valid_score)
         return self.best_valid_score, self.best_valid_result

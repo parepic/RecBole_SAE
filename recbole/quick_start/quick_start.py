@@ -247,8 +247,13 @@ def load_data_and_model(model_file):
     """
     import torch
 
-    checkpoint = torch.load(model_file)
+    checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
     config = checkpoint["config"]
+    config.internal_config_dict['use_gpu'] = False
+    config.internal_config_dict['gpu_id'] = '-1'
+    config.final_config_dict['use_gpu'] = False
+    config.final_config_dict['gpu_id'] = '-1'
+    config['device'] = 'cpu'
     init_seed(config["seed"], config["reproducibility"])
     init_logger(config)
     logger = getLogger()
