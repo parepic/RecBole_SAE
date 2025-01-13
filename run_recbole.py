@@ -89,7 +89,11 @@ if __name__ == "__main__":
     #                 )
                     
     test_result = trainer.evaluate(
-        test_data, model_file='./saved/SASRec-Jan-12-2025_16-43-54.pth', show_progress=config["show_progress"], SAE = True, config=config, dataset=dataset 
+        test_data, model_file='./saved/SASRec-Jan-12-2025_16-43-54.pth', show_progress=config["show_progress"] 
     )
+    
+    # test_result = trainer.evaluate(
+    #     test_data, model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth', show_progress=config["show_progress"], SAE = True, config=config, dataset=dataset 
+    # )
 
     print(test_result)
