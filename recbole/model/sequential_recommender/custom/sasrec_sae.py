@@ -10,15 +10,15 @@ class SASRec_SAE(SASRec):
         self.to(config["device"])
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
+        # Load SASRec model parameters if path is provided
+        if sasrec_model_path is not None:
+            self.load_sasrec(sasrec_model_path)
         for param in self.parameters():
             param.requires_grad = False  # Freeze all parameters
 
         for param in self.sae_module.parameters():
             param.requires_grad = True  # Unfreeze SAE parameters
-            
-        # Load SASRec model parameters if path is provided
-        if sasrec_model_path is not None:
-            self.load_sasrec(sasrec_model_path)
+
 
     def set_sae_mode(self, mode):
         if mode in ['train', 'test', 'inference']:
