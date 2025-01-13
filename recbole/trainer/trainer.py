@@ -18,9 +18,10 @@ recbole.trainer.trainer
 """
 
 import os
-
+import logging
 from logging import getLogger
 from time import time
+import sys
 
 import numpy as np
 import torch
@@ -217,6 +218,8 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
+        self.model.train()
+
         self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
         total_loss = None
@@ -256,6 +259,7 @@ class Trainer(AbstractTrainer):
                 )
             else:
                 loss = losses
+                print(loss)
                 total_loss = (
                     losses.item() if total_loss is None else total_loss + losses.item()
                 )
@@ -546,7 +550,7 @@ class Trainer(AbstractTrainer):
         """
         sasrec_sae = SASRec_SAE(config, dataset, checkpoint_file)
         self.model = sasrec_sae
-        self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=1e-4)
+        self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=1e-3)
 
         message_output = "Loading SASREC model structure and parameters from {}".format(
             checkpoint_file
@@ -560,7 +564,10 @@ class Trainer(AbstractTrainer):
         if self.config["train_neg_sample_args"].get("dynamic", False):
             train_data.get_model(self.model)
         valid_step = 0
-
+        valid_score, valid_result = self._valid_epoch(
+            valid_data, show_progress=show_progress
+        )
+        print("Initial validation score: ", valid_score)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
@@ -1013,6 +1020,20 @@ class DecisionTreeTrainer(AbstractTrainer):
         super(DecisionTreeTrainer, self).__init__(config, model)
 
         self.logger = getLogger()
+        # Create a logger
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)  # Set the logging level
+
+        # Create a console handler
+        console_handler = logging.StreamHandler(sys.stdout)  # Direct logs to stdout
+        console_handler.setLevel(logging.INFO)  # Set the handler level
+
+        # Create a formatter and attach it to the handler
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+
+        # Add the handler to the logger
+        logger.addHandler(console_handler)
         self.tensorboard = get_tensorboard(self.logger)
         self.label_field = config["LABEL_FIELD"]
         self.convert_token_to_onehot = self.config["convert_token_to_onehot"]
