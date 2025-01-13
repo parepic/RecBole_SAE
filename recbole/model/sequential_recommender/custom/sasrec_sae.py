@@ -6,13 +6,13 @@ class SASRec_SAE(SASRec):
     def __init__(self, config, dataset, sasrec_model_path=None, mode="train"):
         from recbole.model.sequential_recommender.custom import SAE  # Replace with the correct path
         super(SASRec_SAE, self).__init__(config, dataset)
+        # Load SASRec model parameters if path is provided
+        if sasrec_model_path is not None:
+            self.load_sasrec(sasrec_model_path)
         self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
         self.to(config["device"])
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
-        # Load SASRec model parameters if path is provided
-        if sasrec_model_path is not None:
-            self.load_sasrec(sasrec_model_path)
         for param in self.parameters():
             param.requires_grad = False  # Freeze all parameters
 
@@ -105,6 +105,7 @@ class SASRec_SAE(SASRec):
         Load the saved SASRec model parameters into the current model.
         """
         checkpoint = torch.load(path, map_location=self.device)
-        self.load_state_dict(checkpoint, strict=False)
-        self.load_other_parameter(checkpoint.get("other_parameter"))
+        self.load_state_dict(checkpoint['state_dict'])
+        a = 5
+        # self.load_other_parameter(checkpoint.get("other_parameter"))
 
