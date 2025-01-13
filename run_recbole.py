@@ -69,14 +69,14 @@ if __name__ == "__main__":
     
     
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file='./RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth',
+        model_file='./saved/SASRec-Jan-12-2025_16-43-54.pth',
     )  # Here you can replace it by your model path.
 
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
 
 
     trainer.fit_SAE(config, 
-                    './RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth',
+                    './saved/SASRec-Jan-12-2025_16-43-54.pth',
                     train_data,
                     dataset,
                     valid_data=valid_data,
