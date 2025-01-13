@@ -548,7 +548,7 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        sasrec_sae = SASRec_SAE(config, dataset, checkpoint_file)
+        sasrec_sae = SASRec_SAE(config, dataset, sasrec_model_path=checkpoint_file)
         self.model = sasrec_sae
         self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=1e-3)
 
