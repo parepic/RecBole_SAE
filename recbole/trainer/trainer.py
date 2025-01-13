@@ -261,7 +261,6 @@ class Trainer(AbstractTrainer):
             if not self.config["single_spec"]:
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
-            print(self.device)
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 losses = loss_func(interaction)
 
@@ -275,7 +274,6 @@ class Trainer(AbstractTrainer):
                 )
             else:
                 loss = losses
-                print(loss)
                 total_loss = (
                     losses.item() if total_loss is None else total_loss + losses.item()
                 )
@@ -590,6 +588,8 @@ class Trainer(AbstractTrainer):
             train_loss = self._train_epoch(
                 train_data, epoch_idx, show_progress=show_progress
             )
+            print(train_loss)
+            
             self.train_loss_dict[epoch_idx] = (
                 sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             )
