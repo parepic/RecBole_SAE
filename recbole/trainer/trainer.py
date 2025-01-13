@@ -712,7 +712,7 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def evaluate(
-        self, eval_data, load_best_model=True, model_file=None, show_progress=False
+        self, eval_data, load_best_model=True, model_file=None, show_progress=False, SAE=False, config=None, dataset=None
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -733,8 +733,11 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_file = model_file or self.saved_model_file
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
-            self.model.load_state_dict(checkpoint["state_dict"])
-            self.model.load_other_parameter(checkpoint.get("other_parameter"))
+            if(SAE):
+                self.model=SASRec_SAE(config, dataset)
+                self.model.load_state_dict(checkpoint["state_dict"])
+                self.model.load_other_parameter(checkpoint.get("other_parameter"))
+                
             message_output = "Loading model structure and parameters from {}".format(
                 checkpoint_file
             )
