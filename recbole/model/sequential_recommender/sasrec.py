@@ -35,6 +35,7 @@ class SASRec(SequentialRecommender):
 
     def __init__(self, config, dataset):
         super(SASRec, self).__init__(config, dataset)
+        self.to(config["device"])
 
         # load parameters info
         self.n_layers = config["n_layers"]

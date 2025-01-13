@@ -7,7 +7,7 @@ class SASRec_SAE(SASRec):
         from recbole.model.sequential_recommender.custom import SAE  # Replace with the correct path
         super(SASRec_SAE, self).__init__(config, dataset)
         self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
-
+        self.to(config["device"])
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
         for param in self.parameters():
