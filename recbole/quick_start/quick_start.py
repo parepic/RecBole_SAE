@@ -262,10 +262,10 @@ def load_data_and_model(model_file):
     dataset = create_dataset(config)
     logger.info(dataset)
     train_data, valid_data, test_data = data_preparation(config, dataset)
-
+    
     init_seed(config["seed"], config["reproducibility"])
     model = get_model(config["model"])(config, train_data._dataset).to(config["device"])
-    model.load_state_dict(checkpoint["state_dict"])
-    model.load_other_parameter(checkpoint.get("other_parameter"))
+    # model.load_state_dict(checkpoint["state_dict"])
+    # model.load_other_parameter(checkpoint.get("other_parameter"))
 
     return config, model, dataset, train_data, valid_data, test_data
