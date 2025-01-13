@@ -735,8 +735,8 @@ class Trainer(AbstractTrainer):
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
             if(SAE):
                 self.model=SASRec_SAE(config, dataset)
-                self.model.load_state_dict(checkpoint["state_dict"])
-                self.model.load_other_parameter(checkpoint.get("other_parameter"))
+            self.model.load_state_dict(checkpoint["state_dict"])
+            self.model.load_other_parameter(checkpoint.get("other_parameter"))
                 
             message_output = "Loading model structure and parameters from {}".format(
                 checkpoint_file
