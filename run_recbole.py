@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
 
     trainer.fit_SAE(config, 
-                    'c:/Users/Dell/Desktop/TUDelft/thesis/recbole_sae/RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth',
+                    './RecBole/saved/SASRec-Jan-12-2025_16-43-54.pth',
                     train_data,
                     dataset,
                     valid_data=valid_data,
