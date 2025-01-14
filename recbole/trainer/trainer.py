@@ -714,7 +714,7 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def evaluate(
-        self, eval_data, load_best_model=True, model_file=None, show_progress=False, SAE=False, config=None, dataset=None
+        self, eval_data, load_best_model=True, model_file=None, show_progress=False
     ):
         r"""Evaluate the model based on the eval data.
 

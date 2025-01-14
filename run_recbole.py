@@ -68,32 +68,35 @@ if __name__ == "__main__":
     # )
     
     
-    # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-    #     model_file='./saved/SASRec-Jan-12-2025_16-43-54.pth',
-    # )  # Here you can replace it by your model path.
-
-    
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth', sae=True
+        model_file='./saved/SASRec-Jan-12-2025_16-43-54.pth',
     )  # Here you can replace it by your model path.
+
+    config["sae_scale_size"] = 32
+    config["sae_k"] = 8
+    config["sae_lr"] = 1e-4
+    
+    # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+    #     model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth', sae=True
+    # )  # Here you can replace it by your model path.
 
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
 
 
-    # trainer.fit_SAE(config, 
-    #                 './saved/SASRec-Jan-12-2025_16-43-54.pth',
-    #                 train_data,
-    #                 dataset,
-    #                 valid_data=valid_data,
-    #                 show_progress=True
-    #                 )
+    trainer.fit_SAE(config, 
+                    './saved/SASRec-Jan-12-2025_16-43-54.pth',
+                    train_data,
+                    dataset,
+                    valid_data=valid_data,
+                    show_progress=True
+                    )
                     
     # test_result = trainer.evaluate(
     #     test_data, model_file='./saved/SASRec-Jan-12-2025_16-43-54.pth', show_progress=config["show_progress"] 
     # )
     
-    test_result = trainer.evaluate(
-        test_data, model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth', show_progress=config["show_progress"], SAE = True, config=config, dataset=dataset 
-    )
+    # test_result = trainer.evaluate(
+    #     test_data, model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth', show_progress=config["show_progress"], SAE = True, config=config, dataset=dataset 
+    # )
 
-    print(test_result)
+    # print(test_result)
