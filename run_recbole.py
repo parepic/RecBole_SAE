@@ -98,4 +98,4 @@ if __name__ == "__main__":
         test_data, model_file='./saved/SASRec_SAE-Jan-14-2025_14-54-50.pth', show_progress=config["show_progress"]
     )
 
-    # print(test_result)
+    print(test_result)
