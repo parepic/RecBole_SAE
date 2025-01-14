@@ -218,6 +218,44 @@ class Trainer(AbstractTrainer):
             optimizer = optim.Adam(params, lr=learning_rate)
         return optimizer
 
+
+    def _epoch_save_activations(self, train_data, show_progress=False):
+        r"""Train the model in an epoch
+
+        Args:
+            train_data (DataLoader): The train data.
+            epoch_idx (int): The current epoch id.
+            loss_func (function): The loss function of :attr:`model`. If it is ``None``, the loss function will be
+                :attr:`self.model.calculate_loss`. Defaults to ``None``.
+            show_progress (bool): Show the progress of training epoch. Defaults to ``False``.
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, it will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.eval()
+
+        self.device = torch.device(self.device)
+        iter_data = (
+            tqdm(
+                train_data,
+                total=len(train_data),
+                ncols=100,
+            )
+            if show_progress
+            else train_data
+        )
+
+        for batch_idx, interaction in enumerate(iter_data):
+            interaction = interaction.to(self.device)
+            self.optimizer.zero_grad()
+            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
+                self.model.full_sort_predict(interaction)
+
+
+
+
     def _train_epoch(self, train_data, epoch_idx, loss_func=None, show_progress=False):
         r"""Train the model in an epoch
 
@@ -276,7 +314,7 @@ class Trainer(AbstractTrainer):
                     losses.item() if total_loss is None else total_loss + losses.item()
                 )
             self._check_nan(loss)
-            scaler.scale(loss + sync_loss).backward()
+            # scaler.scale(loss + sync_loss).backward()
             if self.clip_grad_norm:
                 clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
             scaler.step(self.optimizer)
@@ -533,6 +571,66 @@ class Trainer(AbstractTrainer):
 
                 valid_step += 1
                 
+    @torch.no_grad()
+    def save_neuron_activations(
+        self, train_data, model_file=None, show_progress=True
+    ):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+            show_progress (bool): Show the progress of evaluate epoch. Defaults to ``False``.
+
+        Returns:
+            collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
+        """
+        
+        checkpoint_file = model_file
+        checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        self.model.load_state_dict(checkpoint["state_dict"])
+        self.model.load_other_parameter(checkpoint.get("other_parameter"))
+            
+        message_output = "Loading model structure and parameters from {}".format(
+            checkpoint_file
+        )
+        self.logger.info(message_output)
+
+        self.model.eval()
+
+        iter_data = (
+            tqdm(
+                train_data,
+                total=len(train_data),
+                ncols=100,
+                desc=set_color(f"Save activations   ", "pink"),
+            )
+            if show_progress
+            else train_data
+        )
+        self.model.eval()
+
+        self.device = torch.device(self.device)
+        iter_data = (
+            tqdm(
+                train_data,
+                total=len(train_data),
+                ncols=100,
+            )
+            if show_progress
+            else train_data
+        )
+
+        for batch_idx, interaction in enumerate(iter_data):
+            interaction = interaction.to(self.device)
+            self.optimizer.zero_grad()
+            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
+                self.model.full_sort_predict(interaction)
+
+    
     def fit_SAE(
         self,
         config,
