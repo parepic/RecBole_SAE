@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth',
+        model_file='./saved/SASRec-Jan-13-2025_20-40-37.pth', sae=True
     )  # Here you can replace it by your model path.
 
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)

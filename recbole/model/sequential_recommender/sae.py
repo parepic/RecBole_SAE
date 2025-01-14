@@ -21,12 +21,12 @@ class SAE(nn.Module):
 	# 						help='Model save path.')
 	# 	return parser
 	
-	def __init__(self,args,d_in):
+	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
-		self.k = 16
-		self.scale_size = 32
+		self.k = config["sae_k"]
+		self.scale_size = config["sae_scale_size"]
 
-		self.device = args["device"]
+		self.device = config["device"]
 		self.dtype = torch.float32
 		self.to(self.device)
 		self.d_in = d_in
