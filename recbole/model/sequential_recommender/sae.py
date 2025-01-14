@@ -162,13 +162,14 @@ class SAE(nn.Module):
 		"""
 		Update the top 5 highest activations and corresponding sequences for each latent neuron.
 		"""
+		top_recommendations = torch.argsort(recommendations, dim=1, descending=True)[:, :10]
 		batch_size = self.last_activations.size(0)
 		for i in range(batch_size):
 			for j in range(self.hidden_dim):
 				current_value = self.last_activations[i, j].item()
 				current_sequence = sequences[i].tolist()
-				current_recommendations = recommendations[i].tolist()
-    
+				current_recommendations = top_recommendations[i].tolist()
+
 				# Insert the new activation if it qualifies for the top 5
 				if len(self.highest_activations[j]["values"]) < 10:
 					# Add to the list if it's not full
@@ -184,7 +185,7 @@ class SAE(nn.Module):
 						self.highest_activations[j]["values"][min_index] = current_value
 						self.highest_activations[j]["sequences"][min_index] = current_sequence
 						self.highest_activations[j]["recommendations"][min_index] = current_recommendations
-      
+
 				# Keep the top 5 sorted by value
 				sorted_indices = sorted(
 					range(len(self.highest_activations[j]["values"])),
@@ -194,15 +195,29 @@ class SAE(nn.Module):
 				self.highest_activations[j]["values"] = [
 					self.highest_activations[j]["values"][idx] for idx in sorted_indices
 				]
-    
+
 				self.highest_activations[j]["sequences"] = [
 					self.highest_activations[j]["sequences"][idx] for idx in sorted_indices
 				]
-    
+
 				self.highest_activations[j]["recommendations"] = [
 					self.highest_activations[j]["recommendations"][idx] for idx in sorted_indices
 				]
-
+    
+	def save_highest_activations(self, filename="highest_activations.txt"):		
+		"""
+		Save the top 5 highest activations and their corresponding sequences to a file.
+		"""
+		with open(filename, "w") as f:
+			for neuron, data in self.highest_activations.items():
+				f.write(f"Neuron {neuron}:\n")
+				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"], data["sequences"], utils.get_titles_from_ids(data["sequences"]), data["recommendations"], utils.get_titles_from_ids(data["recommendations"])):
+					f.write(f"  Activation: {value}\n")
+					f.write(f"  Sequence titles: {sequence}\n")
+					f.write(f"  Sequence ids: {sequence_ids}\n")
+					f.write(f"  top recommendation ids: {recommendations_ids}\n")
+					f.write(f"  top recommendations: {recommendations}\n")
+				f.write("\n")
 	# def save_highest_activations(self, filename="highest_activations.txt"):		
 	# 	"""
 	# 	Save the top 5 highest activations and their corresponding sequences to a file.
