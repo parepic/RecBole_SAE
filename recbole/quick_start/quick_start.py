@@ -255,7 +255,7 @@ def load_data_and_model(model_file, sae=True):
     # config.final_config_dict['gpu_id'] = '-1'
     # config['device'] = 'cpu'
     if sae:
-        config['model'] = 'sasrec_sae'
+        config['model'] = 'SASRec_SAE'
     init_seed(config["seed"], config["reproducibility"])
     init_logger(config)
     logger = getLogger()
