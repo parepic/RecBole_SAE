@@ -234,7 +234,6 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-        self.model.train()
 
         self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
@@ -263,7 +262,6 @@ class Trainer(AbstractTrainer):
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 losses = loss_func(interaction)
-
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -668,7 +666,7 @@ class Trainer(AbstractTrainer):
 
                 valid_step += 1
 
-
+        self.model.sae_module.save_highest_activations()
         self._add_hparam_to_tensorboard(self.best_valid_score)
         return self.best_valid_score, self.best_valid_result
 
