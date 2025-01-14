@@ -666,7 +666,6 @@ class Trainer(AbstractTrainer):
 
                 valid_step += 1
 
-        self.model.sae_module.save_highest_activations()
         self._add_hparam_to_tensorboard(self.best_valid_score)
         return self.best_valid_score, self.best_valid_result
 
