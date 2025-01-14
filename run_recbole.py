@@ -93,7 +93,7 @@ if __name__ == "__main__":
                     
     
     test_result = trainer.evaluate(
-        test_data, model_file='./saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', show_progress=config["show_progress"]
+        train_data, model_file='./saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', show_progress=config["show_progress"]
     )
     print("Saving highest activations")
     trainer.model.sae_module.save_highest_activations()
