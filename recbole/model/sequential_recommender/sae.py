@@ -40,10 +40,18 @@ class SAE(nn.Module):
 		self.activate_latents = set()
 		self.previous_activate_latents = None
 		self.epoch_activations = {"indices": None, "values": None} 
-		self.last_activations = []
+		self.last_activations = torch.empty(0, dtype=torch.float32, device=self.device)
+        # 2) highest_activations dict, each neuron j -> dict of GPU tensors
+        #    (values, sequences, recommendations)
 		self.highest_activations = {
-            i: {"values": [], "sequences": [], "recommendations": []} for i in range(self.hidden_dim)
+            j: {
+                "values": torch.empty(0, dtype=torch.float32, device=self.device),      # [<=10]
+                "sequences": torch.empty((0, 50), dtype=torch.long, device=self.device),
+                "recommendations": torch.empty((0, 10), dtype=torch.long, device=self.device)
+            }
+            for j in range(self.hidden_dim)
         }
+
 
 		return
 
@@ -158,51 +166,68 @@ class SAE(nn.Module):
 
 		return x_reconstructed
 
+
 	def update_highest_activations(self, sequences, recommendations):
 		"""
-		Update the top 5 highest activations and corresponding sequences for each latent neuron.
+		1) Find top-10 activations per neuron for this new batch on GPU.
+		2) Merge them with the existing top-10 stored in self.highest_activations.
+		3) Keep only the top-10 overall (no .cpu() or .tolist() here).
+		
+		:param sequences:       [batch_size, seq_len] GPU tensor
+		:param recommendations: [batch_size, num_items] GPU tensor
+								We'll extract top-10 recommended items per sample.
 		"""
-		top_recommendations = torch.argsort(recommendations, dim=1, descending=True)[:, :10]
-		batch_size = self.last_activations.size(0)
-		for i in range(batch_size):
-			for j in range(self.hidden_dim):
-				current_value = self.last_activations[i, j].item()
-				current_sequence = sequences[i].tolist()
-				current_recommendations = top_recommendations[i].tolist()
+		# ------------------------
+		# A) Get top-10 per neuron (column)
+		# ------------------------
+		# self.last_activations has shape [batch_size, hidden_dim]
+		batch_top_vals, batch_top_idxs = torch.topk(self.last_activations, k=10, dim=0)
+		# shapes: [10, hidden_dim]
 
-				# Insert the new activation if it qualifies for the top 5
-				if len(self.highest_activations[j]["values"]) < 10:
-					# Add to the list if it's not full
-					self.highest_activations[j]["values"].append(current_value)
-					self.highest_activations[j]["sequences"].append(current_sequence)
-					self.highest_activations[j]["recommendations"].append(current_recommendations)
-				else:
-					# Replace the smallest value if the new one is higher
-					min_index = self.highest_activations[j]["values"].index(
-						min(self.highest_activations[j]["values"])
-					)
-					if current_value > self.highest_activations[j]["values"][min_index]:
-						self.highest_activations[j]["values"][min_index] = current_value
-						self.highest_activations[j]["sequences"][min_index] = current_sequence
-						self.highest_activations[j]["recommendations"][min_index] = current_recommendations
+		# ------------------------
+		# B) For each sample, find top-10 recommended items
+		# ------------------------
+		# e.g. top 10 from each row in recommendations
+		batch_top_recs = torch.argsort(recommendations, dim=1, descending=True)[:, :10]
+		# shape: [batch_size, 10]
 
-				# Keep the top 5 sorted by value
-				sorted_indices = sorted(
-					range(len(self.highest_activations[j]["values"])),
-					key=lambda idx: self.highest_activations[j]["values"][idx],
-					reverse=True
-				)
-				self.highest_activations[j]["values"] = [
-					self.highest_activations[j]["values"][idx] for idx in sorted_indices
-				]
+		# ------------------------
+		# C) Merge each neuron's top-10
+		# ------------------------
+		for j in range(self.hidden_dim):
+			# 1) Gather new data for neuron j
+			new_indices = batch_top_idxs[:, j]         # [10] - indices in this batch
+			new_vals = batch_top_vals[:, j]           # [10]
+			new_seqs = sequences[new_indices]         # [10, seq_len]
+			new_recs = batch_top_recs[new_indices]    # [10, 10]
 
-				self.highest_activations[j]["sequences"] = [
-					self.highest_activations[j]["sequences"][idx] for idx in sorted_indices
-				]
+			# 2) Retrieve old top-k from self.highest_activations[j]
+			old_vals = self.highest_activations[j]["values"]           # [<=10]
+			old_seqs = self.highest_activations[j]["sequences"]        # [<=10, seq_len]
+			old_recs = self.highest_activations[j]["recommendations"]  # [<=10, 10]
 
-				self.highest_activations[j]["recommendations"] = [
-					self.highest_activations[j]["recommendations"][idx] for idx in sorted_indices
-				]
+			# 3) Concatenate old + new (-> up to 20)
+			all_vals = torch.cat([old_vals, new_vals], dim=0)    # [<=20]
+			all_seqs = torch.cat([old_seqs, new_seqs], dim=0)    # [<=20, seq_len]
+			all_recs = torch.cat([old_recs, new_recs], dim=0)    # [<=20, 10]
+
+			# 4) Take top-10 again
+			if all_vals.numel() > 0:
+				topvals, topidxs = torch.topk(all_vals, k=min(10, all_vals.size(0)), dim=0)
+			else:
+				# no old or new data
+				continue
+
+			# 5) Index sequences & recs
+			new_values = topvals
+			new_sequences = all_seqs[topidxs]
+			new_recommendations = all_recs[topidxs]
+
+			# 6) Store back as GPU tensors
+			self.highest_activations[j]["values"] = new_values
+			self.highest_activations[j]["sequences"] = new_sequences
+			self.highest_activations[j]["recommendations"] = new_recommendations
+
     
 	def save_highest_activations(self, filename="highest_activations.txt"):		
 		"""
@@ -211,12 +236,12 @@ class SAE(nn.Module):
 		with open(filename, "w") as f:
 			for neuron, data in self.highest_activations.items():
 				f.write(f"Neuron {neuron}:\n")
-				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"], data["sequences"], utils.get_titles_from_ids(data["sequences"]), data["recommendations"], utils.get_titles_from_ids(data["recommendations"])):
+				for value, sequence_ids, recommendations_ids in zip(data["values"], data["sequences"], data["recommendations"]):
 					f.write(f"  Activation: {value}\n")
-					f.write(f"  Sequence titles: {sequence}\n")
+					# f.write(f"  Sequence titles: {sequence}\n")
 					f.write(f"  Sequence ids: {sequence_ids}\n")
 					f.write(f"  top recommendation ids: {recommendations_ids}\n")
-					f.write(f"  top recommendations: {recommendations}\n")
+					# f.write(f"  top recommendations: {recommendations}\n")
 				f.write("\n")
 	# def save_highest_activations(self, filename="highest_activations.txt"):		
 	# 	"""

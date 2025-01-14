@@ -50,9 +50,6 @@ class SASRec_SAE(SASRec):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         sasrec_output = self.forward(item_seq, item_seq_len)
-        test_items_emb = self.item_embedding.weight
-        scores = torch.matmul(sasrec_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        self.sae_module.update_highest_activations(item_seq, scores)
         if self.mode == 'train':
             sae_loss = self.sae_module.fvu + self.sae_module.auxk_loss / 32
         else:
@@ -62,6 +59,14 @@ class SASRec_SAE(SASRec):
 
         return total_loss
 
+    def full_sort_predict(self, interaction):
+            item_seq = interaction[self.ITEM_SEQ]
+            item_seq_len = interaction[self.ITEM_SEQ_LEN]
+            seq_output = self.forward(item_seq, item_seq_len)
+            test_items_emb = self.item_embedding.weight
+            scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
+            self.sae_module.update_highest_activations(item_seq, scores)
+            return scores
 
     def save_sae(self, path):
         torch.save(self.sae_module.state_dict(), path)

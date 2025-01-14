@@ -578,10 +578,10 @@ class Trainer(AbstractTrainer):
         if self.config["train_neg_sample_args"].get("dynamic", False):
             train_data.get_model(self.model)
         valid_step = 0
-        valid_score, valid_result = self._valid_epoch(
-            valid_data, show_progress=show_progress
-        )
-        print("Initial validation score: ", valid_score)
+        # valid_score, valid_result = self._valid_epoch(
+        #     valid_data, show_progress=show_progress
+        # )
+        # print("Initial validation score: ", valid_score)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
