@@ -6,13 +6,11 @@ from .sae import SAE
 class SASRec_SAE(SASRec):
     def __init__(self, config, dataset, sasrec_model_path=None, mode="train"):
         super(SASRec_SAE, self).__init__(config, dataset)
-        
-        self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
         self.device = config["device"]
         # Load SASRec model parameters if path is provided
         if sasrec_model_path is not None:
             self.load_sasrec(sasrec_model_path)
-
+        self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
         self.to(config["device"])
