@@ -1,18 +1,22 @@
 import torch
 import torch.nn as nn
-from recbole.model.sequential_recommender import SASRec
+from .sasrec import SASRec
+from .sae import SAE
 
 class SASRec_SAE(SASRec):
     def __init__(self, config, dataset, sasrec_model_path=None, mode="train"):
-        from recbole.model.sequential_recommender.custom import SAE  # Replace with the correct path
         super(SASRec_SAE, self).__init__(config, dataset)
+        
+        self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
+        self.device = config["device"]
         # Load SASRec model parameters if path is provided
         if sasrec_model_path is not None:
             self.load_sasrec(sasrec_model_path)
-        self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
-        self.to(config["device"])
+
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
+        self.to(config["device"])
+
         for param in self.parameters():
             param.requires_grad = False  # Freeze all parameters
 
@@ -20,13 +24,6 @@ class SASRec_SAE(SASRec):
             param.requires_grad = True  # Unfreeze SAE parameters
 
 
-class SASRec_SAE(SASRec):
-    def __init__(self, sasrec_model_path=None, mode="eval"):
-        from recbole.model.sequential_recommender.custom import SAE  # Replace with the correct path
-        # Load SASRec model parameters if path is provided
-        if sasrec_model_path is not None:
-            self.load_sasrec(sasrec_model_path)
-            
     def set_sae_mode(self, mode):
         if mode in ['train', 'test', 'inference']:
             self.mode = mode
