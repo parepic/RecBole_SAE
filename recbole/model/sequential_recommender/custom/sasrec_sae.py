@@ -20,6 +20,13 @@ class SASRec_SAE(SASRec):
             param.requires_grad = True  # Unfreeze SAE parameters
 
 
+class SASRec_SAE(SASRec):
+    def __init__(self, sasrec_model_path=None, mode="eval"):
+        from recbole.model.sequential_recommender.custom import SAE  # Replace with the correct path
+        # Load SASRec model parameters if path is provided
+        if sasrec_model_path is not None:
+            self.load_sasrec(sasrec_model_path)
+            
     def set_sae_mode(self, mode):
         if mode in ['train', 'test', 'inference']:
             self.mode = mode

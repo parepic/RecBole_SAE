@@ -564,11 +564,13 @@ class Trainer(AbstractTrainer):
         """
         sasrec_sae = SASRec_SAE(config, dataset, sasrec_model_path=checkpoint_file)
         self.model = sasrec_sae
+
         self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=1e-3)
 
         message_output = "Loading SASREC model structure and parameters from {}".format(
             checkpoint_file
         )
+        
         self.logger.info(message_output)
         
         if saved and self.start_epoch >= self.epochs:
@@ -734,7 +736,7 @@ class Trainer(AbstractTrainer):
             checkpoint_file = model_file or self.saved_model_file
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
             if(SAE):
-                self.model=SASRec_SAE(config, dataset)
+                self.model=SASRec_SAE()
             self.model.load_state_dict(checkpoint["state_dict"])
             self.model.load_other_parameter(checkpoint.get("other_parameter"))
                 
