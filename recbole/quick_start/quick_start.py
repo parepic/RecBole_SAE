@@ -249,7 +249,7 @@ def load_data_and_model(model_file, sae=True):
 
     checkpoint = torch.load(model_file, map_location=torch.device('cuda'))
     config = checkpoint["config"]
-    config["sae_scale_size"] = 32
+    config["sae_scale_size"] = 64
     config["sae_k"] = 8
     config["sae_lr"] = 1e-4
     # config.internal_config_dict['use_gpu'] = False
