@@ -98,8 +98,8 @@ if __name__ == "__main__":
     
     trainer.save_neuron_activations(train_data,  model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth' )
     
-    # print("Saving highest activations")
-    # trainer.model.sae_module.save_highest_activations()
+    print("Saving highest activations")
+    trainer.model.sae_module.save_highest_activations()
 
 
     
