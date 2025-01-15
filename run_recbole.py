@@ -8,6 +8,7 @@
 # @Email  : chenyuwuxinn@gmail.com, houyupeng@ruc.edu.cn, zhlin@ruc.edu.cn
 
 import argparse
+import torch
 from recbole.quick_start import run_recbole, load_data_and_model, run
 from recbole.utils import (
     init_logger,
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(
-        "--dataset", "-d", type=str, default="ml-100k", help="name of datasets"
+        "--dataset", "-d", type=str, default="ml-1m", help="name of datasets"
     )
     parser.add_argument("--config_files", type=str, default=None, help="config files")
     parser.add_argument(
@@ -44,63 +45,62 @@ if __name__ == "__main__":
         default=0,
         help="the global rank offset of this group",
     )
+    
+    # Add arguments
+    parser.add_argument('--path', '-p', type=str, required=False, help="Path to the dataset or configuration file (e.g., 'blablabla').")
+    parser.add_argument('--train', action='store_true', help="Flag to indicate whether to train the model.")
+    parser.add_argument('--test', action='store_true', help="Flag to indicate whether to test the model.")
+
+    parser.add_argument('--save_neurons', '-s', action='store_true', help="Flag to indicate whether to save SAE activations.")
+
+    # Parse the arguments
+    args = parser.parse_args()
 
     args, _ = parser.parse_known_args()
-
-    config_file_list = (
-        args.config_files.strip().split(" ") if args.config_files else None
-    )
-
-    parameter_dict = {
-        'train_neg_sample_args': None
-        # 'sae_k': 8,
-        # 'sae_scale_size': 32,
-        # 'sae_lr':1e-3
-    }   
     
-    # run(
-    #     'SASRec',
-    #     'ml-1m',
-    #     config_file_list=config_file_list,
-    #     config_dict=parameter_dict,
-    #     nproc=args.nproc,
-    #     world_size=args.world_size,
-    #     ip=args.ip,
-    #     port=args.port,
-    #     group_offset=args.group_offset,
-    # )
+    device = 'cpu'
+    if torch.cuda.is_available():
+        device = 'cuda'
     
     
-    # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-    #     model_file='./recbole/saved/SASRec-Jan-12-2025_16-43-54.pth',
-    # )  # Here you can replace it by your model path.
-
-    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', sae=True
-    )  # Here you can replace it by your model path.
-
-    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-
-
-    # trainer.fit_SAE(config, 
-    #                 './recbole/saved/SASRec-Jan-12-2025_16-43-54.pth',
-    #                 train_data,
-    #                 dataset,
-    #                 valid_data=valid_data,
-    #                 show_progress=True
-    #                 )
-                    
-                    
-    
-    # test_result = trainer.evaluate(
-    #     train_data, model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', show_progress=config["show_progress"]
-    # )
-    
-    trainer.save_neuron_activations(train_data,  model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth')
-    
-    print("Saving highest activations")
-    trainer.model.sae_module.save_highest_activations()
-
-
-    
-    # print(test_result)
+    if(args.model == "SASRec" and args.train):
+        config_file_list = (
+                args.config_files.strip().split(" ") if args.config_files else None
+            )
+        parameter_dict = {
+            'train_neg_sample_args': None
+            # 'sae_k': 8,
+            # 'sae_scale_size': 32,
+            # 'sae_lr':1e-3
+        }   
+        run(
+            'SASRec',
+            'ml-1m',
+            config_file_list=config_file_list,
+            config_dict=parameter_dict,
+            nproc=args.nproc,
+            world_size=args.world_size,
+            ip=args.ip,
+            port=args.port,
+            group_offset=args.group_offset,
+        )
+    else:
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        if(args.test):
+            test_result = trainer.evaluate(
+            test_data, model_file=args.path, show_progress=config["show_progress"]
+            )
+            print(test_result)
+        elif(args.model == "SASRec_SAE" and args.save_neurons):
+            trainer.save_neuron_activations(train_data,  model_file=args.path)
+        elif(args.model == "SASRec_SAE" and args.train):
+            trainer.fit_SAE(config, 
+                args.path,
+                train_data,
+                dataset,
+                valid_data=valid_data,
+                show_progress=True
+                )

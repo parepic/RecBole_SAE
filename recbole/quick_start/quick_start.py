@@ -230,7 +230,7 @@ def objective_function(config_dict=None, config_file_list=None, saved=True):
     }
 
 
-def load_data_and_model(model_file, sae=True):
+def load_data_and_model(model_file, device='cuda', sae=True):
     r"""Load filtered dataset, split dataloaders and saved model.
 
     Args:
@@ -247,16 +247,17 @@ def load_data_and_model(model_file, sae=True):
     """
     import torch
 
-    checkpoint = torch.load(model_file, map_location=torch.device('cuda'))
+    checkpoint = torch.load(model_file, map_location=torch.device(device))
     config = checkpoint["config"]
     config["sae_scale_size"] = 64
     config["sae_k"] = 8
     config["sae_lr"] = 1e-4
-    # config.internal_config_dict['use_gpu'] = False
-    # config.internal_config_dict['gpu_id'] = '-1'
-    # config.final_config_dict['use_gpu'] = False
-    # config.final_config_dict['gpu_id'] = '-1'
-    # config['device'] = 'cpu'
+    if(device == 'cpu'):
+        config.internal_config_dict['use_gpu'] = False
+        config.internal_config_dict['gpu_id'] = '-1'
+        config.final_config_dict['use_gpu'] = False
+        config.final_config_dict['gpu_id'] = '-1'
+        config['device'] = 'cpu'
     if sae:
         config['model'] = 'SASRec_SAE'
     init_seed(config["seed"], config["reproducibility"])
