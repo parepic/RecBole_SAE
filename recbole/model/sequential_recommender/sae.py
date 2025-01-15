@@ -7,7 +7,7 @@ import os
 from time import time
 from tqdm import tqdm
 import logging
-from recbole.utils import utils
+from .utils import utils
 import pandas as pd
 
 class SAE(nn.Module):
@@ -233,7 +233,8 @@ class SAE(nn.Module):
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
-		file_path = r'\dataset\ml-1m\ml-1m.item' 
+  
+		file_path = r'./dataset/ml-1m/ml-1m.item'
 		data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
 		with open(filename, "w") as f:
 			for neuron, data in self.highest_activations.items():
