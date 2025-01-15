@@ -168,6 +168,7 @@ def calculate_valid_score(valid_result, valid_metric=None):
         return valid_result[valid_metric]
     else:
         return valid_result["Recall@10"]
+    
 
 
 def dict2str(result_dict):
@@ -447,3 +448,29 @@ def get_environment(config):
     )
 
     return table
+
+
+# Step 2: Function to get title by ID
+def get_item_title(tensor, df):
+    """
+    Given a tensor of any shape, return the titles corresponding to the IDs
+    in 'tensor', skipping any elements that are 0.
+    
+    :param tensor: The tensor (PyTorch, NumPy array, etc.) containing item IDs.
+    :param df: The DataFrame containing the 'item_id:token' and 'movie_title:token' columns.
+    :return: A list of movie titles corresponding to all nonzero IDs in 'tensor'.
+    """
+    titles = []
+    # Flatten the tensor so we can iterate over each element
+    flattened = tensor.flatten().tolist()
+    
+    for item_id in flattened:
+        if item_id != 0:
+            title = get_item_title(item_id, df)
+            if title is not None:
+                titles.append(title)
+    
+    return titles
+    
+# file_path = r'\dataset\ml-1m\ml-1m.item' 
+# data = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed

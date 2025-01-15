@@ -118,6 +118,8 @@ class SASRec(SequentialRecommender):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
+        if((item_seq == 3707).any()):
+            print("Suka blya here!")
         pos_items = interaction[self.POS_ITEM_ID]
         if self.loss_type == "BPR":
             neg_items = interaction[self.NEG_ITEM_ID]

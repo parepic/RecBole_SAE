@@ -7,8 +7,8 @@ import os
 from time import time
 from tqdm import tqdm
 import logging
-# from utils import utils
-
+from utils import utils
+import pandas as pd
 
 class SAE(nn.Module):
 	# @staticmethod
@@ -233,16 +233,19 @@ class SAE(nn.Module):
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
+		file_path = r'\dataset\ml-1m\ml-1m.item' 
+		data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
 		with open(filename, "w") as f:
 			for neuron, data in self.highest_activations.items():
 				f.write(f"Neuron {neuron}:\n")
-				for value, sequence_ids, recommendations_ids in zip(data["values"], data["sequences"], data["recommendations"]):
+				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_title(sequence_ids, data_item), data["recommendations"], utils.get_item_title(recommendations_ids, data_item)):
 					f.write(f"  Activation: {value}\n")
-					# f.write(f"  Sequence titles: {sequence}\n")
+					f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
 					f.write(f"  Sequence ids: {sequence_ids}\n")
 					f.write(f"  top recommendation ids: {recommendations_ids}\n")
-					# f.write(f"  top recommendations: {recommendations}\n")
+					f.write(f"  top recommendations: {recommendations}\n")
 				f.write("\n")
+
 	# def save_highest_activations(self, filename="highest_activations.txt"):		
 	# 	"""
 	# 	Save the top 5 highest activations and their corresponding sequences to a file.

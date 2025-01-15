@@ -58,17 +58,17 @@ if __name__ == "__main__":
         # 'sae_lr':1e-3
     }   
     
-    # run(
-    #     args.model,
-    #     args.dataset,
-    #     config_file_list=config_file_list,
-    #     config_dict=parameter_dict,
-    #     nproc=args.nproc,
-    #     world_size=args.world_size,
-    #     ip=args.ip,
-    #     port=args.port,
-    #     group_offset=args.group_offset,
-    # )
+    run(
+        'SASRec',
+        'ml-1m',
+        config_file_list=config_file_list,
+        config_dict=parameter_dict,
+        nproc=args.nproc,
+        world_size=args.world_size,
+        ip=args.ip,
+        port=args.port,
+        group_offset=args.group_offset,
+    )
     
     
     # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # )  # Here you can replace it by your model path.
 
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file='./saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', sae=True
+        model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', sae=True
     )  # Here you can replace it by your model path.
 
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
@@ -92,15 +92,15 @@ if __name__ == "__main__":
                     
                     
     
-    # test_result = trainer.evaluate(
-    #     train_data, model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', show_progress=config["show_progress"]
-    # )
+    test_result = trainer.evaluate(
+        train_data, model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth', show_progress=config["show_progress"]
+    )
     
-    trainer.save_neuron_activations(train_data,  model_file='./saved/SASRec_SAE-Jan-14-2025_15-28-06.pth' )
+    trainer.save_neuron_activations(train_data,  model_file='./recbole/saved/SASRec_SAE-Jan-14-2025_15-28-06.pth' )
     
-    print("Saving highest activations")
-    trainer.model.sae_module.save_highest_activations()
+    # print("Saving highest activations")
+    # trainer.model.sae_module.save_highest_activations()
 
 
     
-    print(test_result)
+    # print(test_result)
