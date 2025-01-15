@@ -252,6 +252,7 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 self.model.full_sort_predict(interaction)
+                break
 
 
 
@@ -598,6 +599,7 @@ class Trainer(AbstractTrainer):
         message_output = "Loading model structure and parameters from {}".format(
             checkpoint_file
         )
+        
         self.logger.info(message_output)
         self.model.eval()
         iter_data = (
