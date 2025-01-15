@@ -593,27 +593,13 @@ class Trainer(AbstractTrainer):
         checkpoint = torch.load(checkpoint_file, map_location=self.device)
         self.model.load_state_dict(checkpoint["state_dict"])
         self.model.load_other_parameter(checkpoint.get("other_parameter"))
-            
+        self.device = torch.device(self.device)
+
         message_output = "Loading model structure and parameters from {}".format(
             checkpoint_file
         )
         self.logger.info(message_output)
-
         self.model.eval()
-
-        iter_data = (
-            tqdm(
-                train_data,
-                total=len(train_data),
-                ncols=100,
-                desc=set_color(f"Save activations   ", "pink"),
-            )
-            if show_progress
-            else train_data
-        )
-        self.model.eval()
-
-        self.device = torch.device(self.device)
         iter_data = (
             tqdm(
                 train_data,
