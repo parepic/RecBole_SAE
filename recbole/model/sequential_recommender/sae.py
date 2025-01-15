@@ -239,7 +239,7 @@ class SAE(nn.Module):
 		with open(filename, "w") as f:
 			for neuron, data in self.highest_activations.items():
 				f.write(f"Neuron {neuron}:\n")
-				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_title(sequence, data_item), data["recommendations"], utils.get_item_title(recommendations_ids, data_item)):
+				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_title(data["sequences"], data_item), data["recommendations"], utils.get_item_title(data["recommendations"], data_item)):
 					f.write(f"  Activation: {value}\n")
 					f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
 					f.write(f"  Sequence ids: {sequence_ids}\n")
