@@ -7,7 +7,7 @@ import os
 from time import time
 from tqdm import tqdm
 import logging
-from utils import utils
+from recbole.utils import utils
 import pandas as pd
 
 class SAE(nn.Module):
