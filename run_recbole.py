@@ -58,17 +58,17 @@ if __name__ == "__main__":
         # 'sae_lr':1e-3
     }   
     
-    run(
-        'SASRec',
-        'ml-1m',
-        config_file_list=config_file_list,
-        config_dict=parameter_dict,
-        nproc=args.nproc,
-        world_size=args.world_size,
-        ip=args.ip,
-        port=args.port,
-        group_offset=args.group_offset,
-    )
+    # run(
+    #     'SASRec',
+    #     'ml-1m',
+    #     config_file_list=config_file_list,
+    #     config_dict=parameter_dict,
+    #     nproc=args.nproc,
+    #     world_size=args.world_size,
+    #     ip=args.ip,
+    #     port=args.port,
+    #     group_offset=args.group_offset,
+    # )
     
     
     # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
