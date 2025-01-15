@@ -218,45 +218,6 @@ class Trainer(AbstractTrainer):
             optimizer = optim.Adam(params, lr=learning_rate)
         return optimizer
 
-
-    def _epoch_save_activations(self, train_data, show_progress=False):
-        r"""Train the model in an epoch
-
-        Args:
-            train_data (DataLoader): The train data.
-            epoch_idx (int): The current epoch id.
-            loss_func (function): The loss function of :attr:`model`. If it is ``None``, the loss function will be
-                :attr:`self.model.calculate_loss`. Defaults to ``None``.
-            show_progress (bool): Show the progress of training epoch. Defaults to ``False``.
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, it will return a
-            tuple which includes the sum of loss in each part.
-        """
-        self.model.eval()
-
-        self.device = torch.device(self.device)
-        iter_data = (
-            tqdm(
-                train_data,
-                total=len(train_data),
-                ncols=100,
-            )
-            if show_progress
-            else train_data
-        )
-
-        for batch_idx, interaction in enumerate(iter_data):
-            interaction = interaction.to(self.device)
-            self.optimizer.zero_grad()
-            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                self.model.full_sort_predict(interaction)
-                break
-
-
-
-
     def _train_epoch(self, train_data, epoch_idx, loss_func=None, show_progress=False):
         r"""Train the model in an epoch
 
@@ -617,7 +578,6 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 self.model.full_sort_predict(interaction)
-
     
     def fit_SAE(
         self,

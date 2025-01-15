@@ -450,27 +450,31 @@ def get_environment(config):
     return table
 
 
-# Step 2: Function to get title by ID
-def get_item_title(tensor, df):
+def get_item_titles(tensor, df):
     """
     Given a tensor of any shape, return the titles corresponding to the IDs
-    in 'tensor', skipping any elements that are 0.
+    in 'tensor', skipping any elements that are 0. For IDs not found in the 
+    DataFrame, return "undefined". The shape of the returned list of lists matches
+    the shape of the input tensor.
     
     :param tensor: The tensor (PyTorch, NumPy array, etc.) containing item IDs.
     :param df: The DataFrame containing the 'item_id:token' and 'movie_title:token' columns.
-    :return: A list of movie titles corresponding to all nonzero IDs in 'tensor'.
+    :return: A nested list of movie titles corresponding to all IDs in 'tensor'.
     """
-    titles = []
-    # Flatten the tensor so we can iterate over each element
-    flattened = tensor.flatten().tolist()
+    # Convert tensor to list of lists to preserve shape
+    tensor_as_list = tensor.tolist()
+
+    # Create a dictionary for quick lookup of item titles
+    id_to_title = dict(zip(df['item_id:token'], df['movie_title:token']))
+
+    # Replace IDs with movie titles, preserving the shape
+    result = []
+    for row in tensor_as_list:
+        # Use `.get(item_id, "undefined")` to handle missing IDs
+        titles_row = [id_to_title.get(item_id, "undefined") for item_id in row if item_id != 0]
+        result.append(titles_row)
     
-    for item_id in flattened:
-        if item_id != 0:
-            title = get_item_title(item_id, df)
-            if title is not None:
-                titles.append(title)
-    
-    return titles
-    
+    return result
+
 # file_path = r'\dataset\ml-1m\ml-1m.item' 
 # data = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
