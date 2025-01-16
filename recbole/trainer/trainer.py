@@ -574,7 +574,7 @@ class Trainer(AbstractTrainer):
         )
 
         for batch_idx, batched_data in enumerate(iter_data):
-            if len(batched_data) == 4:
+            if eval_data:
                 interaction, history_index, positive_u, positive_i = batched_data
             else:
                 interaction = batched_data
@@ -582,7 +582,8 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 self.model.full_sort_predict(interaction)
-        self.model.sae_module.save_highest_activations()
+        ending = '_eval' if eval_data else ''
+        self.model.sae_module.save_highest_activations(filename='highest_activations' + ending + '.txt' )
     
     def fit_SAE(
         self,
