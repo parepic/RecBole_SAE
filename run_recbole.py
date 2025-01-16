@@ -97,7 +97,7 @@ if __name__ == "__main__":
             print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data)
+            trainer.save_neuron_activations(valid_data,  model_file=args.path, eval_data=args.eval_data)
         elif(args.model == "SASRec_SAE" and args.train):
             trainer.fit_SAE(config, 
                 args.path,
