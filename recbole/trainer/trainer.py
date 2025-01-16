@@ -535,7 +535,7 @@ class Trainer(AbstractTrainer):
                 
     @torch.no_grad()
     def save_neuron_activations(
-        self, train_data, model_file=None, show_progress=True
+        self, data, model_file=None, show_progress=True, eval_data=True
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -565,19 +565,24 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         iter_data = (
             tqdm(
-                train_data,
-                total=len(train_data),
+                data,
+                total=len(data),
                 ncols=100,
             )
             if show_progress
-            else train_data
+            else data
         )
 
-        for batch_idx, interaction in enumerate(iter_data):
+        for batch_idx, batched_data in enumerate(iter_data):
+            if len(batched_data) == 4:
+                interaction, history_index, positive_u, positive_i = batched_data
+            else:
+                interaction = batched_data
             interaction = interaction.to(self.device)
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 self.model.full_sort_predict(interaction)
+        self.model.sae_module.save_highest_activations()
     
     def fit_SAE(
         self,
