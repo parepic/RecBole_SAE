@@ -50,6 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--path', '-p', type=str, required=False, help="Path to the dataset or configuration file (e.g., 'blablabla').")
     parser.add_argument('--train', action='store_true', help="Flag to indicate whether to train the model.")
     parser.add_argument('--test', action='store_true', help="Flag to indicate whether to test the model.")
+    parser.add_argument('--eval_data', action='store_true', help="Flag to indicate whether to test the model.")
 
     parser.add_argument('--save_neurons', '-s', action='store_true', help="Flag to indicate whether to save SAE activations.")
 
@@ -95,7 +96,8 @@ if __name__ == "__main__":
             )
             print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
-            trainer.save_neuron_activations(train_data,  model_file=args.path)
+            data = test_data if args.eval_data else train_data
+            trainer.save_neuron_activations(data,  model_file=args.path)
         elif(args.model == "SASRec_SAE" and args.train):
             trainer.fit_SAE(config, 
                 args.path,

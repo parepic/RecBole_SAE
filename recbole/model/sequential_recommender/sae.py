@@ -247,17 +247,3 @@ class SAE(nn.Module):
 					f.write(f"  top recommendations: {recommendations}\n")
 				f.write("\n")
 
-	# def save_highest_activations(self, filename="highest_activations.txt"):		
-	# 	"""
-	# 	Save the top 5 highest activations and their corresponding sequences to a file.
-	# 	"""
-	# 	with open(filename, "w") as f:
-	# 		for neuron, data in self.highest_activations.items():
-	# 			f.write(f"Neuron {neuron}:\n")
-	# 			for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"], data["sequences"], utils.get_titles_from_ids(data["sequences"]), data["recommendations"], utils.get_titles_from_ids(data["recommendations"])):
-	# 				f.write(f"  Activation: {value}\n")
-	# 				f.write(f"  Sequence titles: {sequence}\n")
-	# 				f.write(f"  Sequence ids: {sequence_ids}\n")
-	# 				f.write(f"  top recommendation ids: {recommendations_ids}\n")
-	# 				f.write(f"  top recommendations: {recommendations}\n")
-	# 			f.write("\n")
