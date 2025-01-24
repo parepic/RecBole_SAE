@@ -154,5 +154,5 @@ class SASRec(SequentialRecommender):
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs:
-            self.recommendation_count[key] += 1
+            self.recommendation_count[key.item()] += 1
         return scores
