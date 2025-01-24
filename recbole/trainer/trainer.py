@@ -370,7 +370,10 @@ class Trainer(AbstractTrainer):
             raise ValueError("Training loss is nan")
 
     def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses):
-        des = self.config["loss_decimal_place"] or 4
+        des = 4
+        print(self.config["loss_decimal_place"])
+        print(self.config)
+
         train_loss_output = (
             set_color("epoch %d training", "green")
             + " ["
