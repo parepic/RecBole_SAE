@@ -25,7 +25,7 @@ class SAE(nn.Module):
 		super(SAE, self).__init__()
 		self.k = config["sae_k"]
 		self.scale_size = config["sae_scale_size"]
-
+		self.user_pop_scores = []
 		self.device = config["device"]
 		self.dtype = torch.float32
 		self.to(self.device)
@@ -167,7 +167,7 @@ class SAE(nn.Module):
 		return x_reconstructed
 
 
-	def update_highest_activations(self, sequences, recommendations):
+	def update_highest_activations(self, sequences, recommendations, user_ids):
 		"""
 		1) Find top-10 activations per neuron for this new batch on GPU.
 		2) Merge them with the existing top-10 stored in self.highest_activations.
@@ -177,6 +177,10 @@ class SAE(nn.Module):
 		:param recommendations: [batch_size, num_items] GPU tensor
 								We'll extract top-10 recommended items per sample.
 		"""
+  
+		utils.save_user_popularity_score(utils.fetch_user_popularity_score(user_ids,sequences))
+		utils.save_batch_activations(self.last_activations) 
+
 		# ------------------------
 		# A) Get top-10 per neuron (column)
 		# ------------------------
@@ -226,12 +230,13 @@ class SAE(nn.Module):
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
-  
+		correlations = utils.calculate_pearson_correlation()
 		file_path = r'./dataset/ml-1m/ml-1m.item'
 		data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
 		with open(filename, "w") as f:
 			for neuron, data in self.highest_activations.items():
 				f.write(f"Neuron {neuron}:\n")
+				f.write(f"Popularity Correlation:{correlations[neuron]}\n")
 				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
 					f.write(f"  Activation: {value}\n")
 					f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")

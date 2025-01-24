@@ -558,6 +558,144 @@ def save_user_popularity_score(alpha, user_ids, sequences):
 
 
 
+def fetch_user_popularity_score(user_ids, sequences):
+    """
+    Fetches the total scores for the given user IDs and their sequences from the HDF5 file.
+
+    Args:
+        file_path (str): Path to the HDF5 file.
+        user_ids (list): List of user IDs to fetch.
+        sequences (list): List of sequences corresponding to the user IDs.
+
+    Returns:
+        list: A list of total scores for the provided sequences.
+    """
+    total_scores = []
+    file_path = r"./dataset/ml-1m/user_popularity_scores.h5"
+    with h5py.File(file_path, "r") as f:
+        for user_id, user_sequences in zip(user_ids, sequences):
+            if user_id in f:
+                user_id = str(user_id)
+                user_group = f[user_id]
+
+                for seq in user_sequences:
+                    # Convert the sequence to string or hash to match the storage format
+                    seq_key = str(seq)
+
+                    # Search for the sequence in the group
+                    for dataset_name in user_group:
+                        stored_sequence = user_group[dataset_name][:]
+
+                        if list(stored_sequence) == list(seq):  # Match sequence
+                            total_score = user_group[dataset_name].attrs.get("total_score", None)
+                            total_scores.append(total_score)
+                            break
+            else:
+                print(f"User ID {user_id} not found in the HDF5 file.")
+
+    return total_scores
+
+
+
+
+def save_batch_activations(bulk_data):
+    """
+    Saves a bulk of data (shape 4096 x 2024) to the HDF5 file, appending it to each row.
+
+    Args:
+        file_path (str): Path to the HDF5 file.
+        bulk_data (numpy.ndarray): A 2D NumPy array of shape (4096, 2024) to append.
+    """
+    
+    file_path = r"./dataset/ml-1m/neuron_activations.h5"
+    with h5py.File(file_path, "a") as f:
+        if "dataset" not in f:
+            # If the dataset doesn't exist, create it with unlimited columns
+            max_shape = (4096, 1100000)  # Unlimited columns
+            f.create_dataset(
+                "dataset",
+                data=bulk_data,
+                maxshape=max_shape,
+                chunks=(4096, 2024),  # Optimize chunk size for appending
+                dtype="float32",
+            )
+        else:
+            # Resize the dataset to accommodate the new data
+            dataset = f["dataset"]
+            current_cols = dataset.shape[1]
+            new_cols = current_cols + bulk_data.shape[1]
+            dataset.resize((4096, new_cols))
+            
+            # Write the new data at the end
+            dataset[:, current_cols:new_cols] = bulk_data
+            
+
+
+def save_batch_user_popularities(bulk_data):
+    """
+    Saves a bulk of data to an HDF5 file, appending it to a 1D dataset.
+
+    Args:
+        file_path (str): Path to the HDF5 file.
+        bulk_data (list or numpy.ndarray): A 1D list or array of values to append.
+    """
+    bulk_data = np.array(bulk_data, dtype=np.float32)  # Ensure data is in NumPy array format
+    file_path = r"./dataset/ml-1m/user_scores.h5"
+    with h5py.File(file_path, "a") as f:
+        if "dataset" not in f:
+            # Create the dataset if it doesn't exist
+            max_shape = (1100000,)  # Unlimited length
+            f.create_dataset(
+                "dataset",
+                data=bulk_data,
+                maxshape=max_shape,
+                chunks=(len(bulk_data),),  # Chunk size is the size of the bulk
+                dtype="float32"
+            )
+        else:
+            # Resize and append to the existing dataset
+            dataset = f["dataset"]
+            current_size = dataset.shape[0]
+            new_size = current_size + len(bulk_data)
+            dataset.resize((new_size,))
+            dataset[current_size:new_size] = bulk_data
+
+
+def calculate_pearson_correlation():
+    """
+    Calculates the Pearson correlation of each row in a dataset with another dataset and saves the result to a CSV file.
+
+    Args:
+        file1_path (str): Path to the first HDF5 file (shape (N, F)).
+        file2_path (str): Path to the second HDF5 file (shape (F,)).
+        output_csv_path (str): Path to save the resultant CSV file (shape (N,)).
+    """
+    
+    file1_path = r"./dataset/ml-1m/user_popularity_scores.h5"
+    file2_path = r"./dataset/ml-1m/user_scores.h5"
+    output_csv_path = r"./dataset/ml-1m/correlations.csv"
+    # Load the data from the HDF5 files
+    with h5py.File(file1_path, "r") as f1, h5py.File(file2_path, "r") as f2:
+        dataset1 = f1["dataset"][:]  # Shape (N, F)
+        dataset2 = f2["dataset"][:]  # Shape (F,)
+
+    # Validate the shapes
+    if dataset1.shape[1] != dataset2.shape[0]:
+        raise ValueError("The number of features (F) in file1 must match the length of the dataset in file2.")
+
+    # Calculate Pearson correlation for each row in dataset1 with dataset2
+    correlations = []
+    for row in dataset1:
+        correlation = np.corrcoef(row, dataset2)[0, 1]  # Pearson correlation
+        correlations.append(correlation)
+
+    # Save the results to a CSV file
+    df = pd.DataFrame({"Pearson_Correlation": correlations})
+    df.to_csv(output_csv_path, index=False)
+    print(f"Pearson correlations saved to {output_csv_path}")
+    return correlations
+
+            
 def count():
     df = pd.read_csv(
         r'./dataset/ml-1m/ml-1m.inter', sep='\t', encoding='latin1'

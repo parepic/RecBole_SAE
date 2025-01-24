@@ -47,6 +47,7 @@ from recbole.utils import (
     get_gpu_usage,
     WandbLogger,
     save_user_popularity_score,
+    calculate_pearson_correlation
 )
 from recbole.model.sequential_recommender import SASRec_SAE
 from torch.nn.parallel import DistributedDataParallel
@@ -263,35 +264,35 @@ class Trainer(AbstractTrainer):
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                losses = loss_func(interaction)
+                # losses = loss_func(interaction)
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
                     save_user_popularity_score(0.9, user_ids, item_seq)
-            if isinstance(losses, tuple):
-                loss = sum(losses)
-                loss_tuple = tuple(per_loss.item() for per_loss in losses)
-                total_loss = (
-                    loss_tuple
-                    if total_loss is None
-                    else tuple(map(sum, zip(total_loss, loss_tuple)))
-                )
-            else:
-                loss = losses
-                total_loss = (
-                    losses.item() if total_loss is None else total_loss + losses.item()
-                )
-            self._check_nan(loss)
-            scaler.scale(loss + sync_loss).backward()
-            if self.clip_grad_norm:
-                clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
-            scaler.step(self.optimizer)
-            scaler.update()
-            if self.gpu_available and show_progress:
-                iter_data.set_postfix_str(
-                    set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
-                )
-        return total_loss
+        #     if isinstance(losses, tuple):
+        #         loss = sum(losses)
+        #         loss_tuple = tuple(per_loss.item() for per_loss in losses)
+        #         total_loss = (
+        #             loss_tuple
+        #             if total_loss is None
+        #             else tuple(map(sum, zip(total_loss, loss_tuple)))
+        #         )
+        #     else:
+        #         loss = losses
+        #         total_loss = (
+        #             losses.item() if total_loss is None else total_loss + losses.item()
+        #         )
+        #     self._check_nan(loss)
+        #     scaler.scale(loss + sync_loss).backward()
+        #     if self.clip_grad_norm:
+        #         clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
+        #     scaler.step(self.optimizer)
+        #     scaler.update()
+        #     if self.gpu_available and show_progress:
+        #         iter_data.set_postfix_str(
+        #             set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
+        #         )
+        # return total_loss
 
     def _valid_epoch(self, valid_data, show_progress=False):
         r"""Valid the model with valid data
@@ -457,7 +458,7 @@ class Trainer(AbstractTrainer):
         if self.config["train_neg_sample_args"].get("dynamic", False):
             train_data.get_model(self.model)
         valid_step = 0
-        start_train = time()
+        # start_train = time()
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
@@ -539,8 +540,8 @@ class Trainer(AbstractTrainer):
                     break
 
                 valid_step += 1
-            end_train = time()
-            print(f"Training took {(start_train - end_train) / 60} minutes")
+            # end_train = time()
+            # print(f"Training took {(start_train - end_train) / 60} minutes")
     @torch.no_grad()
     def save_neuron_activations(
         self, data, model_file=None, show_progress=True, eval_data=True
@@ -568,7 +569,6 @@ class Trainer(AbstractTrainer):
         message_output = "Loading model structure and parameters from {}".format(
             checkpoint_file
         )
-        
         self.logger.info(message_output)
         self.model.eval()
         iter_data = (
@@ -589,10 +589,12 @@ class Trainer(AbstractTrainer):
             # Update the maximum value
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
+                self.model.set_sae_mode("test")
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
         self.model.sae_module.save_highest_activations(filename='highest_activations' + ending + '.txt' )
+        
     
     def fit_SAE(
         self,
