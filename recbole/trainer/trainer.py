@@ -29,6 +29,7 @@ import torch.optim as optim
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from tqdm import tqdm
 import torch.cuda.amp as amp
+import h5py
 
 from recbole.data.interaction import Interaction
 from recbole.data.dataloader import FullSortEvalDataLoader
@@ -45,6 +46,7 @@ from recbole.utils import (
     set_color,
     get_gpu_usage,
     WandbLogger,
+    save_user_popularity_score,
 )
 from recbole.model.sequential_recommender import SASRec_SAE
 from torch.nn.parallel import DistributedDataParallel
@@ -262,6 +264,10 @@ class Trainer(AbstractTrainer):
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 losses = loss_func(interaction)
+                if(batch_idx == 0):
+                    user_ids = interaction['user_id']
+                    item_seq = interaction['item_id_list']
+                    save_user_popularity_score(0.9, user_ids, item_seq)
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -443,6 +449,7 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
+        
         if saved and self.start_epoch >= self.epochs:
             self._save_checkpoint(-1, verbose=verbose)
 
@@ -450,7 +457,7 @@ class Trainer(AbstractTrainer):
         if self.config["train_neg_sample_args"].get("dynamic", False):
             train_data.get_model(self.model)
         valid_step = 0
-
+        start_train = time()
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
@@ -532,7 +539,8 @@ class Trainer(AbstractTrainer):
                     break
 
                 valid_step += 1
-                
+            end_train = time()
+            print(f"Training took {(start_train - end_train) / 60} minutes")
     @torch.no_grad()
     def save_neuron_activations(
         self, data, model_file=None, show_progress=True, eval_data=True
@@ -833,7 +841,7 @@ class Trainer(AbstractTrainer):
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['LT_coverage@10'] = lt_coverage
-        result['coverage@10'] = lt_coverage
+        result['coverage@10'] = coverage
         self.wandblogger.log_eval_metrics(result, head="eval")
         return result
 

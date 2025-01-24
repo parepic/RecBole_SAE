@@ -60,16 +60,16 @@ class SASRec_SAE(SASRec):
         return total_loss
 
     def full_sort_predict(self, interaction):
-            item_seq = interaction[self.ITEM_SEQ]
-            item_seq_len = interaction[self.ITEM_SEQ_LEN]
-            seq_output = self.forward(item_seq, item_seq_len)
-            test_items_emb = self.item_embedding.weight
-            scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-            top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
-            self.sae_module.update_highest_activations(item_seq, top_recs)
-            for key in top_recs.flatten():
-                self.recommendation_count[key.item()] += 1
-            return scores
+        item_seq = interaction[self.ITEM_SEQ]
+        item_seq_len = interaction[self.ITEM_SEQ_LEN]
+        seq_output = self.forward(item_seq, item_seq_len)
+        test_items_emb = self.item_embedding.weight
+        scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
+        top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        self.sae_module.update_highest_activations(item_seq, top_recs)
+        for key in top_recs.flatten():
+            self.recommendation_count[key.item()] += 1
+        return scores
 
     def save_sae(self, path):
         torch.save(self.sae_module.state_dict(), path)
