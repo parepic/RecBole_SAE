@@ -264,7 +264,7 @@ class Trainer(AbstractTrainer):
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                # losses = loss_func(interaction)
+                losses = loss_func(interaction)
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
@@ -370,10 +370,7 @@ class Trainer(AbstractTrainer):
             raise ValueError("Training loss is nan")
 
     def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses):
-        des = 4
-        print(self.config["loss_decimal_place"])
-        print(self.config)
-
+        des = self.config["loss_decimal_place"] or 4
         train_loss_output = (
             set_color("epoch %d training", "green")
             + " ["
@@ -381,7 +378,7 @@ class Trainer(AbstractTrainer):
             + ": %.2fs, "
         ) % (epoch_idx, e_time - s_time)
         if isinstance(losses, tuple):
-            des = set_color("train_loss4", "blue") + ": %." + "f"
+            des = set_color("train_loss%d", "blue") + ": %." + str(des) + "f"
             train_loss_output += ", ".join(
                 des % (idx + 1, loss) for idx, loss in enumerate(losses)
             )
