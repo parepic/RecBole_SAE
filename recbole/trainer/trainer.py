@@ -268,30 +268,30 @@ class Trainer(AbstractTrainer):
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
-        #     if isinstance(losses, tuple):
-        #         loss = sum(losses)
-        #         loss_tuple = tuple(per_loss.item() for per_loss in losses)
-        #         total_loss = (
-        #             loss_tuple
-        #             if total_loss is None
-        #             else tuple(map(sum, zip(total_loss, loss_tuple)))
-        #         )
-        #     else:
-        #         loss = losses
-        #         total_loss = (
-        #             losses.item() if total_loss is None else total_loss + losses.item()
-        #         )
-        #     self._check_nan(loss)
-        #     scaler.scale(loss + sync_loss).backward()
-        #     if self.clip_grad_norm:
-        #         clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
-        #     scaler.step(self.optimizer)
-        #     scaler.update()
-        #     if self.gpu_available and show_progress:
-        #         iter_data.set_postfix_str(
-        #             set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
-        #         )
-        # return total_loss
+            if isinstance(losses, tuple):
+                loss = sum(losses)
+                loss_tuple = tuple(per_loss.item() for per_loss in losses)
+                total_loss = (
+                    loss_tuple
+                    if total_loss is None
+                    else tuple(map(sum, zip(total_loss, loss_tuple)))
+                )
+            else:
+                loss = losses
+                total_loss = (
+                    losses.item() if total_loss is None else total_loss + losses.item()
+                )
+            self._check_nan(loss)
+            scaler.scale(loss + sync_loss).backward()
+            if self.clip_grad_norm:
+                clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
+            scaler.step(self.optimizer)
+            scaler.update()
+            if self.gpu_available and show_progress:
+                iter_data.set_postfix_str(
+                    set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
+                )
+        return total_loss
 
     def _valid_epoch(self, valid_data, show_progress=False):
         r"""Valid the model with valid data
