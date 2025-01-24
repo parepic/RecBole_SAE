@@ -16,6 +16,9 @@ from recbole.utils.utils import (
     label_popular_items,
     count,
     save_user_popularity_score,
+    calculate_pearson_correlation,
+    fetch_user_popularity_score,
+    save_batch_activations
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -51,5 +54,8 @@ __all__ = [
     "get_environment",
     "list_to_latex",
     "WandbLogger",
-    "save_user_popularity_score"
+    "save_user_popularity_score",
+    "calculate_pearson_correlation",
+    "fetch_user_popularity_score",
+    "save_batch_activations"
 ]
