@@ -13,7 +13,9 @@ from recbole.utils.utils import (
     get_gpu_usage,
     get_flops,
     list_to_latex,
-    label_popular_items,count
+    label_popular_items,
+    count,
+    save_user_popularity_score,
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -49,4 +51,5 @@ __all__ = [
     "get_environment",
     "list_to_latex",
     "WandbLogger",
+    "save_user_popularity_score"
 ]

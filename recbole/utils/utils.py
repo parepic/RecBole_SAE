@@ -13,6 +13,7 @@ recbole.utils.utils
 ################################
 """
 
+import h5py
 import datetime
 import importlib
 import os
@@ -514,6 +515,46 @@ def label_popular_items():
     output_df.to_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", index=False)
 
     print("Popularity labels with titles saved to 'item_popularity_labels_with_titles.csv'")
+
+import math
+def save_user_popularity_score(alpha, user_ids, sequences):
+    sequences = [seq.cpu().numpy().tolist() for seq in sequences]
+    user_ids = [id.item() for id in user_ids]
+    
+    """
+    Updates an HDF5 file with new user IDs and sequences.
+    
+    Args:
+        file_path (str): Path to the HDF5 file.
+        user_ids (list): List of user IDs (length [N]).
+        sequences (list or numpy array): List or array of sequences (shape [N, 50]).
+    """
+    # Ensure sequences are lists if they are tensors (PyTorch or NumPy)
+    
+    item_labels = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+    # Open the HDF5 file in append mode (create if it doesn't exist)
+    with h5py.File('user_popularity_scores.h5', "a") as f:
+        for user_id, user_sequences in zip(user_ids, sequences):
+            # Ensure the group for the user exists
+            if str(user_id) not in f:
+                f.create_group(str(user_id))
+            user_group = f[str(user_id)]
+            filtered_seq = [x for x in user_sequences if x != 0]
+            seq_key = str(filtered_seq)  # Convert sequence to a string key for checking
+            total_weight = 0
+            if seq_key not in user_group:                    
+                # Calculate total_score
+                total_score = 0
+                for idx, item in enumerate(reversed(filtered_seq)):
+                    # Get the popularity label for the item
+                    popularity_label = item_labels.loc[item_labels['item_id:token'] == item, 'popularity_label']
+                    weight = math.pow(alpha, idx)
+                    total_weight += weight
+                    total_score += int(popularity_label.iloc[0]) * weight
+                # Save the sequence and total_score as a dataset and attribute
+                dataset_name = f"seq_{len(user_group)}"
+                dataset = user_group.create_dataset(dataset_name, data=filtered_seq)
+                dataset.attrs["total_score"] = total_score / total_weight
 
 
 
