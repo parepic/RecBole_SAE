@@ -8,3 +8,4 @@ log_tensorboard
 docs/build/
 wandb/*
 /ray_log*
+*.h5
