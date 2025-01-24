@@ -381,7 +381,7 @@ class Trainer(AbstractTrainer):
             + ": %.2fs, "
         ) % (epoch_idx, e_time - s_time)
         if isinstance(losses, tuple):
-            des = set_color("train_loss%d", "blue") + ": %." + str(des) + "f"
+            des = set_color("train_loss4", "blue") + ": %." + "f"
             train_loss_output += ", ".join(
                 des % (idx + 1, loss) for idx, loss in enumerate(losses)
             )
