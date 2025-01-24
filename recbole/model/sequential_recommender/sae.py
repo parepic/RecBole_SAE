@@ -178,7 +178,7 @@ class SAE(nn.Module):
 								We'll extract top-10 recommended items per sample.
 		"""
   
-		utils.save_user_popularity_score(utils.fetch_user_popularity_score(user_ids,sequences))
+		utils.save_batch_user_popularities(utils.fetch_user_popularity_score(user_ids,sequences))
 		utils.save_batch_activations(self.last_activations) 
 
 		# ------------------------

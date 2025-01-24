@@ -240,7 +240,7 @@ class Trainer(AbstractTrainer):
 
         self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
-        total_loss = None
+        print("Device blya ", self.device)
         iter_data = (
             tqdm(
                 train_data,
