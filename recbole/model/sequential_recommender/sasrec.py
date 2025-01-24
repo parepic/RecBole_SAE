@@ -17,6 +17,8 @@ Reference:
 
 import torch
 from torch import nn
+import numpy as np
+from collections import defaultdict
 
 from recbole.model.abstract_recommender import SequentialRecommender
 from recbole.model.layers import TransformerEncoder
@@ -36,7 +38,7 @@ class SASRec(SequentialRecommender):
     def __init__(self, config, dataset):
         super(SASRec, self).__init__(config, dataset)
         self.to(config["device"])
-
+        self.recommendation_count = np.zeros(self.n_items)
         # load parameters info
         self.n_layers = config["n_layers"]
         self.n_heads = config["n_heads"]
@@ -150,4 +152,7 @@ class SASRec(SequentialRecommender):
         seq_output = self.forward(item_seq, item_seq_len)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
+        top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        for key in top_recs:
+            self.recommendation_count[key] += 1
         return scores

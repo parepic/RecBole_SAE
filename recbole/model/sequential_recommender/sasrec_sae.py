@@ -65,7 +65,10 @@ class SASRec_SAE(SASRec):
             seq_output = self.forward(item_seq, item_seq_len)
             test_items_emb = self.item_embedding.weight
             scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-            self.sae_module.update_highest_activations(item_seq, scores)
+            top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+            self.sae_module.update_highest_activations(item_seq, top_recs)
+            for key in top_recs:
+                self.recommendation_count[key] += 1
             return scores
 
     def save_sae(self, path):

@@ -14,13 +14,19 @@ from recbole.utils import (
     init_logger,
     get_model,
     get_trainer,
+    label_popular_items,
     init_seed,
     set_color,
     get_flops,
     get_environment,
+    count
 )
 
+
+
 if __name__ == "__main__":
+    label_popular_items()
+    exit()
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(
@@ -106,3 +112,5 @@ if __name__ == "__main__":
                 valid_data=valid_data,
                 show_progress=True
                 )
+
+

@@ -185,13 +185,6 @@ class SAE(nn.Module):
 		# shapes: [10, hidden_dim]
 
 		# ------------------------
-		# B) For each sample, find top-10 recommended items
-		# ------------------------
-		# e.g. top 10 from each row in recommendations
-		batch_top_recs = torch.argsort(recommendations, dim=1, descending=True)[:, :10]
-		# shape: [batch_size, 10]
-
-		# ------------------------
 		# C) Merge each neuron's top-10
 		# ------------------------
 		for j in range(self.hidden_dim):
@@ -199,7 +192,7 @@ class SAE(nn.Module):
 			new_indices = batch_top_idxs[:, j]         # [10] - indices in this batch
 			new_vals = batch_top_vals[:, j]           # [10]
 			new_seqs = sequences[new_indices]         # [10, seq_len]
-			new_recs = batch_top_recs[new_indices]    # [10, 10]
+			new_recs = recommendations[new_indices]    # [10, 10]
 
 			# 2) Retrieve old top-k from self.highest_activations[j]
 			old_vals = self.highest_activations[j]["values"]           # [<=10]
