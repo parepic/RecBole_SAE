@@ -68,7 +68,7 @@ class SASRec_SAE(SASRec):
             top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
             self.sae_module.update_highest_activations(item_seq, top_recs)
             for key in top_recs:
-                self.recommendation_count[key] += 1
+                self.recommendation_count[key.item()] += 1
             return scores
 
     def save_sae(self, path):
