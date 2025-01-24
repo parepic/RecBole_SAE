@@ -264,7 +264,7 @@ class Trainer(AbstractTrainer):
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 losses = loss_func(interaction)
-                if(batch_idx == 0):
+                if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
                     save_user_popularity_score(0.9, user_ids, item_seq)
