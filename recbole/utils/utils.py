@@ -476,5 +476,50 @@ def get_item_titles(tensor, df):
     
     return result
 
-# file_path = r'\dataset\ml-1m\ml-1m.item' 
-# data = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
+
+def label_popular_items():
+    # Load the data
+    data = pd.read_csv(r'./recbole/dataset/ml-1m/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
+    titles_data = pd.read_csv(r'./recbole/dataset/ml-1m/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
+
+    # Calculate interaction counts per item
+    item_interactions = data['item_id:token'].value_counts().reset_index()
+    item_interactions.columns = ['item_id:token', 'interaction_count']
+
+    # Calculate the thresholds for top 10% and bottom 20%
+    top_threshold = item_interactions['interaction_count'].quantile(0.8)
+    bottom_threshold = item_interactions['interaction_count'].quantile(0.2)
+
+    # Label items as 'popular' (1), 'unpopular' (-1), or 'neutral' (0)
+    def label_popularity(count):
+        if count >= top_threshold:
+            return 1
+        elif count <= bottom_threshold:
+            return -1
+        else:
+            return 0
+
+    item_interactions['popularity_label'] = item_interactions['interaction_count'].apply(label_popularity)
+
+    # Merge with movie titles data to add titles
+    output_df = pd.merge(item_interactions, titles_data, how='left', left_on='item_id:token', right_on='item_id:token')
+
+    # Select relevant columns
+    output_df = output_df[['item_id:token', 'movie_title:token_seq', 'popularity_label', 'interaction_count']]
+
+    # Sort by popularity label and interaction count
+    output_df = output_df.sort_values(by=['popularity_label', 'interaction_count'], ascending=[False, False])
+
+    # Save the output to a CSV file
+    output_df.to_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", index=False)
+
+    print("Popularity labels with titles saved to 'item_popularity_labels_with_titles.csv'")
+
+
+
+def count():
+    df = pd.read_csv(
+        r'./dataset/ml-1m/ml-1m.inter', sep='\t', encoding='latin1'
+    )
+    # print(len(np.unique(df['item_id:token'])))
+    # print(df[df['item_id:token'] == ])

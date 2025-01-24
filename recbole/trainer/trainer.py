@@ -572,16 +572,17 @@ class Trainer(AbstractTrainer):
             if show_progress
             else data
         )
-
         for batch_idx, batched_data in enumerate(iter_data):
             if eval_data:
                 interaction, history_index, positive_u, positive_i = batched_data
             else:
                 interaction = batched_data
             interaction = interaction.to(self.device)
+            # Update the maximum value
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 self.model.full_sort_predict(interaction)
+        
         ending = '_eval' if eval_data else ''
         self.model.sae_module.save_highest_activations(filename='highest_activations' + ending + '.txt' )
     
@@ -828,8 +829,11 @@ class Trainer(AbstractTrainer):
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
+        lt_coverage, coverage = self.evaluator.evaluate_fairness(self.model.recommendation_count)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
+        result['LT_coverage@10'] = lt_coverage
+        result['coverage@10'] = lt_coverage
         self.wandblogger.log_eval_metrics(result, head="eval")
         return result
 

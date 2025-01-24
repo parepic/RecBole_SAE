@@ -123,7 +123,9 @@ class SequentialDataset(Dataset):
         new_dict = {
             self.item_list_length_field: torch.tensor(item_list_length),
         }
-
+        
+        
+        
         for field in self.inter_feat:
             if field != self.uid_field:
                 list_field = getattr(self, f"{field}_list_field")

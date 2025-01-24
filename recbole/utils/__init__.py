@@ -13,12 +13,15 @@ from recbole.utils.utils import (
     get_gpu_usage,
     get_flops,
     list_to_latex,
+    label_popular_items,count
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
 from recbole.utils.wandblogger import WandbLogger
 
 __all__ = [
+    "label_popular_items",
+    "count"
     "init_logger",
     "get_local_time",
     "ensure_dir",
