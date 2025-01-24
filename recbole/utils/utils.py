@@ -479,8 +479,8 @@ def get_item_titles(tensor, df):
 
 def label_popular_items():
     # Load the data
-    data = pd.read_csv(r'./recbole/dataset/ml-1m/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
-    titles_data = pd.read_csv(r'./recbole/dataset/ml-1m/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
+    data = pd.read_csv(r'./dataset/ml-1m/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
+    titles_data = pd.read_csv(r'./dataset/ml-1m/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
 
     # Calculate interaction counts per item
     item_interactions = data['item_id:token'].value_counts().reset_index()
