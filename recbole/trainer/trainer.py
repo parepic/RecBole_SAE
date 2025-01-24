@@ -268,7 +268,6 @@ class Trainer(AbstractTrainer):
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
-                    save_user_popularity_score(0.9, user_ids, item_seq)
         #     if isinstance(losses, tuple):
         #         loss = sum(losses)
         #         loss_tuple = tuple(per_loss.item() for per_loss in losses)
