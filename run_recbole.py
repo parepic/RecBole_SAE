@@ -105,7 +105,6 @@ if __name__ == "__main__":
             data = test_data if args.eval_data else train_data
             trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data)
         elif(args.model == "SASRec_SAE" and args.train):
-            trainer.stopping_step = 20
             trainer.fit_SAE(config, 
                 args.path,
                 train_data,
