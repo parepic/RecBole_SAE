@@ -263,6 +263,24 @@ def load_data_and_model(model_file, device='cuda', sae=True):
     init_seed(config["seed"], config["reproducibility"])
     init_logger(config)
     logger = getLogger()
+    logger = getLogger()
+        
+    logger.setLevel(logging.DEBUG)  # Set the root logger to debug
+
+    # Remove all existing handlers (to prevent duplicate logging)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Create console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)  # Console handler also listens to DEBUG level
+
+    formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s', datefmt='%d-%m-%Y %I:%M:%S %p')
+    console_handler.setFormatter(formatter)
+
+    # Add console handler to the logger
+    logger.addHandler(console_handler)
+    
     logger.info(config)
 
     dataset = create_dataset(config)
