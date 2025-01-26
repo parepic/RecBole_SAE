@@ -252,6 +252,7 @@ def load_data_and_model(model_file, device='cuda', sae=True):
     config["sae_scale_size"] = 128
     config["sae_k"] = 8
     config["sae_lr"] = 1e-4
+    config["valid_metric"] = 'NDCG@10'
     if(device == 'cpu'):
         config.internal_config_dict['use_gpu'] = False
         config.internal_config_dict['gpu_id'] = '-1'
@@ -260,8 +261,8 @@ def load_data_and_model(model_file, device='cuda', sae=True):
         config['device'] = 'cpu'
     if sae:
         config['model'] = 'SASRec_SAE'
-        config['stopping_step'] = 20
-        config['learning_rate'] = 0.0001
+        # config['stopping_step'] = 20
+        # config['learning_rate'] = 0.0001
 
     init_seed(config["seed"], config["reproducibility"])
     init_logger(config)
