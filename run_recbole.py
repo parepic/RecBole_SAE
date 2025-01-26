@@ -19,12 +19,14 @@ from recbole.utils import (
     set_color,
     get_flops,
     get_environment,
-    count
+    count,
+    calculate_pearson_correlation
 )
 
 
 
 if __name__ == "__main__":
+    # count()
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(
@@ -96,13 +98,14 @@ if __name__ == "__main__":
         trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         if(args.test):
             test_result = trainer.evaluate(
-            test_data, model_file=args.path, show_progress=config["show_progress"]
+                test_data, model_file=args.path, show_progress=config["show_progress"]
             )
             print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(valid_data,  model_file=args.path, eval_data=args.eval_data)
+            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data)
         elif(args.model == "SASRec_SAE" and args.train):
+            trainer.stopping_step = 20
             trainer.fit_SAE(config, 
                 args.path,
                 train_data,

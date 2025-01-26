@@ -725,9 +725,7 @@ class Trainer(AbstractTrainer):
                     if verbose:
                         self.logger.info(stop_output)
                     break
-
                 valid_step += 1
-
         self._add_hparam_to_tensorboard(self.best_valid_score)
         return self.best_valid_score, self.best_valid_result
 

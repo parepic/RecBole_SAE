@@ -570,43 +570,40 @@ def fetch_user_popularity_score(user_ids, sequences):
     Returns:
         list: A list of total scores for the provided sequences.
     """
+    sequences = [seq.cpu().numpy().tolist() for seq in sequences]
+    user_ids = [id.item() for id in user_ids]
+    count = 1
     total_scores = []
     file_path = r"./dataset/ml-1m/user_popularity_scores.h5"
     with h5py.File(file_path, "r") as f:
         for user_id, user_sequences in zip(user_ids, sequences):
+            user_id = str(user_id)
             if user_id in f:
-                user_id = str(user_id)
                 user_group = f[user_id]
-
-                for seq in user_sequences:
-                    # Convert the sequence to string or hash to match the storage format
-                    seq_key = str(seq)
-
-                    # Search for the sequence in the group
-                    for dataset_name in user_group:
-                        stored_sequence = user_group[dataset_name][:]
-
-                        if list(stored_sequence) == list(seq):  # Match sequence
-                            total_score = user_group[dataset_name].attrs.get("total_score", None)
-                            total_scores.append(total_score)
-                            break
+                # Search for the sequence in the group
+                for dataset_name in user_group:
+                    stored_sequence = user_group[dataset_name][:]
+                    filtered_seq = [x for x in user_sequences if x != 0]
+                    if list(stored_sequence) == list(filtered_seq):  # Match sequence
+                        total_score = user_group[dataset_name].attrs.get("total_score", None)
+                        total_scores.append(total_score)
+                        break
             else:
                 print(f"User ID {user_id} not found in the HDF5 file.")
-
+    print(len(total_scores))
     return total_scores
-
-
 
 
 def save_batch_activations(bulk_data):
     """
-    Saves a bulk of data (shape 4096 x 2024) to the HDF5 file, appending it to each row.
+    Saves a bulk of data (shape 4096 x 4096) to the HDF5 file, appending it to each row.
 
     Args:
         file_path (str): Path to the HDF5 file.
-        bulk_data (numpy.ndarray): A 2D NumPy array of shape (4096, 2024) to append.
+        bulk_data (numpy.ndarray): A 2D NumPy array of shape (4096, 4096) to append.
     """
-    
+    print(bulk_data.shape)
+    bulk_data = bulk_data.permute(1, 0)
     file_path = r"./dataset/ml-1m/neuron_activations.h5"
     with h5py.File(file_path, "a") as f:
         if "dataset" not in f:
@@ -616,13 +613,14 @@ def save_batch_activations(bulk_data):
                 "dataset",
                 data=bulk_data,
                 maxshape=max_shape,
-                chunks=(4096, 2024),  # Optimize chunk size for appending
+                chunks=(4096, 2048),  # Optimize chunk size for appending
                 dtype="float32",
             )
         else:
             # Resize the dataset to accommodate the new data
             dataset = f["dataset"]
             current_cols = dataset.shape[1]
+            print(current_cols)
             new_cols = current_cols + bulk_data.shape[1]
             dataset.resize((4096, new_cols))
             
@@ -653,6 +651,7 @@ def save_batch_user_popularities(bulk_data):
                 dtype="float32"
             )
         else:
+
             # Resize and append to the existing dataset
             dataset = f["dataset"]
             current_size = dataset.shape[0]
@@ -671,18 +670,17 @@ def calculate_pearson_correlation():
         output_csv_path (str): Path to save the resultant CSV file (shape (N,)).
     """
     
-    file1_path = r"./dataset/ml-1m/user_popularity_scores.h5"
+    file1_path = r"./dataset/ml-1m/neuron_activations.h5"
     file2_path = r"./dataset/ml-1m/user_scores.h5"
     output_csv_path = r"./dataset/ml-1m/correlations.csv"
     # Load the data from the HDF5 files
     with h5py.File(file1_path, "r") as f1, h5py.File(file2_path, "r") as f2:
-        dataset1 = f1["dataset"][:]  # Shape (N, F)
         dataset2 = f2["dataset"][:]  # Shape (F,)
+        dataset1 = f1["dataset"][:]  # Shape (F
 
     # Validate the shapes
     if dataset1.shape[1] != dataset2.shape[0]:
         raise ValueError("The number of features (F) in file1 must match the length of the dataset in file2.")
-
     # Calculate Pearson correlation for each row in dataset1 with dataset2
     correlations = []
     for row in dataset1:
@@ -695,10 +693,31 @@ def calculate_pearson_correlation():
     print(f"Pearson correlations saved to {output_csv_path}")
     return correlations
 
-            
+
+import matplotlib.pyplot as plt
+
 def count():
-    df = pd.read_csv(
-        r'./dataset/ml-1m/ml-1m.inter', sep='\t', encoding='latin1'
-    )
+    file_path = r"./dataset/ml-1m/correlations.csv"  # Replace with your file path
+    df = pd.read_csv(file_path)
+
+    # Assuming the column is unnamed or you know the column name
+    column_name = df.columns[0]  # Use the first column or specify the column name
+
+    # Sort the column by its values in descending order
+    df_sorted = df.sort_values(by=column_name, ascending=False).reset_index(drop=True)
+
+    # Plot the sorted values
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_sorted.index, df_sorted[column_name], marker='o', linestyle='-', label='Values')
+    plt.xlabel('Index (Sorted)')
+    plt.ylabel('Value')
+    plt.title('Sorted Values Chart')
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    # df = pd.read_csv(
+    #     r'./dataset/ml-1m/ml-1m.inter', sep='\t', encoding='latin1'
+    # )
     # print(len(np.unique(df['item_id:token'])))
     # print(df[df['item_id:token'] == ])
