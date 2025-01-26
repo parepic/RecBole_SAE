@@ -24,7 +24,7 @@ class SAE(nn.Module):
 	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
 		self.k = config["sae_k"]
-		self.scale_size = 64
+		self.scale_size = config["sae_scale_size"]
 		self.user_pop_scores = []
 		self.device = config["device"]
 		self.dtype = torch.float32
