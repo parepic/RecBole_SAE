@@ -261,7 +261,7 @@ def load_data_and_model(model_file, device='cuda', sae=True):
         config['device'] = 'cpu'
     if sae:
         config['model'] = 'SASRec_SAE'
-        # config['stopping_step'] = 20
+        config['stopping_step'] = 25
         # config['learning_rate'] = 0.0001
 
     init_seed(config["seed"], config["reproducibility"])
