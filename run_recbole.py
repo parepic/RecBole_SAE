@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset", "-d", type=str, default="ml-1m", help="name of datasets"
     )
-    parser.add_argument("--config_files", type=str, default=None, help="config files")
+    parser.add_argument("--config_files", type=str, default=one, help="config files")
     parser.add_argument(
         "--nproc", type=int, default=1, help="the number of process in this group"
     )
