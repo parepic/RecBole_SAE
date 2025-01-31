@@ -11,5 +11,5 @@ loss_type: 'CE'                 # (str) The type of loss function. Range in ['BP
 
 
 sae_lr: 1e-4
-sae_k: 8
+sae_k: 16
 sae_scale_size: 64
