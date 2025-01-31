@@ -179,7 +179,7 @@ class SAE(nn.Module):
 		"""
   
 		utils.save_batch_user_popularities(utils.fetch_user_popularity_score(user_ids,sequences))
-		# utils.save_batch_activations(self.last_actisvations) 
+		utils.save_batch_activations(self.last_activations) 
 
 		# ------------------------
 		# A) Get top-10 per neuron (column)
