@@ -27,6 +27,7 @@ from recbole.utils import (
 
 if __name__ == "__main__":
     # count()
+    # exit()
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(

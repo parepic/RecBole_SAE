@@ -702,22 +702,23 @@ def count():
 
     # Assuming the column is unnamed or you know the column name
     column_name = df.columns[0]  # Use the first column or specify the column name
-
-    # Sort the column by its values in descending order
-    df_sorted = df.sort_values(by=column_name, ascending=False).reset_index(drop=True)
-
-    # Plot the sorted values
+    
+    # Define bins ranging from -0.4 to 0.4 with a step of 0.05
+    bins = np.arange(-0.4, 0.45, 0.05)
+    
+    # Plot histogram
     plt.figure(figsize=(10, 6))
-    plt.plot(df_sorted.index, df_sorted[column_name], marker='o', linestyle='-', label='Values')
-    plt.xlabel('Index (Sorted)')
-    plt.ylabel('Value')
-    plt.title('Sorted Values Chart')
-    plt.grid()
-    plt.legend()
+    plt.hist(df[column_name], bins=bins, edgecolor='black', alpha=0.7)
+    
+    # Labels and title
+    plt.xlabel('Activation Bins')
+    plt.ylabel('Count')
+    plt.title('Histogram of Activations')
+    
+    # Grid and layout
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.xticks(bins, rotation=45)
     plt.tight_layout()
+    
+    # Show plot
     plt.show()
-    # df = pd.read_csv(
-    #     r'./dataset/ml-1m/ml-1m.inter', sep='\t', encoding='latin1'
-    # )
-    # print(len(np.unique(df['item_id:token'])))
-    # print(df[df['item_id:token'] == ])
