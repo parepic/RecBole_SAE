@@ -19,7 +19,8 @@ from recbole.utils.utils import (
     calculate_pearson_correlation,
     fetch_user_popularity_score,
     save_batch_activations,
-    save_batch_user_popularities
+    save_batch_user_popularities,
+    get_extreme_correlations
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -59,5 +60,6 @@ __all__ = [
     "calculate_pearson_correlation",
     "fetch_user_popularity_score",
     "save_batch_activations",
-    "save_batch_user_popularities"
+    "save_batch_user_popularities",
+    "get_extreme_correlations"
 ]

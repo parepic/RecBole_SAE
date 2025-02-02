@@ -58,7 +58,10 @@ if __name__ == "__main__":
     parser.add_argument('--train', action='store_true', help="Flag to indicate whether to train the model.")
     parser.add_argument('--test', action='store_true', help="Flag to indicate whether to test the model.")
     parser.add_argument('--eval_data', action='store_true', help="Flag to indicate whether to test the model.")
-
+    parser.add_argument('--corr_file', '-c', type=str, required=False, help="Name of csv file containing correlation values")
+    parser.add_argument('--neuron_count', '-n', type=int, required=False, help="Number of neurons to dampen")
+    parser.add_argument('--damp_percent', '-dp', type=float, required=False, help="Damping percentage for popular/unpopular neurons")
+    parser.add_argument('--unpopular_only', '-u', action='store_true', help="Flag to indicate whether to dampen only unpopular neurons.")
     parser.add_argument('--save_neurons', '-s', action='store_true', help="Flag to indicate whether to save SAE activations.")
 
     # Parse the arguments
@@ -98,10 +101,18 @@ if __name__ == "__main__":
         )  
         trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         if(args.test):
+            # if(args.corr_file):
+            #     test_result = trainer.dampen_neurons(
+            #         train_data, model_file=args.path, show_progress=config["show_progress"], eval_data=args.eval_data,
+            #         corr_file=args.corr_file, neuron_count=args.neuron_count,
+            #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
+            #     )            
+            
             test_result = trainer.evaluate(
                 test_data, model_file=args.path, show_progress=config["show_progress"]
             )
             print(test_result)
+            
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
             trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data)
@@ -113,5 +124,8 @@ if __name__ == "__main__":
                 valid_data=valid_data,
                 show_progress=True
                 )
-
-
+            
+def create_graphs():
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+    )  
