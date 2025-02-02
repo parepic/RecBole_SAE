@@ -23,7 +23,7 @@ class SAE(nn.Module):
 	
 	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
-		self.k = 32
+		self.k = 8
 		self.scale_size = config["sae_scale_size"]
 		self.neuron_count = None
 		self.damp_percent = None
