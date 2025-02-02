@@ -696,6 +696,26 @@ def calculate_pearson_correlation():
 
 import matplotlib.pyplot as plt
 
+def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
+    # Load CSV file
+    file_path = r"./dataset/ml-1m/" + file_name
+    df = pd.read_csv(file_path)
+    
+    # Assuming the column name is unknown, take the first column
+    column_name = df.columns[0]
+    values = df[column_name]
+    
+    # Get indexes of highest and lowest n/2 values
+    highest_indexes = values.nlargest(5).index.tolist()
+    lowest_indexes = values.nsmallest(n).index.tolist()
+    
+    if unpopular_only:
+        return lowest_indexes
+    
+    return highest_indexes, lowest_indexes
+
+
+
 def count():
     file_path = r"./dataset/ml-1m/correlations.csv"  # Replace with your file path
     df = pd.read_csv(file_path)

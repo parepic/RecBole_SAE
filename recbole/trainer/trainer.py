@@ -541,6 +541,7 @@ class Trainer(AbstractTrainer):
                 valid_step += 1
             # end_train = time()
             # print(f"Training took {(start_train - end_train) / 60} minutes")
+    
     @torch.no_grad()
     def save_neuron_activations(
         self, data, model_file=None, show_progress=True, eval_data=True
@@ -593,8 +594,61 @@ class Trainer(AbstractTrainer):
         
         ending = '_eval' if eval_data else ''
         self.model.sae_module.save_highest_activations(filename='highest_activations' + ending + '.txt' )
-        
     
+    
+    @torch.no_grad()
+    def dampen_neurons(
+        self, data, model_file=None, show_progress=True, eval_data=True, corr_file=None,
+        neuron_count=20, damp_percent=0.1, unpopular_only=False 
+    ):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+            show_progress (bool): Show the progress of evaluate epoch. Defaults to ``False``.
+
+        Returns:
+            collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
+        """
+        
+        checkpoint_file = model_file
+        checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        self.model.load_state_dict(checkpoint["state_dict"])
+        self.model.load_other_parameter(checkpoint.get("other_parameter"))
+        self.device = torch.device(self.device)
+
+        message_output = "Loading model structure and parameters from {}".format(
+            checkpoint_file
+        )
+        self.logger.info(message_output)
+        self.model.eval()
+        iter_data = (
+            tqdm(
+                data,
+                total=len(data),
+                ncols=100,
+            )
+            if show_progress
+            else data
+        )
+        for batch_idx, batched_data in enumerate(iter_data):
+            if eval_data:
+                interaction, history_index, positive_u, positive_i = batched_data
+            else:
+                interaction = batched_data
+            interaction = interaction.to(self.device)
+            # Update the maximum value
+            self.optimizer.zero_grad()
+            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
+                self.model.sae_module.set_dampen_hyperparam(corr_file=corr_file, neuron_count=neuron_count, 
+                                                            damp_percent=damp_percent, unpopular_only=unpopular_only)
+                scores = self.model.full_sort_predict(interaction)
+    
+        
     def fit_SAE(
         self,
         config,
@@ -794,7 +848,6 @@ class Trainer(AbstractTrainer):
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
             self.model.load_state_dict(checkpoint["state_dict"])
             self.model.load_other_parameter(checkpoint.get("other_parameter"))
-                
             message_output = "Loading model structure and parameters from {}".format(
                 checkpoint_file
             )
@@ -823,6 +876,8 @@ class Trainer(AbstractTrainer):
         )
 
         num_sample = 0
+        # self.model.sae_module.set_dampen_hyperparam(corr_file='correlations.csv', neuron_count=1000, 
+        #                                     damp_percent=2.5, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)

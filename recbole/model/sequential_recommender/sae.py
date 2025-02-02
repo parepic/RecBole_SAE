@@ -23,8 +23,12 @@ class SAE(nn.Module):
 	
 	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
-		self.k = config["sae_k"]
+		self.k = 32
 		self.scale_size = config["sae_scale_size"]
+		self.neuron_count = None
+		self.damp_percent = None
+		self.unpopular_only = False
+		self.corr_file = None
 		self.user_pop_scores = []
 		self.device = config["device"]
 		self.dtype = torch.float32
@@ -55,6 +59,12 @@ class SAE(nn.Module):
 
 		return
 
+	def set_dampen_hyperparam(self, corr_file=None, neuron_count=20, damp_percent=0.1, unpopular_only=False ):
+		self.corr_file = corr_file
+		self.neuron_count = neuron_count
+		self.damp_percent = damp_percent
+		self.unpopular_only = unpopular_only
+  
 	def get_dead_latent_ratio(self, need_update = 0):
 		ans =  1 - len(self.activate_latents)/self.hidden_dim
 		# only update training situation for auxk_loss
@@ -97,6 +107,7 @@ class SAE(nn.Module):
 		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
 		return sparse_x
 
+		
 
 	def update_topk_recommendations(self, predictions, current_sequences, k=10):
 		"""
@@ -125,12 +136,22 @@ class SAE(nn.Module):
      
 					# Update the recommendations for this sequence
 					data["recommendations"].append(topk_indices.tolist())
-			c = 6
-   
-   
+
+	def dampen_neurons(self, pre_acts):
+		if self.unpopular_only:        
+			unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
+			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)
+		else:
+			pop_idxs, unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
+			pre_acts[:, pop_idxs] *= (1 - self.damp_percent)
+			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)
+		return pre_acts	
+  
 	def forward(self, x, sequences=None, train_mode=False, save_result=False):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
+		if self.corr_file:
+			pre_acts = self.dampen_neurons(pre_acts)
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 		x_reconstructed = z @ self.W_dec + self.b_dec
 

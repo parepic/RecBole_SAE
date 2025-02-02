@@ -14,7 +14,6 @@ class SASRec_SAE(SASRec):
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
         self.to(config["device"])
-
         for param in self.parameters():
             param.requires_grad = False  # Freeze all parameters
 
@@ -23,7 +22,7 @@ class SASRec_SAE(SASRec):
 
 
     def set_sae_mode(self, mode):
-        if mode in ['train', 'test', 'inference']:
+        if mode in ['train', 'test', 'dampened']:
             self.mode = mode
         else:
             raise ValueError(f"Invalid mode {mode} set for SASRec_SAE")
