@@ -7,6 +7,8 @@
 # @Author : Zhen Tian, Yupeng Hou, Zihan Lin
 # @Email  : chenyuwuxinn@gmail.com, houyupeng@ruc.edu.cn, zhlin@ruc.edu.cn
 
+import matplotlib.pyplot as plt
+import numpy as np
 import argparse
 import torch
 from recbole.quick_start import run_recbole, load_data_and_model, run
@@ -24,7 +26,98 @@ from recbole.utils import (
 )
 
 
+def plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs):
+    bar_width = 0.2  # Width of each bar
+    # dampen_percs = [x + 1 for x in dampen_percs]
+    index = np.arange(len(dampen_percs) + 1)  # X-axis positions for groups, adding 'sasrec'
+    
+    plt.figure(figsize=(10, 6))
+    # Hardcoded first set of bars for 'sasrec'
+    ndcgs = [0.1168] + ndcgs
+    hits = [0.2296] + hits
+    coverages = [0.6180] + coverages
+    lt_coverages = [0.5228] + lt_coverages
+    dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
+    
+    plt.bar(index, ndcgs, bar_width, label='NDCG@10')
+    plt.bar(index + bar_width, hits, bar_width, label='Hit@10')
+    plt.bar(index + 2 * bar_width, coverages, bar_width, label='Coverage@10')
+    plt.bar(index + 3 * bar_width, lt_coverages, bar_width, label='LT Coverage@10')
+    
+    # Add trend lines starting from the top of each respective bar
+    plt.plot(index, ndcgs, marker='o', linestyle='--', color='blue', linewidth=2, label='NDCG@10 Trend')
+    plt.plot(index + bar_width, hits, marker='o', linestyle='--', color='orange', linewidth=2, label='Hit@10 Trend')
+    plt.plot(index + 2 * bar_width, coverages, marker='o', linestyle='--', color='green', linewidth=2, label='Coverage@10 Trend')
+    plt.plot(index + 3 * bar_width, lt_coverages, marker='o', linestyle='--', color='red', linewidth=2, label='LT Coverage@10 Trend')
+    
+    plt.xlabel('Dampen Percentage')
+    plt.ylabel('Values')
+    plt.title('Performance Metrics by Dampen Percentage')
+    
+    plt.xticks(index + 1.5 * bar_width, dampen_labels)
+    plt.legend()
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
 
+
+import pandas as pd
+from IPython.display import display
+
+
+def calculate_percentage_change(new_values, base_value):
+    print(new_values)
+    return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
+
+def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
+    # Hardcoded first row for 'sasrec'
+    base_values = {
+        'NDCG@10': 0.1168,
+        'Hit@10': 0.2296,
+        'Coverage@10': 0.6180,
+        'LT Coverage@10': 0.5228
+    }
+    
+    dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
+    
+    data = {
+        'Damped neurons': dampen_labels,
+        'NDCG@10': [f"{base_values['NDCG@10']:.4f} (-)" ] + calculate_percentage_change(ndcgs, base_values['NDCG@10']),
+        'Hit@10': [f"{base_values['Hit@10']:.4f} (-)" ] + calculate_percentage_change(hits, base_values['Hit@10']),
+        'Coverage@10': [f"{base_values['Coverage@10']:.4f} (-)" ] + calculate_percentage_change(coverages, base_values['Coverage@10']),
+        'LT Coverage@10': [f"{base_values['LT Coverage@10']:.4f} (-)" ] + calculate_percentage_change(lt_coverages, base_values['LT Coverage@10'])
+    }
+    df = pd.DataFrame(data)
+    
+    # Display table
+    display(df)
+
+def create_visualizations():
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+    )  
+    ndcgs = []
+    hits = []
+    coverages = []
+    lt_coverages = []
+    dampen_percs = []
+    dampen_perc = 200
+    while dampen_perc <= 1400:
+        test_result = trainer.evaluate(
+            test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
+        )
+        
+        ndcgs.append(test_result['ndcg@10'])
+        hits.append(test_result['hit@10'])
+        coverages.append(test_result['coverage@10'])
+        lt_coverages.append(test_result['LT_coverage@10'])
+        dampen_percs.append(dampen_perc)
+        print(test_result['ndcg@10'])
+        print(test_result['coverage@10'])
+        dampen_perc += 200
+    plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs)
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages)
+    
+    
 if __name__ == "__main__":
     # count()
     # exit()
@@ -107,11 +200,11 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            
-            test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"]
-            )
-            print(test_result)
+            create_visualizations()
+            # test_result = trainer.evaluate(
+            #     test_data, model_file=args.path, show_progress=config["show_progress"]
+            # )
+            # print(test_result)
             
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
@@ -125,7 +218,3 @@ if __name__ == "__main__":
                 show_progress=True
                 )
             
-def create_graphs():
-    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-    )  
