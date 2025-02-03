@@ -706,7 +706,7 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
     values = df[column_name]
     
     # Get indexes of highest and lowest n/2 values
-    highest_indexes = values.nlargest(5).index.tolist()
+    highest_indexes = values.nlargest(n).index.tolist()
     lowest_indexes = values.nsmallest(n).index.tolist()
     
     if unpopular_only:

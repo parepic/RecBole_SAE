@@ -23,7 +23,7 @@ class SAE(nn.Module):
 	
 	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
-		self.k = 32
+		self.k = 64
 		self.scale_size = config["sae_scale_size"]
 		self.neuron_count = None
 		self.damp_percent = None
@@ -140,7 +140,8 @@ class SAE(nn.Module):
 	def dampen_neurons(self, pre_acts):
 		if self.unpopular_only:        
 			unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
-			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)
+			# unpop_idxs = [x + 2 for x in unpop_idxs]
+			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)	
 		else:
 			pop_idxs, unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
 			pre_acts[:, pop_idxs] *= (1 - self.damp_percent)
