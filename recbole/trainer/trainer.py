@@ -876,8 +876,8 @@ class Trainer(AbstractTrainer):
         )
 
         num_sample = 0
-        self.model.sae_module.set_dampen_hyperparam(corr_file='correlations.csv', neuron_count=1000, 
-                                            damp_percent=dampen_perc, unpopular_only=True)
+        # self.model.sae_module.set_dampen_hyperparam(corr_file='correlations.csv', neuron_count=1000, 
+        #                                     damp_percent=dampen_perc, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
