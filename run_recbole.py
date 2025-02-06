@@ -179,7 +179,7 @@ if __name__ == "__main__":
         }   
         run(
             'SASRec',
-            'gowalla',
+            'Amazon_Beauty',
             config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
