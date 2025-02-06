@@ -161,7 +161,9 @@ class Collector(object):
             mask = torch.full_like(scores_tensor, False, dtype=torch.bool)
     
             # Scatter True values at the specified indices
-            batch_indices = torch.arange(B).unsqueeze(1).expand(-1, 50)
+            item_seq_len = interaction['item_id_list'].shape[1]
+
+            batch_indices = torch.arange(B).unsqueeze(1).expand(-1, item_seq_len)
             mask[batch_indices, interaction['item_id_list']] = True
             
             # Apply mask
