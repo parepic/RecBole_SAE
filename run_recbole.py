@@ -179,7 +179,7 @@ if __name__ == "__main__":
         }   
         run(
             'SASRec',
-            'ml-1m',
+            'epinions',
             config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,

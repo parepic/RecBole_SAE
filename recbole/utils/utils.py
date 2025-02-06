@@ -563,36 +563,46 @@ def fetch_user_popularity_score(user_ids, sequences):
     Fetches the total scores for the given user IDs and their sequences from the HDF5 file.
 
     Args:
-        file_path (str): Path to the HDF5 file.
         user_ids (list): List of user IDs to fetch.
         sequences (list): List of sequences corresponding to the user IDs.
 
     Returns:
         list: A list of total scores for the provided sequences.
     """
-    sequences = [seq.cpu().numpy().tolist() for seq in sequences]
-    user_ids = [id.item() for id in user_ids]
-    count = 1
+    # Convert sequences and user_ids from tensor to native Python types.
+    sequences = [seq.cpu().numpy() for seq in sequences]
+    user_ids = [uid.item() for uid in user_ids]
+
     total_scores = []
     file_path = r"./dataset/ml-1m/user_popularity_scores.h5"
+
     with h5py.File(file_path, "r") as f:
-        for user_id, user_sequences in zip(user_ids, sequences):
-            user_id = str(user_id)
-            if user_id in f:
-                user_group = f[user_id]
-                # Search for the sequence in the group
-                for dataset_name in user_group:
-                    stored_sequence = user_group[dataset_name][:]
-                    filtered_seq = [x for x in user_sequences if x != 0]
-                    if list(stored_sequence) == list(filtered_seq):  # Match sequence
-                        total_score = user_group[dataset_name].attrs.get("total_score", None)
-                        total_scores.append(total_score)
-                        break
-            else:
-                print(f"User ID {user_id} not found in the HDF5 file.")
+        for uid, seq in zip(user_ids, sequences):
+            uid_str = str(uid)
+            if uid_str not in f:
+                print(f"User ID {uid_str} not found in the HDF5 file.")
+                continue
+
+            user_group = f[uid_str]
+            # Compute the filtered sequence once for the user (removing zeros)
+            filtered_seq = np.array([x for x in seq if x != 0])
+
+            # Option 1: Iterate through datasets and compare using numpy
+            found = False
+            for ds_name in user_group:
+                stored_seq = user_group[ds_name][:]
+                # First check the shape before doing an element-wise comparison
+                if stored_seq.shape == filtered_seq.shape and np.array_equal(stored_seq, filtered_seq):
+                    total_score = user_group[ds_name].attrs.get("total_score", None)
+                    total_scores.append(total_score)
+                    found = True
+                    break
+
+            if not found:
+                print(f"Sequence {filtered_seq.tolist()} not found for user {uid_str}.")
+                
     print(len(total_scores))
     return total_scores
-
 
 def save_batch_activations(bulk_data):
     """
