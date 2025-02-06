@@ -171,7 +171,8 @@ if __name__ == "__main__":
                 args.config_files.strip().split(" ") if args.config_files else None
             )
         parameter_dict = {
-            'train_neg_sample_args': None
+            'train_neg_sample_args': None,
+             
             # 'sae_k': 8,
             # 'sae_scale_size': 32,
             # 'sae_lr':1e-3
@@ -199,11 +200,11 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            create_visualizations()
-            # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"]
-            # )
-            # print(test_result)
+            # create_visualizations()
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"]
+            )
+            print(test_result)
             
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
