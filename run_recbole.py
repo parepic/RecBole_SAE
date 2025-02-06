@@ -33,8 +33,10 @@ def plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs):
     
     plt.figure(figsize=(10, 6))
     # Hardcoded first set of bars for 'sasrec'
-    ndcgs = [0.1168] + ndcgs
-    hits = [0.2296] + hits
+    
+    
+    ndcgs = [0.1573] + ndcgs
+    hits = [0.2805] + hits
     coverages = [0.6180] + coverages
     lt_coverages = [0.5228] + lt_coverages
     dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
@@ -71,8 +73,8 @@ def calculate_percentage_change(new_values, base_value):
 def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
     # Hardcoded first row for 'sasrec'
     base_values = {
-        'NDCG@10': 0.1168,
-        'Hit@10': 0.2296,
+        'NDCG@10': 0.1573,
+        'Hit@10': 0.2805,
         'Coverage@10': 0.6180,
         'LT Coverage@10': 0.5228
     }
@@ -100,12 +102,11 @@ def create_visualizations():
     coverages = []
     lt_coverages = []
     dampen_percs = []
-    dampen_perc = 200
-    while dampen_perc <= 1400:
+    dampen_perc = 0
+    while dampen_perc <= 1.5:
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
-        
         ndcgs.append(test_result['ndcg@10'])
         hits.append(test_result['hit@10'])
         coverages.append(test_result['coverage@10'])
@@ -113,14 +114,12 @@ def create_visualizations():
         dampen_percs.append(dampen_perc)
         print(test_result['ndcg@10'])
         print(test_result['coverage@10'])
-        dampen_perc += 200
+        dampen_perc += 0.2
     plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs)
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages)
     
     
 if __name__ == "__main__":
-    # count()
-    # exit()
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(
