@@ -1,7 +1,3 @@
-user_id:token	item_id:token
-ua	ia
-ub	ib
-uc	ic
-ud	id
-ue	ie
-uf	if
+version https://git-lfs.github.com/spec/v1
+oid sha256:0fb5acd70ab0c8a2d5fdaad9ef33c619481d87df612e72cd614546cc205e9705
+size 69

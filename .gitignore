@@ -10,3 +10,5 @@ wandb/*
 /ray_log*
 *.h5
 dataset/ml-1m/correlations.csv
+dataset/retailrocket-view/*
+dataset/lastfm/*

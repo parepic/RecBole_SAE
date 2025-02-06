@@ -1,19 +1,3 @@
-user_id:token	item_id:token	timestamp:float
-1	1	1
-1	2	2
-1	3	3
-1	4	4
-1	5	5
-1	6	6
-1	7	7
-1	8	8
-2	4	4
-2	5	5
-2	6	6
-2	7	7
-2	8	8
-3	4	4
-3	5	5
-3	6	6
-4	3	3
-4	4	4
+version https://git-lfs.github.com/spec/v1
+oid sha256:8bcb70aabf5a1c63e3a264ef9b619a0ed825adec30aba4354e00fea41940e1dc
+size 169

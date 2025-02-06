@@ -1,5 +1,3 @@
-user_id:token	item_id:token	add_user:token	add_item:token	user_list:token_seq
-ua	ia	ub	ie	uc ue
-ub	ib	ue	ic	
-uc	ic	ud	if	ua ub uc
-ud	id	uf	ia	uf
+version https://git-lfs.github.com/spec/v1
+oid sha256:da70be6b53c24d5ac042fc66caa79d739490f69791b26d62e7651df4abb4c74c
+size 148
