@@ -25,6 +25,8 @@ from recbole.model.layers import TransformerEncoder
 from recbole.model.loss import BPRLoss
 
 
+import pandas as pd
+
 class SASRec(SequentialRecommender):
     r"""
     SASRec is the first sequential recommender based on self-attentive mechanism.
@@ -108,10 +110,25 @@ class SASRec(SequentialRecommender):
         input_emb = self.dropout(input_emb)
 
         extended_attention_mask = self.get_attention_mask(item_seq)
+        
+        file_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+        # Load the CSV file into a DataFrame
+        df = pd.read_csv(file_path)
 
+        # Create a dictionary for fast lookup (item_id → popularity_label)
+        lookup_dict = dict(zip(df['item_id:token'], df['popularity_label']))
+        tensor_np = item_seq.numpy()
+
+        # Vectorized lookup with explicit condition: return 1 if popularity_label is 1, else 0
+        lookup_func = np.vectorize(lambda x: 1 if lookup_dict.get(x, 0) == 1 else 0)
+        print(lookup_dict)
+        result_np = lookup_func(tensor_np)
+
+        # Convert back to PyTorch tensor        
         trm_output = self.trm_encoder(
-            input_emb, extended_attention_mask, output_all_encoded_layers=True
+            input_emb, extended_attention_mask, output_all_encoded_layers=True, label = result_np
         )
+        
         output = trm_output[-1]
         output = self.gather_indexes(output, item_seq_len - 1)
         return output  # [B H]
@@ -120,8 +137,6 @@ class SASRec(SequentialRecommender):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
-        if((item_seq == 3707).any()):
-            print("Suka blya here!")
         pos_items = interaction[self.POS_ITEM_ID]
         if self.loss_type == "BPR":
             neg_items = interaction[self.NEG_ITEM_ID]

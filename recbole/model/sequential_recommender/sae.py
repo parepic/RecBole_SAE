@@ -138,10 +138,27 @@ class SAE(nn.Module):
 					data["recommendations"].append(topk_indices.tolist())
 
 	def dampen_neurons(self, pre_acts):
-		if self.unpopular_only:        
-			unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
-			# unpop_idxs = [x + 2 for x in unpop_idxs]
-			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)	
+		if self.unpopular_only:
+			
+			unpop_indexes, unpop_values = zip(*utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
+			scale_values = torch.tensor(np.maximum(np.minimum(self.damp_percent * np.abs(unpop_values), 1.2), 0.4), device=self.device)
+			print(scale_values)
+   			# differences = utils.get_difference_values(unpop_idxs)
+			# # Convert to PyTorch tensors
+			# unpop_idxs = torch.tensor(unpop_idxs, dtype=torch.long, device=self.device)  # Ensure correct indexing type
+			# differences = torch.tensor(differences, dtype=pre_acts.dtype, device=self.device)  # Ensure correct dtype & device
+			# scale = (1 - differences * self.damp_percent)
+			# print(differences)  # Debugging
+
+			# # Reshape differences to match pre_acts[:, unpop_idxs] for broadcasting
+			# differences = differences.view(1, -1)  # Reshape to (1, F) where F = len(unpop_idxs)
+
+			# # Create a mask where pre_acts is not zero
+			# mask = pre_acts[:, unpop_idxs] != 0  # Boolean mask
+
+			# Apply the operation only where pre_acts is nonzero
+			pre_acts[:, unpop_indexes] *= (1 + scale_values)  # Element-wise masking
+
 		else:
 			pop_idxs, unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
 			pre_acts[:, pop_idxs] *= (1 - self.damp_percent)

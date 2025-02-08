@@ -707,7 +707,18 @@ def calculate_pearson_correlation():
 import matplotlib.pyplot as plt
 
 def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
-    # Load CSV file
+    """
+    Retrieves the highest and lowest correlation indexes and their values.
+    
+    Parameters:
+    file_name (str): CSV file name containing correlation values.
+    n (int): Number of extreme values to retrieve.
+    unpopular_only (bool): Whether to return only the lowest values.
+    
+    Returns:
+    list or tuple: If unpopular_only is True, returns a list of lowest indexes and their values.
+                   Otherwise, returns a tuple of (highest_indexes, highest_values, lowest_indexes, lowest_values).
+    """
     file_path = r"./dataset/ml-1m/" + file_name
     df = pd.read_csv(file_path)
     
@@ -715,14 +726,20 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
     column_name = df.columns[0]
     values = df[column_name]
     
-    # Get indexes of highest and lowest n/2 values
-    highest_indexes = values.nlargest(n).index.tolist()
-    lowest_indexes = values.nsmallest(n).index.tolist()
+    # Get indexes and values of highest and lowest n/2 values
+    highest = values.nlargest(n)
+    lowest = values.nsmallest(n)
+    
+    highest_indexes = highest.index.tolist()
+    highest_values = highest.tolist()
+    lowest_indexes = lowest.index.tolist()
+    lowest_values = lowest.tolist()
     
     if unpopular_only:
-        return lowest_indexes
+        return list(zip(lowest_indexes, lowest_values))
     
-    return highest_indexes, lowest_indexes
+    return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
+
 
 
 
@@ -752,3 +769,56 @@ def count():
     
     # Show plot
     plt.show()
+
+
+def compute_averages(output_file="output_averages.csv"): 
+    """
+    Computes the average values for all 4096 elements in A based on labels in C,
+    and appends the results to a CSV file. If the file does not exist, it is created.
+    
+    Parameters:
+    output_file (str): Path to save the resulting CSV file.
+    """
+    file1_path = r"./dataset/ml-1m/neuron_activations.h5"
+    file2_path = r"./dataset/ml-1m/user_scores.h5"
+    
+    with h5py.File(file1_path, "r") as f1, h5py.File(file2_path, "r") as f2:
+        dataset1 = f1["dataset"][:]  # Shape (4096, N)
+        dataset2 = f2["dataset"][:]  # Shape (N,)
+    
+    # Step 1: Create list D based on conditions
+    D = np.where(dataset2 < 0.3, -1, np.where(dataset2 > 0.7, 1, 0))
+    
+    # Step 2: Compute averages for each row in dataset1 based on D values
+    valid_neg = D == -1
+    valid_pos = D == 1
+    
+    avg_neg = np.where(np.any(valid_neg, axis=0), np.mean(dataset1[:, valid_neg], axis=1), 0)
+    avg_pos = np.where(np.any(valid_pos, axis=0), np.mean(dataset1[:, valid_pos], axis=1), 0)
+    diff = avg_pos - avg_neg
+    
+    # Combine results
+    Y = np.column_stack((avg_neg, avg_pos, diff))
+    
+    # Convert to DataFrame
+    df_Y = pd.DataFrame(Y, columns=["Avg (-1)", "Avg (1)", "Difference"])
+    
+    # Append to CSV file, creating it if it does not exist
+    df_Y.to_csv(output_file, mode='a', header=not os.path.exists(output_file), index=False)
+    
+    print(f"Results appended to {output_file}")
+
+
+def get_difference_values(indexes, csv_file="output_averages.csv"):
+    """
+    Given an array of indexes, returns an array with 'Difference' values for the given indexes.
+    
+    Parameters:
+    indexes (np.ndarray): Array of indexes to retrieve values for.
+    csv_file (str): Path to the CSV file containing precomputed values.
+    
+    Returns:
+    np.ndarray: Array of 'Difference' values corresponding to the given indexes.
+    """
+    df = pd.read_csv(csv_file)
+    return df.iloc[indexes]["Difference"].values
