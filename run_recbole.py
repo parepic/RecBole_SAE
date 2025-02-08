@@ -22,7 +22,8 @@ from recbole.utils import (
     get_flops,
     get_environment,
     count,
-    calculate_pearson_correlation
+    calculate_pearson_correlation,
+    compute_averages
 )
 
 
@@ -35,10 +36,10 @@ def plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs):
     # Hardcoded first set of bars for 'sasrec'
     
     
-    ndcgs = [0.1573] + ndcgs
-    hits = [0.2805] + hits
-    coverages = [0.6180] + coverages
-    lt_coverages = [0.5228] + lt_coverages
+    ndcgs = [0.1589] + ndcgs
+    hits = [0.279] + hits
+    coverages = [0.627] + coverages
+    lt_coverages = [0.535] + lt_coverages
     dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
     
     plt.bar(index, ndcgs, bar_width, label='NDCG@10')
@@ -73,10 +74,10 @@ def calculate_percentage_change(new_values, base_value):
 def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
     # Hardcoded first row for 'sasrec'
     base_values = {
-        'NDCG@10': 0.1573,
-        'Hit@10': 0.2805,
-        'Coverage@10': 0.6180,
-        'LT Coverage@10': 0.5228
+        'NDCG@10': 0.1589,
+        'Hit@10': 0.279,
+        'Coverage@10': 0.627,
+        'LT Coverage@10': 0.535
     }
     
     dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
@@ -120,7 +121,10 @@ def create_visualizations():
     
     
 if __name__ == "__main__":
+    # compute_averages()
+    # exit()
     parser = argparse.ArgumentParser()
+    
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(
         "--dataset", "-d", type=str, default="ml-1m", help="name of datasets"

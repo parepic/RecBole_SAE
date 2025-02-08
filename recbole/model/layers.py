@@ -389,6 +389,11 @@ class VanillaAttention(nn.Module):
         return hidden_states, weights
 
 
+import torch
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
 class MultiHeadAttention(nn.Module):
     """
     Multi-head Self-attention layers, a attention score dropout layer is introduced.
@@ -441,7 +446,9 @@ class MultiHeadAttention(nn.Module):
         x = x.view(*new_x_shape)
         return x
 
-    def forward(self, input_tensor, attention_mask):
+
+    def forward(self, input_tensor, attention_mask, idx, label=None):
+        
         mixed_query_layer = self.query(input_tensor)
         mixed_key_layer = self.key(input_tensor)
         mixed_value_layer = self.value(input_tensor)
@@ -458,7 +465,10 @@ class MultiHeadAttention(nn.Module):
         # [batch_size heads seq_len seq_len] scores
         # [batch_size 1 1 seq_len]
         attention_scores = attention_scores + attention_mask
-
+        # attention_scores = self.steer_attention(attention_scores, label)   
+        # if(idx == 0):
+        #     attention_scores = self.steer_attention(attention_scores, label) 
+        #     attention_scores = self.steer_attention2(attention_scores, label) 
         # Normalize the attention scores to probabilities.
         attention_probs = self.softmax(attention_scores)
         # This is actually dropping out entire tokens to attend to, which might
@@ -472,10 +482,133 @@ class MultiHeadAttention(nn.Module):
         hidden_states = self.dense(context_layer)
         hidden_states = self.out_dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        # if(idx == 0):
+        #     self.visualize_attention(attention_probs, label)
 
         return hidden_states
 
 
+    def visualize_attention(self, attention_probs, label):
+        """
+        Visualizes all attention scores batch-wise and head-wise.
+
+        :param attention_probs: The attention scores tensor of shape [batch_size, num_heads, seq_len, seq_len]
+        """
+        
+        batch_size, num_heads, seq_len, _ = attention_probs.shape
+        total_plots = batch_size * num_heads  # 4096 × 2 = 8192 plots
+
+        for batch_idx in range(batch_size):
+            for head_idx in range(num_heads):
+                attn = attention_probs[batch_idx, head_idx].detach().cpu().numpy()
+                print("SUKA ", label[batch_idx])
+                plt.figure(figsize=(8, 6))
+                sns.heatmap(attn, cmap="viridis", annot=False)
+                plt.xlabel("Key Positions")
+                plt.ylabel("Query Positions")
+                plt.title(f"Batch {batch_idx}, Head {head_idx}")
+                plt.show()
+
+
+
+    def steer_attention2(self, attention_scores, labels, alpha=0.1):
+            """
+            Modify attention scores using conditional scaling:
+            - If positive, dampen by multiplying with alpha.
+            - If negative, amplify by multiplying with (2 - alpha).
+
+            Parameters:
+            - attention_scores: Tensor of shape [B, 2, N, N], representing attention matrices.
+            - labels: NumPy array of shape [B, N], where 0 indicates emphasized tokens.
+            - alpha: Scaling factor for non-emphasized tokens.
+
+            Returns:
+            - Updated attention_scores tensor with adjusted values for the first head.
+            """
+            # Clone the attention scores to avoid modifying in-place
+            new_attention_scores = attention_scores.clone()
+
+            # Extract the first head: Shape [B, N, N]
+            attn_first_head = new_attention_scores[:, 1, :, :]
+
+            # Convert labels to PyTorch tensor for indexing
+            labels_tensor = torch.from_numpy(labels).to(attention_scores.device)  # Shape [B, N]
+
+            # Create masks for emphasized and non-emphasized tokens
+            emphasize_mask = (labels_tensor == 0).unsqueeze(1)  # Shape [B, 1, N] for broadcasting
+            non_emphasize_mask = ~emphasize_mask  # Shape [B, 1, N]
+
+            # Apply conditional scaling to non-emphasized tokens
+            pos_mask = attn_first_head > 0
+            neg_mask = attn_first_head < 0
+
+            attn_first_head = torch.where(
+                non_emphasize_mask & pos_mask,  # If non-emphasized AND positive
+                alpha * attn_first_head,  # Dampen positive values
+                attn_first_head
+            )
+
+            attn_first_head = torch.where(
+                non_emphasize_mask & neg_mask,  # If non-emphasized AND negative
+                attn_first_head / alpha,  # Amplify negative values
+                attn_first_head
+            )
+
+            # Store the modified first head back into the full tensor
+            new_attention_scores[:, 1, :, :] = attn_first_head
+
+            return new_attention_scores  # Return full tensor
+
+
+    def steer_attention(self, attention_scores, labels, alpha=0.1):
+        """
+        Modify attention scores using conditional scaling:
+        - If positive, dampen by multiplying with alpha.
+        - If negative, amplify by multiplying with (2 - alpha).
+
+        Parameters:
+        - attention_scores: Tensor of shape [B, 2, N, N], representing attention matrices.
+        - labels: NumPy array of shape [B, N], where 0 indicates emphasized tokens.
+        - alpha: Scaling factor for non-emphasized tokens.
+
+        Returns:
+        - Updated attention_scores tensor with adjusted values for the first head.
+        """
+        # Clone the attention scores to avoid modifying in-place
+        new_attention_scores = attention_scores.clone()
+
+        # Extract the first head: Shape [B, N, N]
+        attn_first_head = new_attention_scores[:, 0, :, :]
+
+        # Convert labels to PyTorch tensor for indexing
+        labels_tensor = torch.from_numpy(labels).to(attention_scores.device)  # Shape [B, N]
+
+        # Create masks for emphasized and non-emphasized tokens
+        emphasize_mask = (labels_tensor == 0).unsqueeze(1)  # Shape [B, 1, N] for broadcasting
+        non_emphasize_mask = ~emphasize_mask  # Shape [B, 1, N]
+
+        # Apply conditional scaling to non-emphasized tokens
+        pos_mask = attn_first_head > 0
+        neg_mask = attn_first_head < 0
+
+        attn_first_head = torch.where(
+            non_emphasize_mask & pos_mask,  # If non-emphasized AND positive
+            alpha * attn_first_head,  # Dampen positive values
+            attn_first_head
+        )
+
+        attn_first_head = torch.where(
+            non_emphasize_mask & neg_mask,  # If non-emphasized AND negative
+            attn_first_head / alpha,  # Amplify negative values
+            attn_first_head
+        )
+
+        # Store the modified first head back into the full tensor
+        new_attention_scores[:, 0, :, :] = attn_first_head
+
+        return new_attention_scores  # Return full tensor
+
+    
 class FeedForward(nn.Module):
     """
     Point-wise feed-forward layer is implemented by two dense layers.
@@ -570,8 +703,9 @@ class TransformerLayer(nn.Module):
             layer_norm_eps,
         )
 
-    def forward(self, hidden_states, attention_mask):
-        attention_output = self.multi_head_attention(hidden_states, attention_mask)
+    def forward(self, hidden_states, attention_mask, idx, label=None):
+        
+        attention_output = self.multi_head_attention(hidden_states, attention_mask, idx, label=label)
         feedforward_output = self.feed_forward(attention_output)
         return feedforward_output
 
@@ -615,7 +749,7 @@ class TransformerEncoder(nn.Module):
         )
         self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(n_layers)])
 
-    def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True):
+    def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True, label=None):
         """
         Args:
             hidden_states (torch.Tensor): the input of the TransformerEncoder
@@ -625,11 +759,10 @@ class TransformerEncoder(nn.Module):
         Returns:
             all_encoder_layers (list): if output_all_encoded_layers is True, return a list consists of all transformer
             layers' output, otherwise return a list only consists of the output of last transformer layer.
-
         """
         all_encoder_layers = []
-        for layer_module in self.layer:
-            hidden_states = layer_module(hidden_states, attention_mask)
+        for idx, layer_module in enumerate(self.layer):
+            hidden_states = layer_module(hidden_states, attention_mask, idx, label=label)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
         if not output_all_encoded_layers:

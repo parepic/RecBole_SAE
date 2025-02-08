@@ -599,7 +599,7 @@ class Trainer(AbstractTrainer):
     # @torch.no_grad()
     # def dampen_neurons(
     #     self, data, model_file=None, show_progress=True, eval_data=True, corr_file=None,
-    #     neuron_count=20, damp_percent=0.1, unpopular_only=False 
+    #     neuron_count=z20, damp_percent=0.1, unpopular_only=False 
     # ):
     #     r"""Evaluate the model based on the eval data.
 
@@ -877,7 +877,7 @@ class Trainer(AbstractTrainer):
 
         num_sample = 0
         # self.model.sae_module.set_dampen_hyperparam(corr_file='correlations.csv', neuron_count=1000, 
-        #                                     damp_percent=dampen_perc, unpopular_only=True)
+        #                                     damp_percent=2, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
