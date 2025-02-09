@@ -30,17 +30,12 @@ from recbole.utils import (
 def plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs):
     bar_width = 0.2  # Width of each bar
     # dampen_percs = [x + 1 for x in dampen_percs]
-    index = np.arange(len(dampen_percs) + 1)  # X-axis positions for groups, adding 'sasrec'
+    index = np.arange(len(dampen_percs))  # X-axis positions for groups, adding 'sasrec'
     
     plt.figure(figsize=(10, 6))
     # Hardcoded first set of bars for 'sasrec'
     
-    
-    ndcgs = [0.1589] + ndcgs
-    hits = [0.279] + hits
-    coverages = [0.627] + coverages
-    lt_coverages = [0.535] + lt_coverages
-    dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
+    dampen_labels =  [f'{dp}' for dp in dampen_percs]
     
     plt.bar(index, ndcgs, bar_width, label='NDCG@10')
     plt.bar(index + bar_width, hits, bar_width, label='Hit@10')
@@ -68,26 +63,18 @@ from IPython.display import display
 
 
 def calculate_percentage_change(new_values, base_value):
-    print(new_values)
     return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
 
 def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
     # Hardcoded first row for 'sasrec'
-    base_values = {
-        'NDCG@10': 0.1589,
-        'Hit@10': 0.279,
-        'Coverage@10': 0.627,
-        'LT Coverage@10': 0.535
-    }
-    
-    dampen_labels = ['sasrec'] + [f'{dp}' for dp in dampen_percs]
+    dampen_labels = [f'{dp}' for dp in dampen_percs]
     
     data = {
         'Damped neurons': dampen_labels,
-        'NDCG@10': [f"{base_values['NDCG@10']:.4f} (-)" ] + calculate_percentage_change(ndcgs, base_values['NDCG@10']),
-        'Hit@10': [f"{base_values['Hit@10']:.4f} (-)" ] + calculate_percentage_change(hits, base_values['Hit@10']),
-        'Coverage@10': [f"{base_values['Coverage@10']:.4f} (-)" ] + calculate_percentage_change(coverages, base_values['Coverage@10']),
-        'LT Coverage@10': [f"{base_values['LT Coverage@10']:.4f} (-)" ] + calculate_percentage_change(lt_coverages, base_values['LT Coverage@10'])
+        'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[3]),
+        'Hit@10': calculate_percentage_change(hits, hits[3]),
+        'Coverage@10': calculate_percentage_change(coverages, coverages[3]),
+        'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[3])
     }
     df = pd.DataFrame(data)
     
@@ -103,8 +90,8 @@ def create_visualizations():
     coverages = []
     lt_coverages = []
     dampen_percs = []
-    dampen_perc = 0
-    while dampen_perc <= 1.5:
+    dampen_perc = 1000
+    for i in range(10):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
@@ -115,9 +102,9 @@ def create_visualizations():
         dampen_percs.append(dampen_perc)
         print(test_result['ndcg@10'])
         print(test_result['coverage@10'])
-        dampen_perc += 0.2
-    plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs)
+        dampen_perc = dampen_perc / 10.0
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages)
+    plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs)
     
     
 if __name__ == "__main__":
@@ -204,11 +191,11 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            # create_visualizations()
-            test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"]
-            )
-            print(test_result)
+            create_visualizations()
+            # test_result = trainer.evaluate(
+            #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
+            # )
+            # print(test_result)
             
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
