@@ -85,6 +85,7 @@ def create_visualizations():
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     ndcgs = []
     hits = []
     coverages = []
@@ -191,11 +192,11 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            create_visualizations()
-            # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
-            # )
-            # print(test_result)
+            # create_visualizations()
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
+            )
+            print(test_result)
             
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
