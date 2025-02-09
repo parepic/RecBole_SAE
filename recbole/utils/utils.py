@@ -488,8 +488,8 @@ def label_popular_items():
     item_interactions.columns = ['item_id:token', 'interaction_count']
 
     # Calculate the thresholds for top 10% and bottom 20%
-    top_threshold = item_interactions['interaction_count'].quantile(0.9)
-    bottom_threshold = item_interactions['interaction_count'].quantile(0.1)
+    top_threshold = item_interactions['interaction_count'].quantile(0.8)
+    bottom_threshold = item_interactions['interaction_count'].quantile(0.2)
 
     # Label items as 'popular' (1), 'unpopular' (-1), or 'neutral' (0)
     def label_popularity(count):
@@ -823,7 +823,7 @@ def remove_sparse_users_items():
     # -------------------------------
     # 2. Iterative Filtering
     # -------------------------------
-    min_interactions = 5
+    min_interactions = 2
 
     # We'll iterate until the number of interactions/users doesn't change.
     prev_interactions_count = -1
