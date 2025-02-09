@@ -825,7 +825,7 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def evaluate(
-        self, eval_data, load_best_model=True, model_file=None, show_progress=False, dampen_perc=0.5
+        self, eval_data, load_best_model=True, model_file=None, show_progress=False, dampen_perc=1
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -854,7 +854,7 @@ class Trainer(AbstractTrainer):
             self.logger.info(message_output)
 
         self.model.eval()
-
+        self.model.dampen_perc = dampen_perc
         if isinstance(eval_data, FullSortEvalDataLoader):
             eval_func = self._full_sort_batch_eval
             if self.item_tensor is None:

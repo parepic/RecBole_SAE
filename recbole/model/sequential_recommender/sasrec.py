@@ -55,7 +55,7 @@ class SASRec(SequentialRecommender):
 
         self.initializer_range = config["initializer_range"]
         self.loss_type = config["loss_type"]
-
+        self.dampen_perc = 1
         # define layers and loss
         self.item_embedding = nn.Embedding(
             self.n_items, self.hidden_size, padding_idx=0
@@ -110,23 +110,24 @@ class SASRec(SequentialRecommender):
         input_emb = self.dropout(input_emb)
 
         extended_attention_mask = self.get_attention_mask(item_seq)
-        
-        # file_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
-        # # Load the CSV file into a DataFrame
-        # df = pd.read_csv(file_path)
+        result_np = None
+        if self.dampen_perc != 1:
+            file_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+            # Load the CSV file into a DataFrame
+            df = pd.read_csv(file_path)
 
-        # # Create a dictionary for fast lookup (item_id → popularity_label)
-        # lookup_dict = dict(zip(df['item_id:token'], df['popularity_label']))
-        # tensor_np = item_seq.numpy()
+            # Create a dictionary for fast lookup (item_id → popularity_label)
+            lookup_dict = dict(zip(df['item_id:token'], df['popularity_label']))
+            tensor_np = item_seq.numpy()
 
-        # # Vectorized lookup with explicit condition: return 1 if popularity_label is 1, else 0
-        # lookup_func = np.vectorize(lambda x: 1 if lookup_dict.get(x, 0) == 1 else 0)
-        # print(lookup_dict)
-        # result_np = lookup_func(tensor_np)
+            # Vectorized lookup with explicit condition: return 1 if popularity_label is 1, else 0
+            lookup_func = np.vectorize(lambda x: 1 if lookup_dict.get(x, 0) == 1 else 0)
+            # print(lookup_dict)
+            result_np = lookup_func(tensor_np)
 
         # Convert back to PyTorch tensor        
         trm_output = self.trm_encoder(
-            input_emb, extended_attention_mask, output_all_encoded_layers=True, label = None
+            input_emb, extended_attention_mask, output_all_encoded_layers=True, label = result_np, dampen_perc=self.dampen_perc
         )
         
         output = trm_output[-1]

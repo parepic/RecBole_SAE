@@ -447,7 +447,7 @@ class MultiHeadAttention(nn.Module):
         return x
 
 
-    def forward(self, input_tensor, attention_mask, idx, label=None):
+    def forward(self, input_tensor, attention_mask, idx, label=None, alpha=1):
         
         mixed_query_layer = self.query(input_tensor)
         mixed_key_layer = self.key(input_tensor)
@@ -466,9 +466,9 @@ class MultiHeadAttention(nn.Module):
         # [batch_size 1 1 seq_len]
         attention_scores = attention_scores + attention_mask
         # attention_scores = self.steer_attention(attention_scores, label)   
-        # if(idx == 0):
-        #     attention_scores = self.steer_attention(attention_scores, label) 
-        #     attention_scores = self.steer_attention2(attention_scores, label) 
+        if(alpha != 1 and idx == 0):
+            attention_scores = self.steer_attention1(attention_scores, label, alpha=alpha) 
+            attention_scores = self.steer_attention2(attention_scores, label, alpha=alpha) 
         # Normalize the attention scores to probabilities.
         attention_probs = self.softmax(attention_scores)
         # This is actually dropping out entire tokens to attend to, which might
@@ -501,7 +501,7 @@ class MultiHeadAttention(nn.Module):
         for batch_idx in range(batch_size):
             for head_idx in range(num_heads):
                 attn = attention_probs[batch_idx, head_idx].detach().cpu().numpy()
-                print("SUKA ", label[batch_idx])
+                # print("SUKA ", label[batch_idx])
                 plt.figure(figsize=(8, 6))
                 sns.heatmap(attn, cmap="viridis", annot=False)
                 plt.xlabel("Key Positions")
@@ -511,7 +511,7 @@ class MultiHeadAttention(nn.Module):
 
 
 
-    def steer_attention2(self, attention_scores, labels, alpha=0.1):
+    def steer_attention2(self, attention_scores, labels, alpha=1):
             """
             Modify attention scores using conditional scaling:
             - If positive, dampen by multiplying with alpha.
@@ -560,7 +560,7 @@ class MultiHeadAttention(nn.Module):
             return new_attention_scores  # Return full tensor
 
 
-    def steer_attention(self, attention_scores, labels, alpha=0.1):
+    def steer_attention1(self, attention_scores, labels, alpha=1):
         """
         Modify attention scores using conditional scaling:
         - If positive, dampen by multiplying with alpha.
@@ -703,9 +703,9 @@ class TransformerLayer(nn.Module):
             layer_norm_eps,
         )
 
-    def forward(self, hidden_states, attention_mask, idx, label=None):
+    def forward(self, hidden_states, attention_mask, idx, label=None, dampen_perc=0):
         
-        attention_output = self.multi_head_attention(hidden_states, attention_mask, idx, label=label)
+        attention_output = self.multi_head_attention(hidden_states, attention_mask, idx, label=label, alpha=dampen_perc)
         feedforward_output = self.feed_forward(attention_output)
         return feedforward_output
 
@@ -749,7 +749,7 @@ class TransformerEncoder(nn.Module):
         )
         self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(n_layers)])
 
-    def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True, label=None):
+    def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True, label=None, dampen_perc=0):
         """
         Args:
             hidden_states (torch.Tensor): the input of the TransformerEncoder
@@ -762,7 +762,7 @@ class TransformerEncoder(nn.Module):
         """
         all_encoder_layers = []
         for idx, layer_module in enumerate(self.layer):
-            hidden_states = layer_module(hidden_states, attention_mask, idx, label=label)
+            hidden_states = layer_module(hidden_states, attention_mask, idx, label=label, dampen_perc=dampen_perc)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
         if not output_all_encoded_layers:
