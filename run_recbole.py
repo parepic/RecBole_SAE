@@ -110,8 +110,8 @@ def create_visualizations():
     
     
 if __name__ == "__main__":
-    label_popular_items()
-    exit()
+    # label_popular_items()
+    # exit()
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
