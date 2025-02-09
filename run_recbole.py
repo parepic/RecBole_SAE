@@ -23,7 +23,8 @@ from recbole.utils import (
     get_environment,
     count,
     calculate_pearson_correlation,
-    compute_averages
+    compute_averages,
+    remove_sparse_users_items
 )
 
 
@@ -109,8 +110,8 @@ def create_visualizations():
     
     
 if __name__ == "__main__":
-    # label_popular_items()
-    # exit()
+    label_popular_items()
+    exit()
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
@@ -181,10 +182,10 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         if(args.test):
             # if(args.corr_file):
             #     test_result = trainer.dampen_neurons(
