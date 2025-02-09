@@ -71,10 +71,10 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
     
     data = {
         'Damped neurons': dampen_labels,
-        'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[3]),
-        'Hit@10': calculate_percentage_change(hits, hits[3]),
-        'Coverage@10': calculate_percentage_change(coverages, coverages[3]),
-        'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[3])
+        'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[0]),
+        'Hit@10': calculate_percentage_change(hits, hits[0]),
+        'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
+        'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0])
     }
     df = pd.DataFrame(data)
     
@@ -91,8 +91,8 @@ def create_visualizations():
     coverages = []
     lt_coverages = []
     dampen_percs = []
-    dampen_perc = 1000
-    for i in range(10):
+    dampen_perc = 1
+    for i in range(12):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
