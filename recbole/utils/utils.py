@@ -823,7 +823,7 @@ def remove_sparse_users_items():
     # -------------------------------
     # 2. Iterative Filtering
     # -------------------------------
-    min_interactions = 2
+    min_interactions = 3
 
     # We'll iterate until the number of interactions/users doesn't change.
     prev_interactions_count = -1
