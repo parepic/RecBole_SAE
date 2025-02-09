@@ -118,7 +118,7 @@ class SASRec(SequentialRecommender):
 
             # Create a dictionary for fast lookup (item_id → popularity_label)
             lookup_dict = dict(zip(df['item_id:token'], df['popularity_label']))
-            tensor_np = item_seq.numpy()
+            tensor_np = item_seq.cpu().numpy()
 
             # Vectorized lookup with explicit condition: return 1 if popularity_label is 1, else 0
             lookup_func = np.vectorize(lambda x: 1 if lookup_dict.get(x, 0) == 1 else 0)
