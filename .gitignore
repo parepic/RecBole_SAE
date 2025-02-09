@@ -12,3 +12,4 @@ wandb/*
 dataset/ml-1m/correlations.csv
 dataset/retailrocket-view/*
 dataset/lastfm/*
+recbole/saved/SASRec-Feb-09-2025_Beauty.pth

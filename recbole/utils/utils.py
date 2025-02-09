@@ -488,8 +488,8 @@ def label_popular_items():
     item_interactions.columns = ['item_id:token', 'interaction_count']
 
     # Calculate the thresholds for top 10% and bottom 20%
-    top_threshold = item_interactions['interaction_count'].quantile(0.8)
-    bottom_threshold = item_interactions['interaction_count'].quantile(0.2)
+    top_threshold = item_interactions['interaction_count'].quantile(0.9)
+    bottom_threshold = item_interactions['interaction_count'].quantile(0.1)
 
     # Label items as 'popular' (1), 'unpopular' (-1), or 'neutral' (0)
     def label_popularity(count):
@@ -744,31 +744,19 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
 
 
 def count():
-    file_path = r"./dataset/ml-1m/correlations.csv"  # Replace with your file path
+    file_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv" 
     df = pd.read_csv(file_path)
 
-    # Assuming the column is unnamed or you know the column name
-    column_name = df.columns[0]  # Use the first column or specify the column name
-    
-    # Define bins ranging from -0.4 to 0.4 with a step of 0.05
-    bins = np.arange(-0.4, 0.45, 0.05)
-    
-    # Plot histogram
-    plt.figure(figsize=(10, 6))
-    plt.hist(df[column_name], bins=bins, edgecolor='black', alpha=0.7)
-    
-    # Labels and title
-    plt.xlabel('Activation Bins')
-    plt.ylabel('Count')
-    plt.title('Histogram of Activations')
-    
-    # Grid and layout
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.xticks(bins, rotation=45)
-    plt.tight_layout()
-    
-    # Show plot
-    plt.show()
+    # Sum interaction_count where popularity_label == 1
+    popular_sum = df[df['popularity_label'] == 1]['interaction_count'].sum()
+
+    # Sum interaction_count for the rest of the dataset
+    non_popular_sum = df[df['popularity_label'] != 1]['interaction_count'].sum()
+
+    # Print results
+    print(f"Sum of interaction_count where popularity_label == 1: {popular_sum}")
+    print(f"Sum of interaction_count for the rest: {non_popular_sum}")
+
 
 
 def compute_averages(output_file="output_averages.csv"): 
@@ -822,3 +810,65 @@ def get_difference_values(indexes, csv_file="output_averages.csv"):
     """
     df = pd.read_csv(csv_file)
     return df.iloc[indexes]["Difference"].values
+
+
+def remove_sparse_users_items():
+    interactions_file = r"./dataset/Amazon_Beauty/Amazon_Beauty_old.inter"
+    items_file = r"./dataset/Amazon_Beauty/Amazon_Beauty_old.item"
+
+    # Load interactions and items data
+    df_inter = pd.read_csv(interactions_file, sep='\t')
+    df_item = pd.read_csv(items_file, sep='\t')
+
+    # -------------------------------
+    # 2. Iterative Filtering
+    # -------------------------------
+    min_interactions = 5
+
+    # We'll iterate until the number of interactions/users doesn't change.
+    prev_interactions_count = -1
+    prev_users_count = -1
+
+    while True:
+        # --- Filter Items ---
+        # Count interactions per item
+        item_counts = df_inter['item_id:token'].value_counts()
+        # Identify items with at least min_interactions
+        valid_items = item_counts[item_counts >= min_interactions].index
+        # Filter interactions DataFrame to keep only valid items
+        df_inter = df_inter[df_inter['item_id:token'].isin(valid_items)]
+
+        # --- Filter Users ---
+        # Count interactions per user
+        user_counts = df_inter['user_id:token'].value_counts()
+        # Identify users with at least min_interactions
+        valid_users = user_counts[user_counts >= min_interactions].index
+        # Filter interactions DataFrame to keep only valid users
+        df_inter = df_inter[df_inter['user_id:token'].isin(valid_users)]
+
+        # Check for convergence
+        current_interactions_count = df_inter.shape[0]
+        current_users_count = df_inter['user_id:token'].nunique()
+
+        if (current_interactions_count == prev_interactions_count) and (current_users_count == prev_users_count):
+            break  # No further changes
+        else:
+            prev_interactions_count = current_interactions_count
+            prev_users_count = current_users_count
+
+    # -------------------------------
+    # 3. Update the Items DataFrame
+    # -------------------------------
+    # Keep only items that still appear in the interactions DataFrame
+    df_item = df_item[df_item['item_id:token'].isin(df_inter['item_id:token'].unique())]
+
+    # -------------------------------
+    # 4. (Optional) Save the Filtered Data
+    # -------------------------------
+    df_inter.to_csv('Amazon_Beauty.inter', index=False, sep='\t')
+    df_item.to_csv('Amazon_Beauty.item', index=False, sep='\t')
+
+    print("Filtering complete:")
+    print(f" - Interactions: {df_inter.shape[0]} records")
+    print(f" - Users: {df_inter['user_id:token'].nunique()} unique users")
+    print(f" - Items: {df_item.shape[0]} records")
