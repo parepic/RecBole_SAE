@@ -1167,10 +1167,10 @@ class Dataset(torch.utils.data.Dataset):
         for alias in self.alias.values():
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
-            # if(alias == 'item_id'):
-            #     self.remap_item_data( r'./dataset/ml-1m/ml-1m.item', r'./dataset/ml-1m/please_work.csv',
-            #                           r'./dataset/ml-1m/ml-1m.inter', r'./dataset/ml-1m/interactions_mapped.csv'
-            #                          )
+            if(alias == 'item_id'):
+                self.remap_item_data( r'./dataset/Amazon_Beauty/Amazon_Beauty.item', r'./dataset/Amazon_Beauty/items_remapped.csv',
+                                      r'./dataset/Amazon_Beauty/Amazon_Beauty.inter', r'./dataset/Amazon_Beauty/interactions_remapped.csv'
+                                     )
 
         for field in self._rest_fields:
             remap_list = self._get_remap_list(np.array([field]))

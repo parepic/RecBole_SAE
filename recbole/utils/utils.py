@@ -480,8 +480,8 @@ def get_item_titles(tensor, df):
 
 def label_popular_items():
     # Load the data
-    data = pd.read_csv(r'./dataset/ml-1m/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
-    titles_data = pd.read_csv(r'./dataset/ml-1m/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
+    data = pd.read_csv(r'./dataset/Amazon_Beauty/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
+    titles_data = pd.read_csv(r'./dataset/Amazon_Beauty/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
 
     # Calculate interaction counts per item
     item_interactions = data['item_id:token'].value_counts().reset_index()
@@ -506,13 +506,13 @@ def label_popular_items():
     output_df = pd.merge(item_interactions, titles_data, how='left', left_on='item_id:token', right_on='item_id:token')
 
     # Select relevant columns
-    output_df = output_df[['item_id:token', 'movie_title:token_seq', 'popularity_label', 'interaction_count']]
+    output_df = output_df[['item_id:token', 'title:token', 'popularity_label', 'interaction_count']]
 
     # Sort by popularity label and interaction count
     output_df = output_df.sort_values(by=['popularity_label', 'interaction_count'], ascending=[False, False])
 
     # Save the output to a CSV file
-    output_df.to_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", index=False)
+    output_df.to_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv", index=False)
 
     print("Popularity labels with titles saved to 'item_popularity_labels_with_titles.csv'")
 
