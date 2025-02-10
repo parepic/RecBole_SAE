@@ -1167,10 +1167,10 @@ class Dataset(torch.utils.data.Dataset):
         for alias in self.alias.values():
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
-            if(alias == 'item_id'):
-                self.remap_item_data( r'./dataset/steam/steam.item', r'./dataset/steam/items_remapped.csv',
-                                      r'./dataset/steam/steam.inter', r'./dataset/steam/interactions_remapped.csv'
-                                     )
+            # if(alias == 'item_id'):
+            #     self.remap_item_data( r'./dataset/steam/steam.item', r'./dataset/steam/items_remapped.csv',
+            #                           r'./dataset/steam/steam.inter', r'./dataset/steam/interactions_remapped.csv'
+            #                          )
 
         for field in self._rest_fields:
             remap_list = self._get_remap_list(np.array([field]))
