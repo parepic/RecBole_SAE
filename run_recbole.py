@@ -99,7 +99,7 @@ def create_visualizations():
     dampen_percs = []
     ginis = []
     dampen_perc = 0
-    for i in range(5):
+    for i in range(6):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
