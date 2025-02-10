@@ -896,7 +896,7 @@ class Trainer(AbstractTrainer):
             result = self._map_reduce(result, num_sample)
         result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
-        result['Gini_coef@10'] = fairness_dict['Gini_coef@10@']
+        result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
         
         self.wandblogger.log_eval_metrics(result, head="eval")
         return result
