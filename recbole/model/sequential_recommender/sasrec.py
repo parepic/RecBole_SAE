@@ -111,8 +111,8 @@ class SASRec(SequentialRecommender):
 
         extended_attention_mask = self.get_attention_mask(item_seq)
         result_np = None
-        if self.dampen_perc != 0:
-            file_path = r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv"
+        if self.dampen_perc != 1:
+            file_path = r"./dataset/steam/item_popularity_labels_with_titles.csv"
             # Load the CSV file into a DataFrame
             df = pd.read_csv(file_path)
 
