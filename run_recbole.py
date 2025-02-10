@@ -66,7 +66,7 @@ from IPython.display import display
 def calculate_percentage_change(new_values, base_value):
     return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
 
-def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
+def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, ginis):
     # Hardcoded first row for 'sasrec'
     dampen_labels = [f'{dp}' for dp in dampen_percs]
     
@@ -75,7 +75,8 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages):
         'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[0]),
         'Hit@10': calculate_percentage_change(hits, hits[0]),
         'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
-        'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0])
+        'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
+        'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0])
     }
     df = pd.DataFrame(data)
     
@@ -92,6 +93,7 @@ def create_visualizations():
     coverages = []
     lt_coverages = []
     dampen_percs = []
+    ginis = []
     dampen_perc = 1
     for i in range(12):
         test_result = trainer.evaluate(
@@ -101,12 +103,13 @@ def create_visualizations():
         hits.append(test_result['hit@10'])
         coverages.append(test_result['coverage@10'])
         lt_coverages.append(test_result['LT_coverage@10'])
+        ginis.append(test_result['Gini_coef@10'])
         dampen_percs.append(dampen_perc)
         print(test_result['ndcg@10'])
         print(test_result['coverage@10'])
         dampen_perc = dampen_perc / 10.0
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages)
-    plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs)
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, ginis)
+    # plot_graphs(ndcgs, hits, coverages, lt_coverages, ginis, dampen_percs)
     
     
 if __name__ == "__main__":

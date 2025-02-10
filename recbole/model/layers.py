@@ -466,7 +466,7 @@ class MultiHeadAttention(nn.Module):
         # [batch_size 1 1 seq_len]
         attention_scores = attention_scores + attention_mask
         # attention_scores = self.steer_attention(attention_scores, label)   
-        if(alpha != 1):
+        if(alpha != 1 and idx == 0):
             attention_scores = self.steer_attention1(attention_scores, label, alpha=alpha) 
             attention_scores = self.steer_attention2(attention_scores, label, alpha=alpha) 
         # Normalize the attention scores to probabilities.
