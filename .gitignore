@@ -13,4 +13,7 @@ dataset/ml-1m/correlations.csv
 dataset/retailrocket-view/*
 dataset/lastfm/*
 recbole/saved/SASRec-Feb-09-2025_Beauty.pth
-dataset/lfm1b-artists/
+dataset/lfm1b-artists/lfm1b-artists_unsparsed.inter
+dataset/lfm1b-artists/lfm1b-artists_unsparsed.item
+dataset/lfm1b-artists/lfm1b-artists.inter
+dataset/lfm1b-artists/interactions_remapped.csv

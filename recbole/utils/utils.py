@@ -480,8 +480,8 @@ def get_item_titles(tensor, df):
 
 def label_popular_items():
     # Load the data
-    data = pd.read_csv(r'./dataset/steam/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
-    titles_data = pd.read_csv(r'./dataset/steam/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
+    data = pd.read_csv(r'./dataset/lfm1b-artists/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
+    titles_data = pd.read_csv(r'./dataset/lfm1b-artists/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
 
     # Calculate interaction counts per item
     item_interactions = data['item_id:token'].value_counts().reset_index()
@@ -506,13 +506,13 @@ def label_popular_items():
     output_df = pd.merge(item_interactions, titles_data, how='left', left_on='item_id:token', right_on='item_id:token')
 
     # Select relevant columns
-    output_df = output_df[['item_id:token', 'app_name:token', 'popularity_label', 'interaction_count']]
+    output_df = output_df[['item_id:token', 'name:token_seq', 'popularity_label', 'interaction_count']]
 
     # Sort by popularity label and interaction count
     output_df = output_df.sort_values(by=['popularity_label', 'interaction_count'], ascending=[False, False])
 
     # Save the output to a CSV file
-    output_df.to_csv(r"./dataset/steam/item_popularity_labels_with_titles.csv", index=False)
+    output_df.to_csv(r"./dataset/lfm1b-artists/item_popularity_labels_with_titles.csv", index=False)
 
     print("Popularity labels with titles saved to 'item_popularity_labels_with_titles.csv'")
 
@@ -744,24 +744,34 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
 
 
 def count():
-    # Define file paths
-    inter_file_path =  r'./dataset/steam/steam.inter'  # Replace with actual path
-    item_file_path = r'./dataset/steam/steam.item'  # Replace with actual path
 
-    # Define output file paths
-    filtered_inter_file_path = r'./dataset/steam/steam.inter'
-    filtered_item_file_path = r'./dataset/steam/steam.item'
+    df_inter = pd.read_csv(r'./dataset/lfm1b-artists/lfm1b-artists_unsparsed.inter', sep='\t')
 
-    # Load and filter the .inter file (assuming it's tab-separated; modify sep if needed)
-    df_inter = pd.read_csv(inter_file_path, sep="\t", usecols=["user_id:token", "item_id:token", "timestamp:float"])
-    df_inter.to_csv(filtered_inter_file_path, sep="\t", index=False)
+    # ============================================================
+    # 2. KEEP ONLY THE LAST 75 INTERACTIONS PER USER
+    # ============================================================
+    df_inter.sort_values(by=['user_id:token', 'timestamp:float'], inplace=True)
 
-    # Load and filter the .item file (assuming it's tab-separated; modify sep if needed)
-    df_item = pd.read_csv(item_file_path, sep="\t", usecols=["item_id:token", "app_name:token"])
-    df_item.to_csv(filtered_item_file_path, sep="\t", index=False)
+    # Group by user_id and keep only the last 75 rows in each group.
+    df_inter = df_inter.groupby('user_id:token', group_keys=False).tail(100)
 
-    print("Filtered .inter and .item files have been saved.")
+    # ============================================================
+    # 3. READ THE ITEM FILE
+    # ============================================================
+    df_item = pd.read_csv(r'./dataset/lfm1b-artists/lfm1b-artists_unsparsed.item', sep='\t')
 
+    # ============================================================
+    # 4. REMOVE ITEMS THAT NO LONGER HAVE ANY INTERACTIONS
+    # ============================================================
+    valid_items = df_inter['item_id:token'].unique()
+    df_item = df_item[df_item['item_id:token'].isin(valid_items)]
+    df_inter = df_inter[["item_id:token", "user_id:token", "timestamp:float"]]
+    # ============================================================
+    # 5. SAVE THE RESULTS
+    # ============================================================
+    df_inter.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists-filtered.inter', sep='\t', index=False)
+    df_item.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists-filtered.item', sep='\t', index=False)
+    
 
 def compute_averages(output_file="output_averages.csv"): 
     """
@@ -817,8 +827,8 @@ def get_difference_values(indexes, csv_file="output_averages.csv"):
 
 
 def remove_sparse_users_items():
-    interactions_file = r"./dataset/lfm1b-artists/lfm1b-artists.inter"
-    items_file = r"./dataset/lfm1b-artists/lfm1b-artists.item"
+    interactions_file = r"./dataset/lfm1b-artists/lfm1b-artists-filtered.inter"
+    items_file = r"./dataset/lfm1b-artists/lfm1b-artists-filtered.item"
 
     # Load interactions and items data
     df_inter = pd.read_csv(interactions_file, sep='\t')
@@ -827,7 +837,7 @@ def remove_sparse_users_items():
     # -------------------------------
     # 2. Iterative Filtering
     # -------------------------------
-    min_interactions = 420
+    min_interactions = 5
 
     # We'll iterate until the number of interactions/users doesn't change.
     prev_interactions_count = -1
@@ -869,8 +879,8 @@ def remove_sparse_users_items():
     # -------------------------------
     # 4. (Optional) Save the Filtered Data
     # -------------------------------
-    df_inter.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists_new.inter', index=False, sep='\t')
-    df_item.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists_new.item', index=False, sep='\t')
+    df_inter.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists.inter', index=False, sep='\t')
+    df_item.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists.item', index=False, sep='\t')
 
     print("Filtering complete:")
     print(f" - Interactions: {df_inter.shape[0]} records")
