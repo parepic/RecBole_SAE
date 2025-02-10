@@ -112,6 +112,7 @@ def create_visualizations():
 if __name__ == "__main__":
     # remove_sparse_users_items()
     # label_popular_items()
+    # count()
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -173,7 +174,7 @@ if __name__ == "__main__":
         }   
         run(
             'SASRec',
-            'Amazon_Beauty',
+            'steam',
             config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
