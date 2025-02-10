@@ -74,9 +74,9 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, gi
         'Damped neurons': dampen_labels,
         'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[0]),
         'Hit@10': calculate_percentage_change(hits, hits[0]),
-        # 'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
+        'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
         'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
-        'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0])
+        # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0])
     }
     df = pd.DataFrame(data)
     
