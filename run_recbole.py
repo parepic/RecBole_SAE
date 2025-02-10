@@ -82,6 +82,10 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, gi
     
     # Display table
     display(df)
+    
+    
+    
+    
 
 def create_visualizations():
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
@@ -95,7 +99,7 @@ def create_visualizations():
     dampen_percs = []
     ginis = []
     dampen_perc = 1
-    for i in range(12):
+    for i in range(10):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
@@ -177,7 +181,7 @@ if __name__ == "__main__":
         }   
         run(
             'SASRec',
-            'steam',
+            'lfm1b-artists',
             config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
@@ -187,10 +191,10 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         if(args.test):
             # if(args.corr_file):
             #     test_result = trainer.dampen_neurons(
