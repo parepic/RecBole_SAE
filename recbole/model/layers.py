@@ -466,7 +466,7 @@ class MultiHeadAttention(nn.Module):
         # [batch_size 1 1 seq_len]
         attention_scores = attention_scores + attention_mask
         # attention_scores = self.steer_attention(attention_scores, label)   
-        if(alpha != 0 and idx == 0):
+        if(alpha != 1 and idx == 0):
             attention_scores = self.steer_attention1(attention_scores, label, alpha=alpha) 
             attention_scores = self.steer_attention2(attention_scores, label, alpha=alpha) 
         # Normalize the attention scores to probabilities.
@@ -544,13 +544,13 @@ class MultiHeadAttention(nn.Module):
 
             attn_first_head = torch.where(
                 non_emphasize_mask & pos_mask,  # If non-emphasized AND positive
-                attn_first_head - alpha,  # Dampen positive values
+                alpha * attn_first_head,  # Dampen positive values
                 attn_first_head
             )
 
             attn_first_head = torch.where(
                 non_emphasize_mask & neg_mask,  # If non-emphasized AND negative
-                attn_first_head - alpha,  # Amplify negative values
+                attn_first_head / alpha,  # Amplify negative values
                 attn_first_head
             )
 
@@ -593,13 +593,13 @@ class MultiHeadAttention(nn.Module):
 
         attn_first_head = torch.where(
             non_emphasize_mask & pos_mask,  # If non-emphasized AND positive
-            attn_first_head - alpha,  # Dampen positive values
+            alpha * attn_first_head,  # Dampen positive values
             attn_first_head
         )
 
         attn_first_head = torch.where(
             non_emphasize_mask & neg_mask,  # If non-emphasized AND negative
-            attn_first_head - alpha,  # Amplify negative values
+            attn_first_head / alpha,  # Amplify negative values
             attn_first_head
         )
 
