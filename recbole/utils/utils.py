@@ -753,7 +753,7 @@ def count():
     df_inter.sort_values(by=['user_id:token', 'timestamp:float'], inplace=True)
 
     # Group by user_id and keep only the last 75 rows in each group.
-    df_inter = df_inter.groupby('user_id:token', group_keys=False).tail(100)
+    df_inter = df_inter.groupby('user_id:token', group_keys=False).tail(60)
 
     # ============================================================
     # 3. READ THE ITEM FILE
