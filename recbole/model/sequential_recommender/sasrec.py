@@ -115,7 +115,6 @@ class SASRec(SequentialRecommender):
             file_path = r"./dataset/lfm1b-artists/item_popularity_labels_with_titles.csv"
             # Load the CSV file into a DataFrame
             df = pd.read_csv(file_path)
-
             # Create a dictionary for fast lookup (item_id → popularity_label)
             lookup_dict = dict(zip(df['item_id:token'], df['popularity_label']))
             tensor_np = item_seq.cpu().numpy()

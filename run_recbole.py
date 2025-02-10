@@ -99,7 +99,7 @@ def create_visualizations():
     dampen_percs = []
     ginis = []
     dampen_perc = 0
-    for i in range(7):
+    for i in range(5):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
@@ -111,7 +111,7 @@ def create_visualizations():
         dampen_percs.append(dampen_perc)
         print(test_result['ndcg@10'])
         print(test_result['coverage@10'])
-        dampen_perc = dampen_perc * 10.0 if dampen_perc != 0 else 1 
+        dampen_perc += 0.2
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, ginis)
     # plot_graphs(ndcgs, hits, coverages, lt_coverages, ginis, dampen_percs)
     

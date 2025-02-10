@@ -466,14 +466,13 @@ class MultiHeadAttention(nn.Module):
         # [batch_size 1 1 seq_len]
         attention_scores = attention_scores + attention_mask
         # attention_scores = self.steer_attention(attention_scores, label)   
-        if(alpha != 0 and idx == 0):
-            attention_scores = self.steer_attention1(attention_scores, label, alpha=alpha) 
-            attention_scores = self.steer_attention2(attention_scores, label, alpha=alpha) 
         # Normalize the attention scores to probabilities.
         attention_probs = self.softmax(attention_scores)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-
+        if(alpha != 0 and idx == 0):
+            attention_scores = self.steer_attention_probs1(attention_probs, label, alpha=alpha) 
+            attention_scores = self.steer_attention_probs2(attention_probs, label, alpha=alpha) 
         attention_probs = self.attn_dropout(attention_probs)
         context_layer = torch.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
@@ -607,8 +606,132 @@ class MultiHeadAttention(nn.Module):
         new_attention_scores[:, 0, :, :] = attn_first_head
 
         return new_attention_scores  # Return full tensor
-
     
+    
+    import torch
+
+    def steer_attention_probs1(self, attention_probs, labels, alpha=0.2):
+        """
+        Adjust the first attention head's probability distribution so that:
+        - items (columns) with label == 0 are multiplied by (1 + alpha)
+        - items with label != 0 are multiplied by (1 - alpha) or remain 1.0
+        Then row-wise re-normalize each distribution.
+
+        Parameters
+        ----------
+        attention_probs : torch.Tensor
+            Shape [B, 2, N, N]. Each row of the first head is a probability distribution
+            over N 'key' tokens for a given 'query' token.
+        labels : numpy.ndarray
+            Shape [B, N], indicating group membership for each key token.
+            label == 0 => Group A (to be boosted),
+            label != 0 => Group B (to be suppressed or unchanged).
+        alpha : float
+            Controls how much to boost/suppress probabilities.
+            Must be in [0, 1] if you want (1 - alpha) >= 0.
+
+        Returns
+        -------
+        new_attention_probs : torch.Tensor
+            Same shape as attention_probs, with the first head adjusted and re-normalized.
+        """
+        # Make a copy so we don't modify in-place
+        new_attention_probs = attention_probs.clone()
+
+        # We'll focus on the first head => shape [B, N, N]
+        attn_first_head = new_attention_probs[:, 0, :, :]
+
+        # Convert labels to a PyTorch tensor on the same device
+        labels_tensor = torch.from_numpy(labels).to(attention_probs.device)
+
+        # Define scaling factors
+        factorA = 1.0 + alpha  # Boost
+        factorB = 1.0 - alpha  # Suppress
+
+        B, N, _ = attn_first_head.shape
+
+        # Scale probabilities column-wise based on labels
+        for b in range(B):
+            # Group A mask (label == 0) => to be boosted
+            groupA_mask = (labels_tensor[b] == 0)   # shape [N]
+            # Group B (label != 0) => to be suppressed
+            groupB_mask = ~groupA_mask
+
+            # Multiply columns corresponding to group A or B
+            attn_first_head[b, :, groupA_mask] *= factorA
+            attn_first_head[b, :, groupB_mask] *= factorB
+
+            # Now re-normalize each row so sum(row) = 1
+            row_sums = attn_first_head[b].sum(dim=1, keepdim=True)  # shape [N, 1]
+            # Avoid division by zero
+            attn_first_head[b] = attn_first_head[b] / (row_sums + 1e-12)
+
+        # Put the modified probabilities back
+        new_attention_probs[:, 0, :, :] = attn_first_head
+        return new_attention_probs
+
+
+    def steer_attention_probs2(self, attention_probs, labels, alpha=0.2):
+        """
+        Adjust the first attention head's probability distribution so that:
+        - items (columns) with label == 0 are multiplied by (1 + alpha)
+        - items with label != 0 are multiplied by (1 - alpha) or remain 1.0
+        Then row-wise re-normalize each distribution.
+
+        Parameters
+        ----------
+        attention_probs : torch.Tensor
+            Shape [B, 2, N, N]. Each row of the first head is a probability distribution
+            over N 'key' tokens for a given 'query' token.
+        labels : numpy.ndarray
+            Shape [B, N], indicating group membership for each key token.
+            label == 0 => Group A (to be boosted),
+            label != 0 => Group B (to be suppressed or unchanged).
+        alpha : float
+            Controls how much to boost/suppress probabilities.
+            Must be in [0, 1] if you want (1 - alpha) >= 0.
+
+        Returns
+        -------
+        new_attention_probs : torch.Tensor
+            Same shape as attention_probs, with the first head adjusted and re-normalized.
+        """
+        # Make a copy so we don't modify in-place
+        new_attention_probs = attention_probs.clone()
+
+        # We'll focus on the first head => shape [B, N, N]
+        attn_first_head = new_attention_probs[:, 1, :, :]
+
+        # Convert labels to a PyTorch tensor on the same device
+        labels_tensor = torch.from_numpy(labels).to(attention_probs.device)
+
+        # Define scaling factors
+        factorA = 1.0 + alpha  # Boost
+        factorB = 1.0 - alpha  # Suppress
+
+        B, N, _ = attn_first_head.shape
+
+        # Scale probabilities column-wise based on labels
+        for b in range(B):
+            # Group A mask (label == 0) => to be boosted
+            groupA_mask = (labels_tensor[b] == 0)   # shape [N]
+            # Group B (label != 0) => to be suppressed
+            groupB_mask = ~groupA_mask
+
+            # Multiply columns corresponding to group A or B
+            attn_first_head[b, :, groupA_mask] *= factorA
+            attn_first_head[b, :, groupB_mask] *= factorB
+
+            # Now re-normalize each row so sum(row) = 1
+            row_sums = attn_first_head[b].sum(dim=1, keepdim=True)  # shape [N, 1]
+            # Avoid division by zero
+            attn_first_head[b] = attn_first_head[b] / (row_sums + 1e-12)
+
+        # Put the modified probabilities back
+        new_attention_probs[:, 1, :, :] = attn_first_head
+        return new_attention_probs
+
+        
 class FeedForward(nn.Module):
     """
     Point-wise feed-forward layer is implemented by two dense layers.
