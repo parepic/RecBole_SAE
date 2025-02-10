@@ -480,8 +480,8 @@ def get_item_titles(tensor, df):
 
 def label_popular_items():
     # Load the data
-    data = pd.read_csv(r'./dataset/Amazon_Beauty/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
-    titles_data = pd.read_csv(r'./dataset/Amazon_Beauty/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
+    data = pd.read_csv(r'./dataset/steam/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
+    titles_data = pd.read_csv(r'./dataset/steam/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
 
     # Calculate interaction counts per item
     item_interactions = data['item_id:token'].value_counts().reset_index()
@@ -506,13 +506,13 @@ def label_popular_items():
     output_df = pd.merge(item_interactions, titles_data, how='left', left_on='item_id:token', right_on='item_id:token')
 
     # Select relevant columns
-    output_df = output_df[['item_id:token', 'title:token', 'popularity_label', 'interaction_count']]
+    output_df = output_df[['item_id:token', 'app_name:token', 'popularity_label', 'interaction_count']]
 
     # Sort by popularity label and interaction count
     output_df = output_df.sort_values(by=['popularity_label', 'interaction_count'], ascending=[False, False])
 
     # Save the output to a CSV file
-    output_df.to_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv", index=False)
+    output_df.to_csv(r"./dataset/steam/item_popularity_labels_with_titles.csv", index=False)
 
     print("Popularity labels with titles saved to 'item_popularity_labels_with_titles.csv'")
 
@@ -744,19 +744,23 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
 
 
 def count():
-    file_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv" 
-    df = pd.read_csv(file_path)
+    # Define file paths
+    inter_file_path =  r'./dataset/steam/steam.inter'  # Replace with actual path
+    item_file_path = r'./dataset/steam/steam.item'  # Replace with actual path
 
-    # Sum interaction_count where popularity_label == 1
-    popular_sum = df[df['popularity_label'] == 1]['interaction_count'].sum()
+    # Define output file paths
+    filtered_inter_file_path = r'./dataset/steam/steam.inter'
+    filtered_item_file_path = r'./dataset/steam/steam.item'
 
-    # Sum interaction_count for the rest of the dataset
-    non_popular_sum = df[df['popularity_label'] != 1]['interaction_count'].sum()
+    # Load and filter the .inter file (assuming it's tab-separated; modify sep if needed)
+    df_inter = pd.read_csv(inter_file_path, sep="\t", usecols=["user_id:token", "item_id:token", "timestamp:float"])
+    df_inter.to_csv(filtered_inter_file_path, sep="\t", index=False)
 
-    # Print results
-    print(f"Sum of interaction_count where popularity_label == 1: {popular_sum}")
-    print(f"Sum of interaction_count for the rest: {non_popular_sum}")
+    # Load and filter the .item file (assuming it's tab-separated; modify sep if needed)
+    df_item = pd.read_csv(item_file_path, sep="\t", usecols=["item_id:token", "app_name:token"])
+    df_item.to_csv(filtered_item_file_path, sep="\t", index=False)
 
+    print("Filtered .inter and .item files have been saved.")
 
 
 def compute_averages(output_file="output_averages.csv"): 
@@ -813,8 +817,8 @@ def get_difference_values(indexes, csv_file="output_averages.csv"):
 
 
 def remove_sparse_users_items():
-    interactions_file = r"./dataset/Amazon_Beauty/Amazon_Beauty_old.inter"
-    items_file = r"./dataset/Amazon_Beauty/Amazon_Beauty_old.item"
+    interactions_file = r"./dataset/lfm1b-artists/lfm1b-artists.inter"
+    items_file = r"./dataset/lfm1b-artists/lfm1b-artists.item"
 
     # Load interactions and items data
     df_inter = pd.read_csv(interactions_file, sep='\t')
@@ -823,7 +827,7 @@ def remove_sparse_users_items():
     # -------------------------------
     # 2. Iterative Filtering
     # -------------------------------
-    min_interactions = 3
+    min_interactions = 420
 
     # We'll iterate until the number of interactions/users doesn't change.
     prev_interactions_count = -1
@@ -865,8 +869,8 @@ def remove_sparse_users_items():
     # -------------------------------
     # 4. (Optional) Save the Filtered Data
     # -------------------------------
-    df_inter.to_csv('Amazon_Beauty.inter', index=False, sep='\t')
-    df_item.to_csv('Amazon_Beauty.item', index=False, sep='\t')
+    df_inter.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists_new.inter', index=False, sep='\t')
+    df_item.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists_new.item', index=False, sep='\t')
 
     print("Filtering complete:")
     print(f" - Interactions: {df_inter.shape[0]} records")

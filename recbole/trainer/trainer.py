@@ -891,11 +891,13 @@ class Trainer(AbstractTrainer):
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
-        lt_coverage, coverage = self.evaluator.evaluate_fairness(self.model.recommendation_count)
+        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
-        result['LT_coverage@10'] = lt_coverage
-        result['coverage@10'] = coverage
+        result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
+        result['coverage@10'] = fairness_dict['coverage@10']
+        result['Gini_coef@10'] = fairness_dict['Gini_coef@10@']
+        
         self.wandblogger.log_eval_metrics(result, head="eval")
         return result
 
