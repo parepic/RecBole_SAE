@@ -23,7 +23,12 @@ from recbole.utils.utils import (
     get_extreme_correlations,
     compute_averages,
     get_difference_values,
-    remove_sparse_users_items
+    remove_sparse_users_items,
+    plot_binned_bar_chart,
+    make_items_unpopular,
+    make_items_popular,
+    save_mean_SD,
+    save_cohens_d
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -67,5 +72,10 @@ __all__ = [
     "get_extreme_correlations",
     "compute_averages",
     "get_difference_values",
-    "remove_sparse_users_items"
+    "remove_sparse_users_items",
+    "plot_binned_bar_chart",
+    "make_items_unpopular",
+    "make_items_popular",
+    "save_mean_SD",
+    "save_cohens_d"
 ]

@@ -62,14 +62,17 @@ class Evaluator(object):
         
         # Identify long-tail items (popularity_label == -1)
         long_tail_items = set(item_data[item_data['popularity_label'] != 1]['item_id:token'])
-        
+        deep_long_tail_items = set(item_data[item_data['popularity_label'] == -1]['item_id:token'])
+
         # Items that were recommended at least once
         recommended_items = {i for i, count in enumerate(recommendation_count) if count > 0}
         
         # Calculate Long Tail Coverage
-        recommended_long_tail_items = recommended_items & long_tail_items
-        long_tail_coverage = len(recommended_long_tail_items) / len(long_tail_items) if long_tail_items else 0
-        
+        recommended_LT_items = recommended_items & long_tail_items
+        recommended_deep_LT_items = recommended_items & deep_long_tail_items
+
+        long_tail_coverage = len(recommended_LT_items) / len(long_tail_items) if long_tail_items else 0
+        deep_long_tail_coverage = len(recommended_deep_LT_items) / len(deep_long_tail_items) if deep_long_tail_items else 0
         # Calculate Coverage (based on all possible items)
         coverage = len(recommended_items) / num_items
         
@@ -82,6 +85,7 @@ class Evaluator(object):
         # Return the metrics
         return {
             'LT_coverage@10': long_tail_coverage,
+            'Deep_LT_coverage@10': deep_long_tail_coverage,
             'coverage@10': coverage,
             'Gini_coef@10': gini_coefficient
         }

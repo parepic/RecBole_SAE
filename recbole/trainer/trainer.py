@@ -580,6 +580,7 @@ class Trainer(AbstractTrainer):
             if show_progress
             else data
         )
+        
         for batch_idx, batched_data in enumerate(iter_data):
             if eval_data:
                 interaction, history_index, positive_u, positive_i = batched_data
@@ -647,6 +648,66 @@ class Trainer(AbstractTrainer):
     #             # self.model.sae_module.set_dampen_hyperparam(corr_file=corr_file, neuron_count=neuron_count, 
     #             #                                             damp_percent=damp_percent, unpopular_only=False)
     #             scores = self.model.full_sort_predict(interaction)
+    
+    
+    
+    @torch.no_grad()
+    def save_neuron_activations2(
+        self, data, model_file=None, show_progress=True, eval_data=True
+    ):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+            show_progress (bool): Show the progress of evaluate epoch. Defaults to ``False``.
+
+        Returns:
+            collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
+        """
+        
+        checkpoint_file = model_file
+        checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        self.model.load_state_dict(checkpoint["state_dict"])
+        self.model.load_other_parameter(checkpoint.get("other_parameter"))
+        self.device = torch.device(self.device)
+
+        message_output = "Loading model structure and parameters from {}".format(
+            checkpoint_file
+        )
+        self.logger.info(message_output)
+        self.model.eval()
+        iter_data = (
+            tqdm(
+                data,
+                total=len(data),
+                ncols=100,
+            )
+            if show_progress
+            else data
+        )
+        now = 0
+        times = 300
+        for batch_idx, batched_data in enumerate(iter_data):
+            if now > times:
+                break
+            now +=1
+            if eval_data:
+                interaction, history_index, positive_u, positive_i = batched_data
+            else:
+                interaction = batched_data
+            interaction = interaction.to(self.device)
+            # Update the maximum value
+            self.optimizer.zero_grad()
+            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
+                self.model.set_sae_mode("test")
+                self.model.full_sort_predict(interaction)
+        
+        ending = '_eval' if eval_data else ''
+        # self.model.sae_module.save_highest_activations(filename='highest_activations' + ending + '.txt' )
     
         
     def fit_SAE(
@@ -854,7 +915,6 @@ class Trainer(AbstractTrainer):
             self.logger.info(message_output)
 
         self.model.eval()
-        self.model.dampen_perc = dampen_perc
         if isinstance(eval_data, FullSortEvalDataLoader):
             eval_func = self._full_sort_batch_eval
             if self.item_tensor is None:
@@ -876,8 +936,8 @@ class Trainer(AbstractTrainer):
         )
 
         num_sample = 0
-        # self.model.sae_module.set_dampen_hyperparam(corr_file='correlations.csv', neuron_count=1000, 
-        #                                     damp_percent=2, unpopular_only=True)
+        self.model.sae_module.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
+                                            damp_percent=0.6, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
@@ -892,13 +952,13 @@ class Trainer(AbstractTrainer):
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
+        self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
+        result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
-        
-        self.wandblogger.log_eval_metrics(result, head="eval")
         return result
 
     def _map_reduce(self, result, num_sample):
