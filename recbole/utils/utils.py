@@ -478,43 +478,44 @@ def get_item_titles(tensor, df):
     return result
 
 
+
 def label_popular_items():
     # Load the data
-    data = pd.read_csv(r'./dataset/lfm1b-artists/interactions_remapped.csv', encoding='latin1')  # Replace with your actual file name
-    titles_data = pd.read_csv(r'./dataset/lfm1b-artists/items_remapped.csv', encoding='latin1')  # Replace with your file containing titles and item IDs
+    data = pd.read_csv(r'./dataset/ml-1m/interactions_remapped.csv', encoding='latin1')
+    titles_data = pd.read_csv(r'./dataset/ml-1m/items_remapped.csv', encoding='latin1')
 
     # Calculate interaction counts per item
     item_interactions = data['item_id:token'].value_counts().reset_index()
     item_interactions.columns = ['item_id:token', 'interaction_count']
 
-    # Calculate the thresholds for top 10% and bottom 20%
-    top_threshold = item_interactions['interaction_count'].quantile(0.8)
-    bottom_threshold = item_interactions['interaction_count'].quantile(0.2)
+    # Sort items by interaction count in descending order
+    item_interactions = item_interactions.sort_values(by='interaction_count', ascending=False)
 
-    # Label items as 'popular' (1), 'unpopular' (-1), or 'neutral' (0)
-    def label_popularity(count):
-        if count >= top_threshold:
-            return 1
-        elif count <= bottom_threshold:
-            return -1
-        else:
-            return 0
+    # Compute cumulative interaction percentage
+    item_interactions['cumulative_interaction'] = item_interactions['interaction_count'].cumsum()
+    total_interactions = item_interactions['interaction_count'].sum()
+    item_interactions['cumulative_percentage'] = item_interactions['cumulative_interaction'] / total_interactions
 
-    item_interactions['popularity_label'] = item_interactions['interaction_count'].apply(label_popularity)
+    # Determine popularity labels based on cumulative percentage
+    item_interactions['popularity_label'] = 0
+    item_interactions.loc[item_interactions['cumulative_percentage'] <= 0.2, 'popularity_label'] = 1  # Top 20%
+    item_interactions.loc[item_interactions['cumulative_percentage'] >= 0.8, 'popularity_label'] = -1  # Bottom 20%
 
-    # Merge with movie titles data to add titles
-    output_df = pd.merge(item_interactions, titles_data, how='left', left_on='item_id:token', right_on='item_id:token')
+    # Merge with item titles data
+    output_df = pd.merge(item_interactions, titles_data, how='left', on='item_id:token')
 
     # Select relevant columns
-    output_df = output_df[['item_id:token', 'name:token_seq', 'popularity_label', 'interaction_count']]
+    output_df = output_df[['item_id:token', 'movie_title:token_seq', 'popularity_label', 'interaction_count']]
 
     # Sort by popularity label and interaction count
     output_df = output_df.sort_values(by=['popularity_label', 'interaction_count'], ascending=[False, False])
 
     # Save the output to a CSV file
-    output_df.to_csv(r"./dataset/lfm1b-artists/item_popularity_labels_with_titles.csv", index=False)
+    output_df.to_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", index=False)
 
     print("Popularity labels with titles saved to 'item_popularity_labels_with_titles.csv'")
+
+
 
 import math
 def save_user_popularity_score(alpha, user_ids, sequences):
@@ -544,17 +545,23 @@ def save_user_popularity_score(alpha, user_ids, sequences):
             total_weight = 0
             if seq_key not in user_group:                    
                 # Calculate total_score
-                total_score = 0
+                total_pop_score = 0
+                total_unpop_score = 0
                 for idx, item in enumerate(reversed(filtered_seq)):
                     # Get the popularity label for the item
                     popularity_label = item_labels.loc[item_labels['item_id:token'] == item, 'popularity_label']
                     weight = math.pow(alpha, idx)
                     total_weight += weight
-                    total_score += int(popularity_label.iloc[0]) * weight
+                    pop_label = popularity_label.iloc[0]
+                    if pop_label == 1:   
+                        total_pop_score += weight
+                    elif pop_label == -1:
+                        total_unpop_score += weight
                 # Save the sequence and total_score as a dataset and attribute
                 dataset_name = f"seq_{len(user_group)}"
                 dataset = user_group.create_dataset(dataset_name, data=filtered_seq)
-                dataset.attrs["total_score"] = total_score / total_weight
+                dataset.attrs["total_pop_score"] = total_pop_score / total_weight
+                dataset.attrs["total_unpop_score"] = total_unpop_score / total_weight
 
 
 
@@ -573,7 +580,8 @@ def fetch_user_popularity_score(user_ids, sequences):
     sequences = [seq.cpu().numpy() for seq in sequences]
     user_ids = [uid.item() for uid in user_ids]
 
-    total_scores = []
+    total_pop_scores = []
+    total_unpop_scores = []
     file_path = r"./dataset/ml-1m/user_popularity_scores.h5"
 
     with h5py.File(file_path, "r") as f:
@@ -593,16 +601,18 @@ def fetch_user_popularity_score(user_ids, sequences):
                 stored_seq = user_group[ds_name][:]
                 # First check the shape before doing an element-wise comparison
                 if stored_seq.shape == filtered_seq.shape and np.array_equal(stored_seq, filtered_seq):
-                    total_score = user_group[ds_name].attrs.get("total_score", None)
-                    total_scores.append(total_score)
+                    total_pop_score = user_group[ds_name].attrs.get("total_pop_score", None)
+                    total_pop_scores.append(total_pop_score)
+                    total_unpop_score = user_group[ds_name].attrs.get("total_unpop_score", None)
+                    total_unpop_scores.append(total_unpop_score)
                     found = True
                     break
 
             if not found:
                 print(f"Sequence {filtered_seq.tolist()} not found for user {uid_str}.")
                 
-    print(len(total_scores))
-    return total_scores
+    print(f"{len(total_pop_scores)} ' ' {len(total_unpop_scores)}")
+    return total_pop_scores, total_unpop_scores
 
 def save_batch_activations(bulk_data):
     """
@@ -614,7 +624,7 @@ def save_batch_activations(bulk_data):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)
-    file_path = r"./dataset/ml-1m/neuron_activations.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_popular.h5"
     with h5py.File(file_path, "a") as f:
         if "dataset" not in f:
             # If the dataset doesn't exist, create it with unlimited columns
@@ -639,38 +649,47 @@ def save_batch_activations(bulk_data):
             
 
 
-def save_batch_user_popularities(bulk_data):
+def save_batch_user_popularities(bulk_data_pop, bulk_data_unpop):
     """
-    Saves a bulk of data to an HDF5 file, appending it to a 1D dataset.
+    Saves two bulk data lists to separate HDF5 files, appending them to 1D datasets.
 
     Args:
-        file_path (str): Path to the HDF5 file.
-        bulk_data (list or numpy.ndarray): A 1D list or array of values to append.
+        bulk_data_pop (list or numpy.ndarray): A 1D list or array of values to append to the first file.
+        bulk_data_unpop (list or numpy.ndarray): A 1D list or array of values to append to the second file.
     """
-    bulk_data = np.array(bulk_data, dtype=np.float32)  # Ensure data is in NumPy array format
-    file_path = r"./dataset/ml-1m/user_scores.h5"
-    with h5py.File(file_path, "a") as f:
-        if "dataset" not in f:
-            # Create the dataset if it doesn't exist
-            max_shape = (1100000,)  # Unlimited length
-            f.create_dataset(
-                "dataset",
-                data=bulk_data,
-                maxshape=max_shape,
-                chunks=(len(bulk_data),),  # Chunk size is the size of the bulk
-                dtype="float32"
-            )
-        else:
+    
+    def save_to_h5(file_path, bulk_data):
+        bulk_data = np.array(bulk_data, dtype=np.float32)  # Convert to NumPy array
+        with h5py.File(file_path, "a") as f:
+            if "dataset" not in f:
+                # Create the dataset if it doesn't exist
+                max_shape = (1100000,)  # Predefined max length
+                f.create_dataset(
+                    "dataset",
+                    data=bulk_data,
+                    maxshape=max_shape,
+                    chunks=(len(bulk_data),),  # Chunk size equals bulk size
+                    dtype="float32"
+                )
+            else:
+                # Resize and append to the existing dataset
+                dataset = f["dataset"]
+                current_size = dataset.shape[0]
+                new_size = current_size + len(bulk_data)
+                dataset.resize((new_size,))
+                dataset[current_size:new_size] = bulk_data
 
-            # Resize and append to the existing dataset
-            dataset = f["dataset"]
-            current_size = dataset.shape[0]
-            new_size = current_size + len(bulk_data)
-            dataset.resize((new_size,))
-            dataset[current_size:new_size] = bulk_data
+    # Save first bulk data
+    save_to_h5(r"./dataset/ml-1m/user_scores_pop.h5", bulk_data_pop)
+    
+    # Save second bulk data
+    save_to_h5(r"./dataset/ml-1m/user_scores_unpop.h5", bulk_data_unpop)
 
+    print("Both datasets have been successfully saved.")
+    
+    
 
-def calculate_pearson_correlation():
+def calculate_pearson_correlation(file2_path, output_csv_path):
     """
     Calculates the Pearson correlation of each row in a dataset with another dataset and saves the result to a CSV file.
 
@@ -681,8 +700,7 @@ def calculate_pearson_correlation():
     """
     
     file1_path = r"./dataset/ml-1m/neuron_activations.h5"
-    file2_path = r"./dataset/ml-1m/user_scores.h5"
-    output_csv_path = r"./dataset/ml-1m/correlations.csv"
+    # file2_path = r"./dataset/ml-1m/user_scores.h5"
     # Load the data from the HDF5 files
     with h5py.File(file1_path, "r") as f1, h5py.File(file2_path, "r") as f2:
         dataset2 = f2["dataset"][:]  # Shape (F,)
@@ -729,7 +747,43 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
     # Get indexes and values of highest and lowest n/2 values
     highest = values.nlargest(n)
     lowest = values.nsmallest(n)
+
+    highest_indexes = highest.index.tolist()
+    highest_values = highest.tolist()
+    lowest_indexes = lowest.index.tolist()
+    lowest_values = lowest.tolist()
     
+    if unpopular_only:
+        return list(zip(highest_indexes, highest_values))
+    
+    return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
+
+
+
+def get_extreme_correlations2(file_name: str, n: int, unpopular_only: bool):
+    """
+    Retrieves the highest and lowest correlation indexes and their values.
+    
+    Parameters:
+    file_name (str): CSV file name containing correlation values.
+    n (int): Number of extreme values to retrieve.
+    unpopular_only (bool): Whether to return only the lowest values.
+    
+    Returns:
+    list or tuple: If unpopular_only is True, returns a list of lowest indexes and their values.
+                   Otherwise, returns a tuple of (highest_indexes, highest_values, lowest_indexes, lowest_values).
+    """
+    file_path = r"./dataset/ml-1m/" + file_name
+    df = pd.read_csv(file_path)
+    
+    # Assuming the column name is unknown, take the first column
+    column_name = df.columns[0]
+    values = df[column_name]
+    
+    # Get indexes and values of highest and lowest n/2 values
+    highest = values.nlargest(n)
+    lowest = values.nsmallest(n)
+
     highest_indexes = highest.index.tolist()
     highest_values = highest.tolist()
     lowest_indexes = lowest.index.tolist()
@@ -739,7 +793,6 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
         return list(zip(lowest_indexes, lowest_values))
     
     return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
-
 
 
 
@@ -829,7 +882,7 @@ def get_difference_values(indexes, csv_file="output_averages.csv"):
 def remove_sparse_users_items():
     interactions_file = r"./dataset/lfm1b-artists/lfm1b-artists-filtered.inter"
     items_file = r"./dataset/lfm1b-artists/lfm1b-artists-filtered.item"
-
+    
     # Load interactions and items data
     df_inter = pd.read_csv(interactions_file, sep='\t')
     df_item = pd.read_csv(items_file, sep='\t')
@@ -886,3 +939,155 @@ def remove_sparse_users_items():
     print(f" - Interactions: {df_inter.shape[0]} records")
     print(f" - Users: {df_inter['user_id:token'].nunique()} unique users")
     print(f" - Items: {df_item.shape[0]} records")
+    
+    
+
+def plot_binned_bar_chart(csv_file):
+    # Load the CSV file
+    df = pd.read_csv(csv_file)
+    column_name = df.columns[0]  # Assuming there is only one column
+    
+    # Define bins
+    bins = np.arange(-0.4, 0.45, 0.05)  # Bin edges from -0.4 to 0.4 with step 0.05
+    
+    # Bin the data
+    counts, _ = np.histogram(df[column_name], bins=bins)
+    
+    # Define bin centers for plotting
+    bin_centers = bins[:-1] + np.diff(bins) / 2
+    
+    # Create the bar chart
+    plt.figure(figsize=(8, 5))
+    plt.bar(bin_centers, counts, width=0.04, edgecolor='black', align='center')
+    plt.xlabel('Value Bins')
+    plt.ylabel('Count')
+    plt.title('Histogram with Bin Size 0.05')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+
+
+def make_items_unpopular(item_seq_len):
+    file_path = r"./dataset/ml-1m/neuron_activations_unpopular.h5"
+    with h5py.File(file_path, 'r') as f:
+
+        print("Datasets in file:")
+        for name in f:
+            print(name)
+
+        # Replace 'your_dataset_name' with the actual dataset name
+        dataset_name = 'dataset'  # adjust this after printing dataset names
+        data = f[dataset_name]
+
+        print(f"Shape of dataset: {data.shape}")  # Should print (4096, X)
+
+        # Convert to NumPy array (if not too big)
+        array = np.array(data)
+
+        # Loop through columns
+        for i in range(array.shape[1]):
+            print(f"Column {i}:")
+            print(array[:, i])
+        
+        # item_labels = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        
+        # # Filter rows where popularity_label == -1
+        # filtered_items = item_labels[item_labels['popularity_label'] == -1]
+        # available_ids = filtered_items['item_id:token'].tolist()
+        
+        # # Count how many items are in each row of the batch
+        # nonzero_counts = (item_seq_len != 0).sum(dim=1).tolist()
+        # selected_item_ids = []
+
+        # for count in nonzero_counts:
+        #     sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
+            
+        #     # Pad with 0s if needed to reach length 50
+        #     if len(sampled) < 50:
+        #         sampled += [0] * (50 - len(sampled))
+        #     else:
+        #         sampled = sampled[:50]  # In case count > 50 for any reason
+
+        #     selected_item_ids.append(sampled)
+
+        # # Convert to tensor of shape (batch_size, 50)
+        # selected_tensor = torch.tensor(selected_item_ids)
+
+        # return selected_tensor
+
+
+
+def make_items_popular(item_seq_len):
+    item_labels = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+    
+    # Filter rows where popularity_label == -1
+    filtered_items = item_labels[item_labels['popularity_label'] == 1]
+    available_ids = filtered_items['item_id:token'].tolist()
+    
+    # Count how many items are in each row of the batch
+    nonzero_counts = (item_seq_len != 0).sum(dim=1).tolist()
+    selected_item_ids = []
+
+    for count in nonzero_counts:
+        sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
+        
+        # Pad with 0s if needed to reach length 50
+        if len(sampled) < 50:
+            sampled += [0] * (50 - len(sampled))
+        else:
+            sampled = sampled[:50]  # In case count > 50 for any reason
+
+        selected_item_ids.append(sampled)
+
+    # Convert to tensor of shape (batch_size, 50)
+    selected_tensor = torch.tensor(selected_item_ids)
+
+    return selected_tensor
+
+
+
+def save_mean_SD():
+    # Load your .h5 file
+    file_path = r"./dataset/ml-1m/neuron_activations_popular.h5"
+    dataset_name = 'dataset'  # Replace with the actual dataset name inside the h5 file
+
+    with h5py.File(file_path, 'r') as f:
+        data = f[dataset_name][()]  # This reads the full dataset into memory
+
+    # Check shape
+    print("Data shape:", data.shape)  # Should be (4096, X)
+
+    # Compute mean and standard deviation for each row
+    means = np.mean(data, axis=1)
+    stds = np.std(data, axis=1)
+
+    # Combine into a DataFrame
+    df = pd.DataFrame({
+        'mean': means,
+        'std': stds
+    })
+
+    # Save to CSV
+    output_csv_path = r"./dataset/ml-1m/row_stats_popular.csv"
+    df.to_csv(output_csv_path, index=False)
+
+    print(f"Row-wise mean and std saved to {output_csv_path}")
+    
+    
+    
+def save_cohens_d():
+    df1 = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")  # Replace with your actual file name
+    df2 = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")  # Replace with your actual file name
+
+    # Compute pooled standard deviation
+    s_pooled = np.sqrt((df1['std']**2 + df2['std']**2) / 2)
+
+    # Compute Cohen's d
+    cohen_d = (df1['mean'] - df2['mean']) / s_pooled
+
+    # Create result DataFrame
+    df_result = pd.DataFrame({'cohen_d': cohen_d})
+
+    # Save to CSV
+    df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv", index=False)
+
+    print("Cohen's d values saved to cohen_d_results.csv")

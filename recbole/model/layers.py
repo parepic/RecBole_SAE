@@ -470,9 +470,9 @@ class MultiHeadAttention(nn.Module):
         attention_probs = self.softmax(attention_scores)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        if(alpha != 0 and idx == 0):
-            attention_probs = self.steer_attention_probs1(attention_probs, label, alpha=alpha) 
-            attention_probs = self.steer_attention_probs2(attention_probs, label, alpha=alpha) 
+        # if(alpha != 0 and idx == 0):
+        #     attention_probs = self.steer_attention_probs1(attention_probs, label, alpha=alpha) 
+        #     attention_probs = self.steer_attention_probs2(attention_probs, label, alpha=alpha) 
         attention_probs = self.attn_dropout(attention_probs)
         context_layer = torch.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()

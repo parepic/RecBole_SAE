@@ -23,7 +23,7 @@ class SAE(nn.Module):
 	
 	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
-		self.k = 32
+		self.k = 8
 		self.scale_size = config["sae_scale_size"]
 		self.neuron_count = None
 		self.damp_percent = None
@@ -138,11 +138,13 @@ class SAE(nn.Module):
 					data["recommendations"].append(topk_indices.tolist())
 
 	def dampen_neurons(self, pre_acts):
+		print(self.sae_k)
 		if self.unpopular_only:
-			
+			if(self.neuron_count == 0): 
+				return pre_acts
 			unpop_indexes, unpop_values = zip(*utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
-			scale_values = torch.tensor(np.maximum(np.minimum(self.damp_percent * np.abs(unpop_values), 1.2), 0.4), device=self.device)
-			print(scale_values)
+			print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
+			pre_acts[:, unpop_indexes] *= (1 - self.damp_percent)
    			# differences = utils.get_difference_values(unpop_idxs)
 			# # Convert to PyTorch tensors
 			# unpop_idxs = torch.tensor(unpop_idxs, dtype=torch.long, device=self.device)  # Ensure correct indexing type
@@ -157,7 +159,7 @@ class SAE(nn.Module):
 			# mask = pre_acts[:, unpop_idxs] != 0  # Boolean mask
 
 			# Apply the operation only where pre_acts is nonzero
-			pre_acts[:, unpop_indexes] *= (1 + scale_values)  # Element-wise masking
+			# pre_acts[:, unpop_indexes] *= (1 + scale_values)  # Element-wise masking
 
 		else:
 			pop_idxs, unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
@@ -216,8 +218,9 @@ class SAE(nn.Module):
 		:param recommendations: [batch_size, num_items] GPU tensor
 								We'll extract top-10 recommended items per sample.
 		"""
-  
-		utils.save_batch_user_popularities(utils.fetch_user_popularity_score(user_ids,sequences))
+		# utils.save_user_popularity_score(0.9, user_ids, sequences)
+		total_pop_scores, total_unpop_scores = utils.fetch_user_popularity_score(user_ids,sequences)
+		utils.save_batch_user_popularities(total_pop_scores, total_unpop_scores)
 		utils.save_batch_activations(self.last_activations) 
 
 		# ------------------------
@@ -269,13 +272,15 @@ class SAE(nn.Module):
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
-		correlations = utils.calculate_pearson_correlation()
+		corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
+		corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
 		file_path = r'./dataset/ml-1m/ml-1m.item'
 		data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
 		with open(filename, "w") as f:
 			for neuron, data in self.highest_activations.items():
 				f.write(f"Neuron {neuron}:\n")
-				f.write(f"Popularity Correlation:{correlations[neuron]}\n")
+				f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
+				f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
 				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
 					f.write(f"  Activation: {value}\n")
 					f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")

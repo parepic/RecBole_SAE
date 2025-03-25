@@ -24,7 +24,11 @@ from recbole.utils import (
     count,
     calculate_pearson_correlation,
     compute_averages,
-    remove_sparse_users_items
+    remove_sparse_users_items,
+    plot_binned_bar_chart,
+    make_items_unpopular,
+    save_mean_SD,
+    save_cohens_d
 )
 
 
@@ -66,25 +70,24 @@ from IPython.display import display
 def calculate_percentage_change(new_values, base_value):
     return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
 
-def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, ginis):
+def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis):
     # Hardcoded first row for 'sasrec'
     dampen_labels = [f'{dp}' for dp in dampen_percs]
     
     data = {
-        'Damped neurons': dampen_labels,
+        'Alpha': dampen_labels,
         'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[0]),
         'Hit@10': calculate_percentage_change(hits, hits[0]),
-        'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
+        # 'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
         'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
-        # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0])
+        'Deep LT Coverage@10': calculate_percentage_change(deep_lt_coverages, deep_lt_coverages[0]),
+        'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0])
     }
     df = pd.DataFrame(data)
     
     # Display table
-    display(df)
-    
-    
-    
+    print(df.to_string(index=False))  # Print the entire table without truncation
+
     
 
 def create_visualizations():
@@ -92,14 +95,16 @@ def create_visualizations():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    ndcgs = []
-    hits = []
-    coverages = []
-    lt_coverages = []
-    dampen_percs = []
-    ginis = []
+    ndcgs = [0.1573]
+    hits = [0.2805]
+    coverages = [0.6180]
+    lt_coverages = [0.6063]
+    deep_lt_coverages = [0.4487]
+    dampen_percs = ['Sasrec']
+    ginis = [0.7631]
     dampen_perc = 0
-    for i in range(6):
+    neuron_count = 0
+    for i in range(11):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
@@ -107,19 +112,54 @@ def create_visualizations():
         hits.append(test_result['hit@10'])
         coverages.append(test_result['coverage@10'])
         lt_coverages.append(test_result['LT_coverage@10'])
+        deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
         dampen_percs.append(dampen_perc)
         print(test_result['ndcg@10'])
         print(test_result['coverage@10'])
         dampen_perc += 0.2
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, ginis)
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis)
     # plot_graphs(ndcgs, hits, coverages, lt_coverages, ginis, dampen_percs)
     
-    
+
+def create_visualizations_neurons():
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+    )  
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+    ndcgs = [0.1573]
+    hits = [0.2805]
+    coverages = [0.6180]
+    lt_coverages = [0.6063]
+    deep_lt_coverages = [0.4487]
+    dampen_percs = ['Sasrec']
+    ginis = [0.7631]
+    dampen_perc = 0
+    neuron_count = 0
+    for i in range(10):
+        test_result = trainer.evaluate(
+            test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = neuron_count
+        )
+        ndcgs.append(test_result['ndcg@10'])
+        hits.append(test_result['hit@10'])
+        coverages.append(test_result['coverage@10'])
+        lt_coverages.append(test_result['LT_coverage@10'])
+        deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
+        ginis.append(test_result['Gini_coef@10'])
+        dampen_percs.append(neuron_count)
+        print(test_result['ndcg@10'])
+        print(test_result['coverage@10'])
+        neuron_count += 30
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis)
+
+
 if __name__ == "__main__":
+    # save_cohens_d()
+    # exit()
     # remove_sparse_users_items()
     # label_popular_items()
-    # count()
+    # label_popular_items()
+    # plot_binned_bar_chart('./dataset/ml-1m/correlations_pop.csv')
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -166,7 +206,7 @@ if __name__ == "__main__":
     device = 'cpu'
     if torch.cuda.is_available():
         device = 'cuda'
-    
+        
     
     if(args.model == "SASRec" and args.train):
         config_file_list = (
@@ -174,7 +214,6 @@ if __name__ == "__main__":
             )
         parameter_dict = {
             'train_neg_sample_args': None,
-             
             # 'sae_k': 8,
             # 'sae_scale_size': 32,
             # 'sae_lr':1e-3
@@ -202,7 +241,7 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            create_visualizations()
+            create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
             # )
