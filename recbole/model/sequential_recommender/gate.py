@@ -4,10 +4,14 @@ import torch
 class SASRecWithGating(nn.Module):    
     def __init__(self, sasrec_model, gate_indices, device='cpu'):
         super().__init__()
-        self.to(device)
+        print("device blya! ", device)
+        self.to(device)        
         self.sasrec = sasrec_model
         self.gating = AdaptiveGating(hidden_dim=sasrec_model.hidden_size,
                                      gate_indices=gate_indices)
+        self.gating.to(device)
+        self.sasrec.to(device)
+
         self.loss_fct = nn.CrossEntropyLoss()
 
     
@@ -33,7 +37,22 @@ class SASRecWithGating(nn.Module):
         ).mean()        
         loss =  loss_main + penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
-        return loss        
+        return loss      
+    
+    def full_sort_predict(self, interaction):
+        item_seq = interaction[self.sasrec.ITEM_SEQ]
+        # item_seq = make_items_unpopular(item_seq)
+        item_seq_len = interaction[self.sasrec.ITEM_SEQ_LEN]
+        seq_output = self.forward(item_seq, item_seq_len)
+        # if self.corr_file:
+        #     seq_output = self.dampen_neurons_sasrec(seq_output)
+        # save_batch_activations(seq_output, 64)
+        test_items_emb = self.item_embedding.weight
+        scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
+        top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        for key in top_recs.flatten():
+            self.recommendation_count[key.item()] += 1
+        return scores  
 
         
 class AdaptiveGating(nn.Module):
