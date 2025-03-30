@@ -28,7 +28,9 @@ from recbole.utils.utils import (
     make_items_unpopular,
     make_items_popular,
     save_mean_SD,
-    save_cohens_d
+    save_cohens_d,
+    find_diff,
+    build_popularity_tensor
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -77,5 +79,7 @@ __all__ = [
     "make_items_unpopular",
     "make_items_popular",
     "save_mean_SD",
-    "save_cohens_d"
+    "save_cohens_d",
+    "find_diff",
+    "build_popularity_tensor"
 ]
