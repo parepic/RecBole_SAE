@@ -33,6 +33,7 @@ class SASRecWithGating(nn.Module):
         logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
         scores = torch.sigmoid(logits)
         loss_main = self.loss_fct(logits, pos_items)
+        scores = scores.to('cuda')
         penalty = (
             self.popularity_labels * scores[:, 1:]**2 +
             (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
