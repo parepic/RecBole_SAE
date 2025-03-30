@@ -6,12 +6,12 @@ class SASRecWithGating(nn.Module):
         self.popularity_labels = popularity_labels
         self.popularity_labels = self.popularity_labels.to(device)
         super().__init__()
-        self.recommendation_count = np.zeros(self.n_items)
         self.to(device)        
         self.sasrec = sasrec_model
         self.gating = AdaptiveGating(hidden_dim=sasrec_model.hidden_size,
                                      gate_indices=gate_indices)
         self.gating = self.gating.to(device)
+        self.recommendation_count = np.zeros(self.sasrec.n_items)
 
         self.loss_fct = nn.CrossEntropyLoss()
 
