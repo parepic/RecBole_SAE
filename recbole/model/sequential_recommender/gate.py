@@ -1,12 +1,12 @@
 from torch import nn
 import torch
-
+import numpy as np
 class SASRecWithGating(nn.Module):    
     def __init__(self, sasrec_model, gate_indices, device='cpu', popularity_labels=None):
         self.popularity_labels = popularity_labels
         self.popularity_labels = self.popularity_labels.to(device)
         super().__init__()
-        print("device blya! ", device)
+        self.recommendation_count = np.zeros(self.n_items)
         self.to(device)        
         self.sasrec = sasrec_model
         self.gating = AdaptiveGating(hidden_dim=sasrec_model.hidden_size,
@@ -50,7 +50,7 @@ class SASRecWithGating(nn.Module):
         # if self.corr_file:
         #     seq_output = self.dampen_neurons_sasrec(seq_output)
         # save_batch_activations(seq_output, 64)
-        test_items_emb = self.item_embedding.weight
+        test_items_emb = self.sasrec.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
