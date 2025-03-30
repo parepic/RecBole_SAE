@@ -2,8 +2,9 @@ from torch import nn
 import torch
 
 class SASRecWithGating(nn.Module):    
-    def __init__(self, sasrec_model, gate_indices):
+    def __init__(self, sasrec_model, gate_indices, device='cpu'):
         super().__init__()
+        self.to(device)
         self.sasrec = sasrec_model
         self.gating = AdaptiveGating(hidden_dim=sasrec_model.hidden_size,
                                      gate_indices=gate_indices)

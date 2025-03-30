@@ -282,7 +282,8 @@ if __name__ == "__main__":
         trainer.fit_gate( 
             train_data,
             valid_data=valid_data,
-            show_progress=True
+            show_progress=True,
+            device=config["device"]
             )
     
         exit()

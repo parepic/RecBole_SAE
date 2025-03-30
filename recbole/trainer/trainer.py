@@ -1015,6 +1015,7 @@ class Trainer(AbstractTrainer):
             saved=True,
             show_progress=False,
             callback_fn=None,
+            device='cpu'
         ):
             r"""Train the model based on the train data and the valid data.
 
@@ -1034,7 +1035,7 @@ class Trainer(AbstractTrainer):
             
             if saved and self.start_epoch >= self.epochs:
                 self._save_checkpoint(-1, verbose=verbose)
-            self.model = SASRecWithGating(self.model, [40, 56, 59])
+            self.model = SASRecWithGating(self.model, [40, 56, 59], device=device)
             self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
             
