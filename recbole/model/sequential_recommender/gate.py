@@ -4,15 +4,14 @@ import torch
 class SASRecWithGating(nn.Module):    
     def __init__(self, sasrec_model, gate_indices, device='cpu', popularity_labels=None):
         self.popularity_labels = popularity_labels
-        self.popularity_labels.to(device)
+        self.popularity_labels = self.popularity_labels.to(device)
         super().__init__()
         print("device blya! ", device)
         self.to(device)        
         self.sasrec = sasrec_model
         self.gating = AdaptiveGating(hidden_dim=sasrec_model.hidden_size,
                                      gate_indices=gate_indices)
-        self.gating.to(device)
-        self.sasrec.to(device)
+        self.gating = self.gating.to(device)
 
         self.loss_fct = nn.CrossEntropyLoss()
 
@@ -34,6 +33,7 @@ class SASRecWithGating(nn.Module):
         scores = torch.sigmoid(logits)
         loss_main = self.loss_fct(logits, pos_items)
         scores = scores.to('cuda')
+        self.popularity_labels.to('cuda')
         penalty = (
             self.popularity_labels * scores[:, 1:]**2 +
             (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
