@@ -23,7 +23,12 @@ from collections import defaultdict
 from recbole.model.abstract_recommender import SequentialRecommender
 from recbole.model.layers import TransformerEncoder
 from recbole.model.loss import BPRLoss
-
+from recbole.utils import (
+    make_items_unpopular,
+    make_items_popular,
+    save_batch_activations,
+    get_extreme_correlations
+)
 
 import pandas as pd
 
@@ -85,6 +90,13 @@ class SASRec(SequentialRecommender):
         # parameters initialization
         self.apply(self._init_weights)
 
+
+    def set_dampen_hyperparam(self, corr_file=None, neuron_count=20, damp_percent=0.1, unpopular_only=False ):
+        self.corr_file = corr_file
+        self.neuron_count = neuron_count
+        self.damp_percent = damp_percent
+        self.unpopular_only = unpopular_only
+  
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Embedding)):
@@ -110,27 +122,14 @@ class SASRec(SequentialRecommender):
         input_emb = self.dropout(input_emb)
 
         extended_attention_mask = self.get_attention_mask(item_seq)
-        result_np = None
-        if self.dampen_perc != 0:
-            file_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
-            # Load the CSV file into a DataFrame
-            df = pd.read_csv(file_path)
-            # Create a dictionary for fast lookup (item_id → popularity_label)
-            lookup_dict = dict(zip(df['item_id:token'], df['popularity_label']))
-            tensor_np = item_seq.cpu().numpy()
-
-            # Vectorized lookup with explicit condition: return 1 if popularity_label is 1, else 0
-            lookup_func = np.vectorize(lambda x: 1 if lookup_dict.get(x, 0) == 1 else 0)
-            # print(lookup_dict)
-            result_np = lookup_func(tensor_np)
-
         # Convert back to PyTorch tensor        
         trm_output = self.trm_encoder(
-            input_emb, extended_attention_mask, output_all_encoded_layers=True, label = result_np, dampen_perc=self.dampen_perc
+            input_emb, extended_attention_mask, output_all_encoded_layers=True
         )
         
         output = trm_output[-1]
         output = self.gather_indexes(output, item_seq_len - 1)
+        
         return output  # [B H]
 
     def calculate_loss(self, interaction):
@@ -163,11 +162,25 @@ class SASRec(SequentialRecommender):
 
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
+        # item_seq = make_items_unpopular(item_seq)
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
+        if self.corr_file:
+            seq_output = self.dampen_neurons_sasrec(seq_output)
+        # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
         return scores
+
+    def dampen_neurons_sasrec(self, pre_acts):
+        if(self.neuron_count == 0): 
+            return pre_acts
+        unpop_indexes, unpop_values = zip(*get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
+        print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
+        pre_acts[:, unpop_indexes] += self.damp_percent
+        return pre_acts	
+
+

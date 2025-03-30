@@ -144,7 +144,7 @@ class SAE(nn.Module):
 				return pre_acts
 			unpop_indexes, unpop_values = zip(*utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
 			print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
-			pre_acts[:, unpop_indexes] *= (1 - self.damp_percent)
+			pre_acts[:, unpop_indexes] *= (1 + self.damp_percent)
    			# differences = utils.get_difference_values(unpop_idxs)
 			# # Convert to PyTorch tensors
 			# unpop_idxs = torch.tensor(unpop_idxs, dtype=torch.long, device=self.device)  # Ensure correct indexing type
@@ -221,7 +221,7 @@ class SAE(nn.Module):
 		# utils.save_user_popularity_score(0.9, user_ids, sequences)
 		total_pop_scores, total_unpop_scores = utils.fetch_user_popularity_score(user_ids,sequences)
 		utils.save_batch_user_popularities(total_pop_scores, total_unpop_scores)
-		utils.save_batch_activations(self.last_activations) 
+		utils.save_batch_activations(self.last_activations, 4096) 
 
 		# ------------------------
 		# A) Get top-10 per neuron (column)

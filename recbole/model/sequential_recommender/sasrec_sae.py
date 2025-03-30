@@ -66,19 +66,19 @@ class SASRec_SAE(SASRec):
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        # item_seq = make_items_popular(item_seq)
+        item_seq = make_items_popular(item_seq)
         seq_output = self.forward(item_seq, item_seq_len)
         
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        # top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         if(self.mode == "test"):
-            user_ids = interaction['user_id']
-            # save_batch_activations(self.sae_module.last_activations) 
+            # user_ids = interaction['user_id']
+            save_batch_activations(self.sae_module.last_activations, 4096) 
 
-            self.sae_module.update_highest_activations(item_seq, top_recs, user_ids)
-        for key in top_recs.flatten():
-            self.recommendation_count[key.item()] += 1
+            # self.sae_module.update_highest_activations(item_seq, top_recs, user_ids)
+        # for key in top_recs.flatten():
+        #     self.recommendation_count[key.item()] += 1
         return scores
 
 

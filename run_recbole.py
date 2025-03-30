@@ -28,7 +28,8 @@ from recbole.utils import (
     plot_binned_bar_chart,
     make_items_unpopular,
     save_mean_SD,
-    save_cohens_d
+    save_cohens_d,
+    find_diff
 )
 
 
@@ -135,8 +136,8 @@ def create_visualizations_neurons():
     dampen_percs = ['Sasrec']
     ginis = [0.7631]
     dampen_perc = 0
-    neuron_count = 0
-    for i in range(10):
+    neuron_count = 1
+    for i in range(15):
         test_result = trainer.evaluate(
             test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = neuron_count
         )
@@ -149,17 +150,59 @@ def create_visualizations_neurons():
         dampen_percs.append(neuron_count)
         print(test_result['ndcg@10'])
         print(test_result['coverage@10'])
-        neuron_count += 30
+        neuron_count += 2
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis)
 
 
+from scipy.stats import pearsonr
+import h5py
+from itertools import combinations
+from multiprocessing import Pool, cpu_count
+
+
+
+# file_path = r"./dataset/ml-1m/neuron_activations_popular_sasrec.h5"
+# dataset_name = "dataset"  # Replace with actual dataset key inside the HDF5
+# output_csv = "correlation_pairs_popular.csv"
+# num_workers = 6  # You said 6 cores!
+# with h5py.File(file_path, "r") as f:
+#     data = f[dataset_name][...]  # shape: (64, X)
+
+# assert data.shape[0] == 64, "Expected 64 rows (neurons)."
+
+# === PREPARE PAIRS (i < j only) ===
+# row_pairs = list(combinations(range(64), 2))  # Only unique pairs
+
+def compute_corr(pair):
+    i, j = pair
+    r, _ = pearsonr(data[i], data[j])
+    return (i, j, r)
+
+
+
 if __name__ == "__main__":
+   
+    # with Pool(num_workers) as pool:
+    #     results = pool.map(compute_corr, row_pairs)
+
+    # # Save to CSV
+    # df = pd.DataFrame(results, columns=["row_i", "row_j", "correlation"])
+    # df["abs_corr"] = df["correlation"].abs()
+    # # df.sort_values("abs_corr", ascending=False, inplace=True)
+    # df.drop(columns="abs_corr", inplace=True)
+    # df.to_csv(output_csv, index=False)
+
+    # print(f"Saved correlation results to '{output_csv}' using {num_workers} cores.")
+    
+    
+    
     # save_cohens_d()
     # exit()
     # remove_sparse_users_items()
     # label_popular_items()
     # label_popular_items()
     # plot_binned_bar_chart('./dataset/ml-1m/correlations_pop.csv')
+    # save_mean_SD()
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -218,6 +261,7 @@ if __name__ == "__main__":
             # 'sae_scale_size': 32,
             # 'sae_lr':1e-3
         }   
+        
         run(
             'SASRec',
             'lfm1b-artists',
@@ -233,7 +277,15 @@ if __name__ == "__main__":
         config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
             model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
         )  
+        
         trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer.fit_gate( 
+            train_data,
+            valid_data=valid_data,
+            show_progress=True
+            )
+    
+        exit()
         if(args.test):
             # if(args.corr_file):
             #     test_result = trainer.dampen_neurons(
@@ -241,15 +293,18 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            create_visualizations_neurons()
-            # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
-            # )
-            # print(test_result)
-            
+            print("here!")
+            # create_visualizations_neurons()
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
+            )
+            print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data)
+            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
+        elif(args.model == "SASRec" and args.save_neurons):
+            data = test_data if args.eval_data else train_data
+            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
         elif(args.model == "SASRec_SAE" and args.train):
             trainer.fit_SAE(config, 
                 args.path,

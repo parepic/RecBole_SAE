@@ -447,7 +447,7 @@ class MultiHeadAttention(nn.Module):
         return x
 
 
-    def forward(self, input_tensor, attention_mask, idx, label=None, alpha=1):
+    def forward(self, input_tensor, attention_mask):
         
         mixed_query_layer = self.query(input_tensor)
         mixed_key_layer = self.key(input_tensor)
@@ -826,9 +826,9 @@ class TransformerLayer(nn.Module):
             layer_norm_eps,
         )
 
-    def forward(self, hidden_states, attention_mask, idx, label=None, dampen_perc=0):
+    def forward(self, hidden_states, attention_mask):
         
-        attention_output = self.multi_head_attention(hidden_states, attention_mask, idx, label=label, alpha=dampen_perc)
+        attention_output = self.multi_head_attention(hidden_states, attention_mask)
         feedforward_output = self.feed_forward(attention_output)
         return feedforward_output
 
@@ -872,7 +872,7 @@ class TransformerEncoder(nn.Module):
         )
         self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(n_layers)])
 
-    def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True, label=None, dampen_perc=0):
+    def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True):
         """
         Args:
             hidden_states (torch.Tensor): the input of the TransformerEncoder
@@ -885,7 +885,7 @@ class TransformerEncoder(nn.Module):
         """
         all_encoder_layers = []
         for idx, layer_module in enumerate(self.layer):
-            hidden_states = layer_module(hidden_states, attention_mask, idx, label=label, dampen_perc=dampen_perc)
+            hidden_states = layer_module(hidden_states, attention_mask)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
         if not output_all_encoded_layers:
@@ -1038,6 +1038,7 @@ class LightTransformerLayer(nn.Module):
         super(LightTransformerLayer, self).__init__()
         self.multi_head_attention = LightMultiHeadAttention(
             n_heads,
+            
             k_interests,
             hidden_size,
             seq_len,

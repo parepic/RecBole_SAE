@@ -5,7 +5,7 @@
 # UPDATE:
 # @Time   : 2022/7/8, 2021/6/23, 2020/9/26, 2020/9/26, 2020/10/01, 2020/9/16
 # @Author : Zhen Tian, Zihan Lin, Yupeng Hou, Yushuo Chen, Shanlei Mu, Xingyu Pan
-# @Email  : chenyuwuxinn@gmail.com, zhlin@ruc.edu.cn, houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn, slmu@ruc.edu.cn, panxy@ruc.edu.cn
+# @Email  : e@gmail.com, zhlin@ruc.edu.cn, houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn, slmu@ruc.edu.cn, panxy@ruc.edu.cn
 
 # UPDATE:
 # @Time   : 2020/10/8, 2020/10/15, 2020/11/20, 2021/2/20, 2021/3/3, 2021/3/5, 2021/7/18, 2022/7/11, 2023/2/11
@@ -47,9 +47,10 @@ from recbole.utils import (
     get_gpu_usage,
     WandbLogger,
     save_user_popularity_score,
-    calculate_pearson_correlation
+    calculate_pearson_correlation,
+    build_popularity_tensor
 )
-from recbole.model.sequential_recommender import SASRec_SAE
+from recbole.model.sequential_recommender import SASRec_SAE, SASRecWithGating
 from torch.nn.parallel import DistributedDataParallel
 
 
@@ -237,7 +238,8 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-
+        for param in self.model.sasrec.parameters():
+            param.requires_grad = False
         self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
         total_loss = None
@@ -254,7 +256,7 @@ class Trainer(AbstractTrainer):
 
         if not self.config["single_spec"] and train_data.shuffle:
             train_data.sampler.set_epoch(epoch_idx)
-
+        
         scaler = amp.GradScaler(enabled=self.enable_scaler)
         for batch_idx, interaction in enumerate(iter_data):
             interaction = interaction.to(self.device)
@@ -264,7 +266,7 @@ class Trainer(AbstractTrainer):
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                losses = loss_func(interaction)
+                losses = loss_func(interaction, build_popularity_tensor(), 0.05)
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
@@ -544,7 +546,7 @@ class Trainer(AbstractTrainer):
     
     @torch.no_grad()
     def save_neuron_activations(
-        self, data, model_file=None, show_progress=True, eval_data=True
+        self, data, model_file=None, show_progress=True, eval_data=True, sae=True
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -590,7 +592,8 @@ class Trainer(AbstractTrainer):
             # Update the maximum value
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                self.model.set_sae_mode("test")
+                if sae:
+                    self.model.set_sae_mode("test")
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
@@ -653,7 +656,7 @@ class Trainer(AbstractTrainer):
     
     @torch.no_grad()
     def save_neuron_activations2(
-        self, data, model_file=None, show_progress=True, eval_data=True
+        self, data, model_file=None, show_progress=True, eval_data=True, sae=True
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -703,7 +706,8 @@ class Trainer(AbstractTrainer):
             # Update the maximum value
             self.optimizer.zero_grad()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                self.model.set_sae_mode("test")
+                if sae:
+                    self.model.set_sae_mode("test")
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
@@ -765,7 +769,6 @@ class Trainer(AbstractTrainer):
             train_loss = self._train_epoch(
                 train_data, epoch_idx, show_progress=show_progress
             )
-            print(train_loss)
             
             self.train_loss_dict[epoch_idx] = (
                 sum(train_loss) if isinstance(train_loss, tuple) else train_loss
@@ -936,7 +939,7 @@ class Trainer(AbstractTrainer):
         )
 
         num_sample = 0
-        # self.model.sae_module.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
+        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
         #                                     damp_percent=0.6, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
@@ -1002,6 +1005,125 @@ class Trainer(AbstractTrainer):
                 result = result.unsqueeze(0)
             result_list.append(result)
         return torch.cat(result_list, dim=0)
+    
+
+    def fit_gate(
+            self,
+            train_data,
+            valid_data=None,
+            verbose=True,
+            saved=True,
+            show_progress=False,
+            callback_fn=None,
+        ):
+            r"""Train the model based on the train data and the valid data.
+
+            Args:
+                train_data (DataLoader): the train data
+                valid_data (DataLoader, optional): the valid data, default: None.
+                                                If it's None, the early_stopping is invalid.
+                verbose (bool, optional): whether to write training and evaluation information to logger, default: True
+                saved (bool, optional): whether to save the model parameters, default: True
+                show_progress (bool): Show the progress of training epoch and evaluate epoch. Defaults to ``False``.
+                callback_fn (callable): Optional callback function executed at end of epoch.
+                                        Includes (epoch_idx, valid_score) input arguments.
+
+            Returns:
+                (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
+            """
+            
+            if saved and self.start_epoch >= self.epochs:
+                self._save_checkpoint(-1, verbose=verbose)
+            self.model = SASRecWithGating(self.model, [40, 56, 59])
+            self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
+            self.eval_collector.data_collect(train_data)
+            
+            valid_step = 0
+            # start_train = time()
+            for epoch_idx in range(0, 100):
+                # train
+                training_start_time = time()
+                train_loss = self._train_epoch(
+                    train_data, epoch_idx, show_progress=show_progress
+                )
+                self.train_loss_dict[epoch_idx] = (
+                    sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+                )
+                training_end_time = time()
+                train_loss_output = self._generate_train_loss_output(
+                    epoch_idx, training_start_time, training_end_time, train_loss
+                )
+                if verbose:
+                    self.logger.info(train_loss_output)
+                self._add_train_loss_to_tensorboard(epoch_idx, train_loss)
+                self.wandblogger.log_metrics(
+                    {"epoch": epoch_idx, "train_loss": train_loss, "train_step": epoch_idx},
+                    head="train",
+                )
+
+                # eval
+                if self.eval_step <= 0 or not valid_data:
+                    if saved:
+                        self._save_checkpoint(epoch_idx, verbose=verbose)
+                    continue
+                if (epoch_idx + 1) % self.eval_step == 0:
+                    valid_start_time = time()
+                    valid_score, valid_result = self._valid_epoch(
+                        valid_data, show_progress=show_progress
+                    )
+
+                    (
+                        self.best_valid_score,
+                        self.cur_step,
+                        stop_flag,
+                        update_flag,
+                    ) = early_stopping(
+                        valid_score,
+                        self.best_valid_score,
+                        self.cur_step,
+                        max_step=self.stopping_step,
+                        bigger=self.valid_metric_bigger,
+                    )
+                    valid_end_time = time()
+                    valid_score_output = (
+                        set_color("epoch %d evaluating", "green")
+                        + " ["
+                        + set_color("time", "blue")
+                        + ": %.2fs, "
+                        + set_color("valid_score", "blue")
+                        + ": %f]"
+                    ) % (epoch_idx, valid_end_time - valid_start_time, valid_score)
+                    valid_result_output = (
+                        set_color("valid result", "blue") + ": \n" + dict2str(valid_result)
+                    )
+                    if verbose:
+                        self.logger.info(valid_score_output)
+                        self.logger.info(valid_result_output)
+                    self.tensorboard.add_scalar("Vaild_score", valid_score, epoch_idx)
+                    self.wandblogger.log_metrics(
+                        {**valid_result, "valid_step": valid_step}, head="valid"
+                    )
+
+                    if update_flag:
+                        if saved:
+                            self._save_checkpoint(epoch_idx, verbose=verbose)
+                        self.best_valid_result = valid_result
+
+                    if callback_fn:
+                        callback_fn(epoch_idx, valid_score)
+
+                    if stop_flag:
+                        stop_output = "Finished training, best eval result in epoch %d" % (
+                            epoch_idx - self.cur_step * self.eval_step
+                        )
+                        if verbose:
+                            self.logger.info(stop_output)
+                        break
+
+                    valid_step += 1
+                # end_train = time()
+                # print(f"Training took {(start_train - end_train) / 60} minutes")
+        
 
 
 class KGTrainer(Trainer):

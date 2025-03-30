@@ -614,7 +614,8 @@ def fetch_user_popularity_score(user_ids, sequences):
     print(f"{len(total_pop_scores)} ' ' {len(total_unpop_scores)}")
     return total_pop_scores, total_unpop_scores
 
-def save_batch_activations(bulk_data):
+
+def save_batch_activations(bulk_data, neuron_count):
     """
     Saves a bulk of data (shape 4096 x 4096) to the HDF5 file, appending it to each row.
 
@@ -624,16 +625,16 @@ def save_batch_activations(bulk_data):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)
-    file_path = r"./dataset/ml-1m/neuron_activations_popular.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_unpopular_sasrec.h5"
     with h5py.File(file_path, "a") as f:
         if "dataset" not in f:
             # If the dataset doesn't exist, create it with unlimited columns
-            max_shape = (4096, 1100000)  # Unlimited columns
+            max_shape = (neuron_count, 1100000)  # Unlimited columns
             f.create_dataset(
                 "dataset",
                 data=bulk_data,
                 maxshape=max_shape,
-                chunks=(4096, 2048),  # Optimize chunk size for appending
+                chunks=(neuron_count, 2048),  # Optimize chunk size for appending
                 dtype="float32",
             )
         else:
@@ -642,7 +643,7 @@ def save_batch_activations(bulk_data):
             current_cols = dataset.shape[1]
             print(current_cols)
             new_cols = current_cols + bulk_data.shape[1]
-            dataset.resize((4096, new_cols))
+            dataset.resize((neuron_count, new_cols))
             
             # Write the new data at the end
             dataset[:, current_cols:new_cols] = bulk_data
@@ -754,8 +755,8 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
     lowest_values = lowest.tolist()
     
     if unpopular_only:
-        return list(zip(highest_indexes, highest_values))
-    
+        return list(zip(lowest_indexes, lowest_values))
+    print("here???????????")
     return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
 
 
@@ -967,52 +968,52 @@ def plot_binned_bar_chart(csv_file):
 
 
 def make_items_unpopular(item_seq_len):
-    file_path = r"./dataset/ml-1m/neuron_activations_unpopular.h5"
-    with h5py.File(file_path, 'r') as f:
+    # file_path = r"./dataset/ml-1m/neuron_activations_unpopular.h5"
+    # with h5py.File(file_path, 'r') as f:
 
-        print("Datasets in file:")
-        for name in f:
-            print(name)
+    #     print("Datasets in file:")
+    #     for name in f:
+    #         print(name)
 
-        # Replace 'your_dataset_name' with the actual dataset name
-        dataset_name = 'dataset'  # adjust this after printing dataset names
-        data = f[dataset_name]
+    #     # Replace 'your_dataset_name' with the actual dataset name
+    #     dataset_name = 'dataset'  # adjust this after printing dataset names
+    #     data = f[dataset_name]
 
-        print(f"Shape of dataset: {data.shape}")  # Should print (4096, X)
+    #     print(f"Shape of dataset: {data.shape}")  # Should print (4096, X)
 
-        # Convert to NumPy array (if not too big)
-        array = np.array(data)
+    #     # Convert to NumPy array (if not too big)
+    #     array = np.array(data)
 
-        # Loop through columns
-        for i in range(array.shape[1]):
-            print(f"Column {i}:")
-            print(array[:, i])
+    #     # Loop through columns
+    #     for i in range(array.shape[1]):
+    #         print(f"Column {i}:")
+    #         print(array[:, i])
         
-        # item_labels = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+    item_labels = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+    
+    # Filter rows where popularity_label == -1
+    filtered_items = item_labels[item_labels['popularity_label'] == -1]
+    available_ids = filtered_items['item_id:token'].tolist()
+    
+    # Count how many items are in each row of the batch
+    nonzero_counts = (item_seq_len != 0).sum(dim=1).tolist()
+    selected_item_ids = []
+
+    for count in nonzero_counts:
+        sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
         
-        # # Filter rows where popularity_label == -1
-        # filtered_items = item_labels[item_labels['popularity_label'] == -1]
-        # available_ids = filtered_items['item_id:token'].tolist()
-        
-        # # Count how many items are in each row of the batch
-        # nonzero_counts = (item_seq_len != 0).sum(dim=1).tolist()
-        # selected_item_ids = []
+        # Pad with 0s if needed to reach length 50
+        if len(sampled) < 50:
+            sampled += [0] * (50 - len(sampled))
+        else:
+            sampled = sampled[:50]  # In case count > 50 for any reason
 
-        # for count in nonzero_counts:
-        #     sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
-            
-        #     # Pad with 0s if needed to reach length 50
-        #     if len(sampled) < 50:
-        #         sampled += [0] * (50 - len(sampled))
-        #     else:
-        #         sampled = sampled[:50]  # In case count > 50 for any reason
+        selected_item_ids.append(sampled)
 
-        #     selected_item_ids.append(sampled)
+    # Convert to tensor of shape (batch_size, 50)
+    selected_tensor = torch.tensor(selected_item_ids)
 
-        # # Convert to tensor of shape (batch_size, 50)
-        # selected_tensor = torch.tensor(selected_item_ids)
-
-        # return selected_tensor
+    return selected_tensor
 
 
 
@@ -1047,7 +1048,7 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/ml-1m/neuron_activations_popular.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_unpopular_sasrec.h5"
     dataset_name = 'dataset'  # Replace with the actual dataset name inside the h5 file
 
     with h5py.File(file_path, 'r') as f:
@@ -1067,7 +1068,7 @@ def save_mean_SD():
     })
 
     # Save to CSV
-    output_csv_path = r"./dataset/ml-1m/row_stats_popular.csv"
+    output_csv_path = r"./dataset/ml-1m/row_stats_unpopular.csv"
     df.to_csv(output_csv_path, index=False)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
@@ -1091,3 +1092,88 @@ def save_cohens_d():
     df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv", index=False)
 
     print("Cohen's d values saved to cohen_d_results.csv")
+    
+from scipy.stats import pearsonr
+
+
+def find_pair_cor():
+    # === CONFIG ===
+    # === CONFIG ===
+    file_path = r"./dataset/ml-1m/neuron_activations_popular_sasrec.h5"
+    dataset_name = "dataset"  # Replace with actual dataset key inside the HDF5
+    output_csv = "correlation_pairs_popular.csv"
+
+    # === LOAD DATA ===
+    with h5py.File(file_path, "r") as f:
+        data = f[dataset_name][...]  # shape: (64, X)
+
+    assert data.shape[0] == 64, "Expected 64 rows (neurons) in the data."
+
+    # === COMPUTE CORRELATIONS ===
+    correlations = []
+
+    for i in range(64):
+        for j in range(i + 1, 64):  # Only upper triangle (i < j)
+            r, _ = pearsonr(data[i], data[j])
+            correlations.append((i, j, r))
+
+    # === SAVE TO CSV ===
+    df = pd.DataFrame(correlations, columns=["row_i", "row_j", "correlation"])
+    df["abs_corr"] = df["correlation"].abs()
+    df.sort_values("abs_corr", ascending=False, inplace=True)
+    df.drop(columns="abs_corr", inplace=True)
+    df.to_csv(output_csv, index=False)
+
+    print(f"Saved correlation results to '{output_csv}'")
+    
+
+
+def find_diff():
+    file1 = "correlation_pairs_popular.csv"  # Replace with your actual file name
+    file2 = "correlation_pairs_unpopular.csv"
+    output_file = "correlation_diff.csv"
+
+    # === LOAD FILES ===
+    df1 = pd.read_csv(file1)
+    df2 = pd.read_csv(file2)
+
+    # === MERGE ON (row_i, row_j) ===
+    merged = pd.merge(df1, df2, on=["row_i", "row_j"], suffixes=("_1", "_2"))
+
+    # === COMPUTE DIFFERENCE ===
+    merged["correlation_diff"] = merged["correlation_1"] - merged["correlation_2"]
+    merged["abs_diff"] = merged["correlation_diff"].abs()
+
+    # === SORT AND SAVE ===
+    merged.sort_values("abs_diff", ascending=False, inplace=True)
+    result = merged[["row_i", "row_j", "correlation_diff"]]
+    result.to_csv(output_file, index=False)
+
+    print(f"Saved correlation differences to '{output_file}' (sorted by abs diff)")
+    
+    
+    
+
+def build_popularity_tensor(num_items=3706):
+    """
+    Returns a tensor of shape [num_items], where index i holds the
+    popularity label for item ID (i + 1). Assumes item IDs ∈ [1, num_items].
+    """
+    csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+    df = pd.read_csv(csv_path)
+
+    # Rename for clarity (optional)
+    df = df.rename(columns={'item_id:token': 'item_id'})
+
+    # Clamp non-1 labels to 0
+    df['popularity_label'] = (df['popularity_label'] == 1).astype(int)
+
+    # Initialize tensor: index 0 = item ID 1
+    popularity_tensor = torch.zeros(num_items, dtype=torch.float32)
+
+    for _, row in df.iterrows():
+        item_id = row['item_id']
+        index = item_id - 1  # shift: ID 1 → index 0
+        if 0 <= index < num_items:
+            popularity_tensor[index] = row['popularity_label']
+    return popularity_tensor
