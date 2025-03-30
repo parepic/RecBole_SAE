@@ -2,7 +2,9 @@ from torch import nn
 import torch
 
 class SASRecWithGating(nn.Module):    
-    def __init__(self, sasrec_model, gate_indices, device='cpu'):
+    def __init__(self, sasrec_model, gate_indices, device='cpu', popularity_labels=None):
+        self.popularity_labels = popularity_labels
+        self.popularity_labels.to(device)
         super().__init__()
         print("device blya! ", device)
         self.to(device)        
@@ -22,7 +24,7 @@ class SASRecWithGating(nn.Module):
     
 
 
-    def calculate_loss(self, interaction, popularity_scores, lambda_reg):
+    def calculate_loss(self, interaction, lambda_reg):
         item_seq = interaction['item_id_list']
         item_seq_len = interaction['item_length']
         seq_output = self.forward(item_seq, item_seq_len)
@@ -31,10 +33,9 @@ class SASRecWithGating(nn.Module):
         logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
         scores = torch.sigmoid(logits)
         loss_main = self.loss_fct(logits, pos_items)
-        popularity_scores = popularity_scores.to(self.device)
         penalty = (
-            popularity_scores * scores[:, 1:]**2 +
-            (1 - popularity_scores) * (1 - scores[:, 1:])**2
+            self.popularity_labels * scores[:, 1:]**2 +
+            (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
         ).mean()        
         loss =  loss_main + penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
