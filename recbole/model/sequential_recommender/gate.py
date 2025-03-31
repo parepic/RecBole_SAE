@@ -75,8 +75,7 @@ class AdaptiveGating(nn.Module):
         gate_values = self.gate_mlp(hidden)  # [batch_size, 3]
         gated_hidden = hidden.clone()
         for i, idx in enumerate(self.gate_indices):
-            gated_hidden[:, idx] += gate_values[:, i]
-            gated_hidden[:, idx] -= gate_values[:, i]
+            gated_hidden[:, idx] += (gate_values[:, i] -  gate_values[:, i])
         # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
                 # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
         print('gate values ', gate_values[0])
