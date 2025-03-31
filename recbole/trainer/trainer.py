@@ -266,7 +266,7 @@ class Trainer(AbstractTrainer):
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                losses = loss_func(interaction, 0.001)
+                losses = loss_func(interaction, 0.002)
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
@@ -1037,7 +1037,7 @@ class Trainer(AbstractTrainer):
             if saved and self.start_epoch >= self.epochs:
                 self._save_checkpoint(-1, verbose=verbose)
             self.model = SASRecWithGating(self.model, [40, 56, 59], device=device, popularity_labels=build_popularity_tensor())
-            self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
+            self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.005)
             self.eval_collector.data_collect(train_data)
             self.model.load_sasrec(path)
             
