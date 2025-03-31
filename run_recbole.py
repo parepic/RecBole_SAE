@@ -281,12 +281,12 @@ if __name__ == "__main__":
         trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         trainer.fit_gate( 
             train_data,
-            valid_data=valid_data,
+            valid_data=test_data,
             show_progress=True,
             device=config["device"],
             path=args.path
             )
-    
+        
         exit()
         if(args.test):
             # if(args.corr_file):

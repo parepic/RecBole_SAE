@@ -40,7 +40,7 @@ class SASRecWithGating(nn.Module):
             self.popularity_labels * scores[:, 1:]**2 +
             (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
         ).mean()        
-        loss =  loss_main + penalty
+        loss =   penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
         return loss      
     
