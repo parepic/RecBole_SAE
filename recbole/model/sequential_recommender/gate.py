@@ -32,7 +32,7 @@ class SASRecWithGating(nn.Module):
         pos_items = interaction['item_id']
         test_item_emb = self.sasrec.item_embedding.weight
         logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
-        scores = torch.softmax(logits)
+        scores = torch.softmax(logits, dim=1)
         loss_main = self.loss_fct(logits, pos_items)
         scores = scores.to('cuda')
         self.popularity_labels.to('cuda')
