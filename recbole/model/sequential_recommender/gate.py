@@ -38,8 +38,8 @@ class SASRecWithGating(nn.Module):
         self.popularity_labels.to('cuda')
         print(f"popularity shape {self.popularity_labels.shape}, scores shape {scores.shape}")
         penalty = (
-            self.popularity_labels * scores[:, 1:]**2 +
-            (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
+            self.popularity_labels * (1 - scores[:, 1:])**2 +
+            (1 - self.popularity_labels) * (scores[:, 1:])**2
         ).mean()        
         loss = penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
