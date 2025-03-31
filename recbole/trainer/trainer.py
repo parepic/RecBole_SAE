@@ -47,9 +47,8 @@ from recbole.utils import (
     get_gpu_usage,
     WandbLogger,
     save_user_popularity_score,
-    calculate_pearson_correlation,
-    build_popularity_tensor
-)
+    calculate_pearson_correlation
+    )
 from recbole.model.sequential_recommender import SASRec_SAE, SASRecWithGating
 from torch.nn.parallel import DistributedDataParallel
 
@@ -238,8 +237,6 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-        for param in self.model.sasrec.parameters():
-            param.requires_grad = False
         self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
         total_loss = None
@@ -266,7 +263,7 @@ class Trainer(AbstractTrainer):
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                losses = loss_func(interaction, 0.001)
+                losses = loss_func(interaction)
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
@@ -328,7 +325,7 @@ class Trainer(AbstractTrainer):
             "cur_step": self.cur_step,
             "best_valid_score": self.best_valid_score,
             "state_dict": self.model.state_dict(),
-            "other_parameter": self.model.sasrec.other_parameter(),
+            "other_parameter": self.model.other_parameter(),
             "optimizer": self.optimizer.state_dict(),
         }
         torch.save(state, saved_model_file, pickle_protocol=4)
@@ -939,8 +936,8 @@ class Trainer(AbstractTrainer):
         )
 
         num_sample = 0
-        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
-        #                                     damp_percent=0.6, unpopular_only=True)
+        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
+                                            damp_percent=0.6, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
@@ -955,7 +952,7 @@ class Trainer(AbstractTrainer):
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
-        self.model.recommendation_count = np.zeros(self.model.sasrec.n_items)
+        self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
@@ -1015,8 +1012,7 @@ class Trainer(AbstractTrainer):
             saved=True,
             show_progress=False,
             callback_fn=None,
-            device='cpu',
-            path=None
+            device='cpu'
         ):
             r"""Train the model based on the train data and the valid data.
 
@@ -1037,9 +1033,8 @@ class Trainer(AbstractTrainer):
             if saved and self.start_epoch >= self.epochs:
                 self._save_checkpoint(-1, verbose=verbose)
             self.model = SASRecWithGating(self.model, [40, 56, 59], device=device, popularity_labels=build_popularity_tensor())
-            self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.005)
+            self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
-            self.model.load_sasrec(path)
             
             valid_step = 0
             # start_train = time()
@@ -1126,4 +1121,5 @@ class Trainer(AbstractTrainer):
                     valid_step += 1
                 # end_train = time()
                 # print(f"Training took {(start_train - end_train) / 60} minutes")
-    
+        
+
