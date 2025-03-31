@@ -38,9 +38,9 @@ class SASRecWithGating(nn.Module):
         self.popularity_labels.to('cuda')
         penalty = lambda_reg * torch.sum(scores[:, 1:] * self.popularity_labels)
         loss = loss_main + penalty
-        print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
+        # print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
         top_recs = torch.argsort(logits, dim=1, descending=True)[:, :10]
-        print(top_recs[0])
+        # print(top_recs[0])
         
         return loss      
     
@@ -81,6 +81,6 @@ class AdaptiveGating(nn.Module):
             gated_hidden[:, idx] += gate_values[:, i]
         # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
                 # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
-        print('gate values ', gate_values[0])
+        # print('gate values ', gate_values[0])
         
         return gated_hidden, gate_values
