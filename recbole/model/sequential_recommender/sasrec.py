@@ -165,8 +165,6 @@ class SASRec(SequentialRecommender):
         # item_seq = make_items_unpopular(item_seq)
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
-        if self.corr_file:
-            seq_output = self.dampen_neurons_sasrec(seq_output)
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]

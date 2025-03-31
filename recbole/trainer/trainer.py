@@ -1035,7 +1035,8 @@ class Trainer(AbstractTrainer):
             
             if saved and self.start_epoch >= self.epochs:
                 self._save_checkpoint(-1, verbose=verbose)
-            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.5)
+            self.model = SASRecWithGating(self.model,device=device)
+            self.optimizer = torch.optim.Adam(self.model.sasrec.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
             
             valid_step = 0
