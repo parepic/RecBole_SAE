@@ -20,8 +20,7 @@ class SASRecWithGating(nn.Module):
         # for param in self.sasrec.parameters():
         #     print('required? ', param.requires_grad)
         hidden = self.sasrec.forward(input_seq, input_seq_len)  # [batch_size, seq_len, hidden_dim]
-        gated_hidden, gate_values = self.gating(hidden)
-        return gated_hidden
+        return hidden
     
 
 

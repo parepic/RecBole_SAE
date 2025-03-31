@@ -238,7 +238,7 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-        for param in self.model.sasrec.parameters():
+        for param in self.model.gating.parameters():
             param.requires_grad = False
         # for param in self.model.gating.parameters():
         #     param.requires_grad = False
