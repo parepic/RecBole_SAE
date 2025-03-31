@@ -43,8 +43,7 @@ class SASRecWithGating(nn.Module):
         loss = penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
         
-        scores_uncensored = torch.matmul(seq_output, test_item_emb.transpose(0, 1))  # [B n_items]
-        top_recs = torch.argsort(scores_uncensored, dim=1, descending=True)[:, :10]
+        top_recs = torch.argsort(logits, dim=1, descending=True)[:, :10]
         print(top_recs)
         
         return loss      
