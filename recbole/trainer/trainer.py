@@ -238,8 +238,6 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-        for param in self.model.gating.parameters():
-            param.requires_grad = False
         # for param in self.model.gating.parameters():
         #     param.requires_grad = False
         self.device = torch.device(self.device)
@@ -1038,7 +1036,7 @@ class Trainer(AbstractTrainer):
             if saved and self.start_epoch >= self.epochs:
                 self._save_checkpoint(-1, verbose=verbose)
             self.model = SASRecWithGating(self.model, [40, 56, 59], device=device, popularity_labels=build_popularity_tensor())
-            self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
+            self.optimizer = torch.optim.Adam(self.model.sasrec.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
             
             valid_step = 0
