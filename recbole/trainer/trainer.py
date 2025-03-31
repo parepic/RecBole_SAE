@@ -1040,6 +1040,7 @@ class Trainer(AbstractTrainer):
             self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
             self.model.load_sasrec(path)
+            
             valid_step = 0
             # start_train = time()
             for epoch_idx in range(0, 100):
