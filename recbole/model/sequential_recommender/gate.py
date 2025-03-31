@@ -28,13 +28,13 @@ class SASRecWithGating(nn.Module):
         scores = torch.sigmoid(logits)
         loss_main = self.loss_fct(logits, pos_items)
         scores = scores.to('cuda')
-        self.popularity_labels.to('cuda')
-        penalty = (
-            self.popularity_labels * scores[:, 1:]**2 +
-            (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
-        ).mean()        
-        loss =  loss_main + penalty
-        print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
+        # self.popularity_labels.to('cuda')
+        # penalty = (
+        #     self.popularity_labels * scores[:, 1:]**2 +
+        #     (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
+        # ).mean()        
+        loss =  loss_main
+        print(f"Main Loss: {loss_main.item():.4f} | λ: {lambda_reg}")
         return loss      
     
     def full_sort_predict(self, interaction):
