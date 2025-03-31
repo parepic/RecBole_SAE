@@ -36,15 +36,15 @@ class SASRecWithGating(nn.Module):
         loss_main = self.loss_fct(logits, pos_items)
         scores = scores.to('cuda')
         self.popularity_labels.to('cuda')
-        penalty = (
+        penalty = 3 * (
             self.popularity_labels * (1 - scores[:, 1:])**2 +
             (1 - self.popularity_labels) * (scores[:, 1:])**2
         ).mean()        
-        loss = loss_main + 3 * penalty
+        loss = loss_main + penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
         
         top_recs = torch.argsort(logits, dim=1, descending=True)[:, :10]
-        print(top_recs)
+        print(top_recs[0])
         
         return loss      
     
