@@ -328,7 +328,7 @@ class Trainer(AbstractTrainer):
             "cur_step": self.cur_step,
             "best_valid_score": self.best_valid_score,
             "state_dict": self.model.state_dict(),
-            "other_parameter": self.model.sasrec.other_parameter(),
+            "other_parameter": self.model.other_parameter(),
             "optimizer": self.optimizer.state_dict(),
         }
         torch.save(state, saved_model_file, pickle_protocol=4)
@@ -955,7 +955,7 @@ class Trainer(AbstractTrainer):
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
-        self.model.recommendation_count = np.zeros(self.model.sasrec.n_items)
+        self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
