@@ -18,24 +18,16 @@ class SASRecWithGating(nn.Module):
     
 
 
-    def calculate_loss(self, interaction, lambda_reg):
-        item_seq = interaction['item_id_list']
-        item_seq_len = interaction['item_length']
+    def calculate_loss(self, interaction):
+        item_seq = interaction[self.sasrec.ITEM_SEQ]
+        item_seq_len = interaction[self.sasrec.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
-        pos_items = interaction['item_id']
+        pos_items = interaction[self.sasrec.POS_ITEM_ID]
         test_item_emb = self.sasrec.item_embedding.weight
         logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
-        scores = torch.sigmoid(logits)
-        loss_main = self.loss_fct(logits, pos_items)
-        scores = scores.to('cuda')
-        # self.popularity_labels.to('cuda')
-        # penalty = (
-        #     self.popularity_labels * scores[:, 1:]**2 +
-        #     (1 - self.popularity_labels) * (1 - scores[:, 1:])**2
-        # ).mean()        
-        loss =  loss_main
-        print(f"Main Loss: {loss_main.item():.4f} | λ: {lambda_reg}")
-        return loss      
+        loss = self.loss_fct(logits, pos_items)
+        return loss
+
     
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.sasrec.ITEM_SEQ]
@@ -50,6 +42,4 @@ class SASRecWithGating(nn.Module):
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
-        return scores  
-
-        
+        return scores
