@@ -266,7 +266,7 @@ class Trainer(AbstractTrainer):
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                losses = loss_func(interaction, 0.002)
+                losses = loss_func(interaction, 0.001)
                 if(epoch_idx == 0):
                     user_ids = interaction['user_id']
                     item_seq = interaction['item_id_list']
