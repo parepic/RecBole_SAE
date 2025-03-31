@@ -937,7 +937,7 @@ class Trainer(AbstractTrainer):
 
         num_sample = 0
         self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
-                                            damp_percent=0.6, unpopular_only=True)
+                                            damp_percent=1.0, unpopular_only=True)
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
