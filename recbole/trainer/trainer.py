@@ -328,7 +328,7 @@ class Trainer(AbstractTrainer):
             "cur_step": self.cur_step,
             "best_valid_score": self.best_valid_score,
             "state_dict": self.model.state_dict(),
-            "other_parameter": self.model.other_parameter(),
+            "other_parameter": self.model.sasrec.other_parameter(),
             "optimizer": self.optimizer.state_dict(),
         }
         torch.save(state, saved_model_file, pickle_protocol=4)
@@ -1036,7 +1036,6 @@ class Trainer(AbstractTrainer):
             if saved and self.start_epoch >= self.epochs:
                 self._save_checkpoint(-1, verbose=verbose)
             # self.model = SASRecWithGating(self.model,device=device)
-            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
             
             valid_step = 0
