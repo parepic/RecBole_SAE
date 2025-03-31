@@ -80,4 +80,4 @@ class AdaptiveGating(nn.Module):
                 # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
         print('gate values ', gate_values[0])
         
-        return gated_hidden, gate_values
+        return hidden, gate_values

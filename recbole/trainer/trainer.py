@@ -240,8 +240,8 @@ class Trainer(AbstractTrainer):
         self.model.train()
         for param in self.model.sasrec.parameters():
             param.requires_grad = False
-        for param in self.model.gating.parameters():
-            param.requires_grad = False
+        # for param in self.model.gating.parameters():
+        #     param.requires_grad = False
         self.device = torch.device(self.device)
         loss_func = loss_func or self.model.calculate_loss
         total_loss = None
