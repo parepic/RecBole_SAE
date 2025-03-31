@@ -12,7 +12,7 @@ class SASRecWithGating(nn.Module):
                                      gate_indices=gate_indices)
         self.gating = self.gating.to(device)
         self.recommendation_count = np.zeros(self.sasrec.n_items)
-
+        self.device = device
         self.loss_fct = nn.CrossEntropyLoss()
 
     
