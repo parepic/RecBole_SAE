@@ -36,7 +36,7 @@ class SASRecWithGating(nn.Module):
         loss_main = self.loss_fct(logits, pos_items)
         scores = scores.to('cuda')
         self.popularity_labels.to('cuda')
-        penalty = 3 * (
+        penalty = 7 * (
             self.popularity_labels * (1 - scores[:, 1:])**2 +
             (1 - self.popularity_labels) * (scores[:, 1:])**2
         ).mean()        
