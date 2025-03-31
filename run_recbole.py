@@ -314,4 +314,3 @@ if __name__ == "__main__":
                 valid_data=valid_data,
                 show_progress=True
                 )
-            
