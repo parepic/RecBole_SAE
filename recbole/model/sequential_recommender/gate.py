@@ -3,16 +3,9 @@ import torch
 import numpy as np
 class SASRecWithGating(nn.Module):    
     def __init__(self, sasrec_model, gate_indices, device='cpu', popularity_labels=None):
-        self.popularity_labels = popularity_labels
-        self.popularity_labels = self.popularity_labels.to(device)
-        super().__init__()
         self.to(device)        
         self.sasrec = sasrec_model
-        self.gating = AdaptiveGating(hidden_dim=sasrec_model.hidden_size,
-                                     gate_indices=gate_indices)
-        self.gating = self.gating.to(device)
         self.recommendation_count = np.zeros(self.sasrec.n_items)
-
         self.loss_fct = nn.CrossEntropyLoss()
 
     
@@ -59,24 +52,3 @@ class SASRecWithGating(nn.Module):
         return scores  
 
         
-class AdaptiveGating(nn.Module):
-    def __init__(self, hidden_dim, gate_indices):
-        super().__init__()
-        self.gate_indices = gate_indices  # e.g., [5, 20, 38]
-        self.gate_mlp = nn.Sequential(
-            nn.Linear(hidden_dim, 32),
-            nn.ReLU(),
-            nn.Linear(32, len(gate_indices))  # No sigmoid!
-        )
-
-    def forward(self, hidden):
-        # hidden: [batch_size, hidden_dim]
-        gate_values = self.gate_mlp(hidden)  # [batch_size, 3]
-        gated_hidden = hidden.clone()
-        for i, idx in enumerate(self.gate_indices):
-            gated_hidden[:, idx] += (gate_values[:, i] -  gate_values[:, i])
-        # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
-                # print(f"Gate values: {gate_values[0]} | Gate hidden: {gated_hidden[0]} | Indices: {self.gate_indices[0]}")
-        print('gate values ', gate_values[0])
-        
-        return gated_hidden, gate_values
