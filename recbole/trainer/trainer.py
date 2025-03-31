@@ -955,7 +955,7 @@ class Trainer(AbstractTrainer):
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
-        self.model.recommendation_count = np.zeros(self.model.n_items)
+        self.model.recommendation_count = np.zeros(self.model.sasrec.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
