@@ -1015,7 +1015,8 @@ class Trainer(AbstractTrainer):
             saved=True,
             show_progress=False,
             callback_fn=None,
-            device='cpu'
+            device='cpu',
+            path=None
         ):
             r"""Train the model based on the train data and the valid data.
 
@@ -1038,7 +1039,7 @@ class Trainer(AbstractTrainer):
             self.model = SASRecWithGating(self.model, [40, 56, 59], device=device, popularity_labels=build_popularity_tensor())
             self.optimizer = torch.optim.Adam(self.model.gating.parameters(), lr=0.5)
             self.eval_collector.data_collect(train_data)
-            
+            self.model.load_sasrec(path)
             valid_step = 0
             # start_train = time()
             for epoch_idx in range(0, 100):

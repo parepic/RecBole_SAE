@@ -283,7 +283,8 @@ if __name__ == "__main__":
             train_data,
             valid_data=valid_data,
             show_progress=True,
-            device=config["device"]
+            device=config["device"],
+            path=args.path
             )
     
         exit()
