@@ -37,7 +37,7 @@ class SASRecWithGating(nn.Module):
         scores = scores.to('cuda')
         self.popularity_labels.to('cuda')
         penalty = lambda_reg * torch.sum(scores[:, 1:] * self.popularity_labels)
-        loss = loss_main + penalty
+        loss = loss_main
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
         top_recs = torch.argsort(logits, dim=1, descending=True)[:, :10]
         # print(top_recs[0])
