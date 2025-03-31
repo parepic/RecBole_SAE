@@ -274,20 +274,20 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
         
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-        trainer.fit_gate( 
-            train_data,
-            valid_data=test_data,
-            show_progress=True,
-            device=config["device"],
-            path=args.path
-            )
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer.fit_gate( 
+        #     train_data,
+        #     valid_data=test_data,
+        #     show_progress=True,
+        #     device=config["device"],
+        #     path=args.path
+        #     )
         
-        exit()
+        # exit()
         if(args.test):
             # if(args.corr_file):
             #     test_result = trainer.dampen_neurons(
@@ -295,12 +295,11 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            print("here!")
-            # create_visualizations_neurons()
-            test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
-            )
-            print(test_result)
+            create_visualizations_neurons()
+            # test_result = trainer.evaluate(
+            #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
+            # )
+            # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
             trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
