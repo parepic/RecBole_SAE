@@ -40,7 +40,7 @@ class SASRecWithGating(nn.Module):
             self.popularity_labels * (1 - scores[:, 1:])**2 +
             (1 - self.popularity_labels) * (scores[:, 1:])**2
         ).mean()        
-        loss = penalty
+        loss = loss_main + 3 * penalty
         print(f"Main Loss: {loss_main.item():.4f} | Penalty: {penalty.item():.4f} | λ: {lambda_reg}")
         
         top_recs = torch.argsort(logits, dim=1, descending=True)[:, :10]
