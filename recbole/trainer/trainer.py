@@ -328,7 +328,7 @@ class Trainer(AbstractTrainer):
             "cur_step": self.cur_step,
             "best_valid_score": self.best_valid_score,
             "state_dict": self.model.state_dict(),
-            "other_parameter": self.sasrec.model.other_parameter(),
+            "other_parameter": self.model.sasrec.other_parameter(),
             "optimizer": self.optimizer.state_dict(),
         }
         torch.save(state, saved_model_file, pickle_protocol=4)
