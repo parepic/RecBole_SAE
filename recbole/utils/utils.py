@@ -1159,7 +1159,7 @@ def build_popularity_tensor(num_items=3706):
     Returns a tensor of shape [num_items], where index i holds the
     popularity label for item ID (i + 1). Assumes item IDs ∈ [1, num_items].
     """
-    csv_path = r"./recbole/dataset/ml-1m/item_popularity_labels_with_titles.csv"
+    csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
     df = pd.read_csv(csv_path)
 
     # Rename for clarity (optional)
