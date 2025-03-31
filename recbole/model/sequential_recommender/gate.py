@@ -3,6 +3,7 @@ import torch
 import numpy as np
 class SASRecWithGating(nn.Module):    
     def __init__(self, sasrec_model, gate_indices, device='cpu', popularity_labels=None):
+        super(SASRecWithGating, self).__init__()  # ✅ This line is critical
         self.to(device)        
         self.sasrec = sasrec_model
         self.recommendation_count = np.zeros(self.sasrec.n_items)
