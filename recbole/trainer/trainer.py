@@ -267,7 +267,7 @@ class Trainer(AbstractTrainer):
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):                
                 losses = loss_func(interaction, scores=calculate_IPS(interaction[self.model.POS_ITEM_ID]))
-                
+
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -941,8 +941,8 @@ class Trainer(AbstractTrainer):
         )
         
         num_sample = 0
-        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
-                                            damp_percent=1, unpopular_only=False)
+        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
+        #                                     damp_percent=1, unpopular_only=False)
         splits = []
         inverse_propensities = []
         for batch_idx, batched_data in enumerate(iter_data):
@@ -961,7 +961,6 @@ class Trainer(AbstractTrainer):
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=splits)
-        pop_labels = calculate_IPS(positive_i, reverse=False)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, batch_ips)
         self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
