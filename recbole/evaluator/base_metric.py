@@ -29,7 +29,7 @@ class AbstractMetric(object):
     def __init__(self, config):
         self.decimal_place = config["metric_decimal_place"]
 
-    def calculate_metric(self, dataobject):
+    def calculate_metric(self, dataobject, ips_scores=None):
         """Get the dictionary of a metric.
 
         Args:
@@ -56,15 +56,18 @@ class TopkMetric(AbstractMetric):
         super().__init__(config)
         self.topk = config["topk"]
 
-    def used_info(self, dataobject):
+    def used_info(self, dataobject, row_indices=None):
         """Get the bool matrix indicating whether the corresponding item is positive
         and number of positive items for each user.
         """
-        rec_mat = dataobject.get("rec.topk")
+        rec_mat = dataobject.get("rec.topk")  # Shape (B, X)
+        if row_indices is not None:
+            rec_mat = rec_mat[row_indices]  # Keep selected rows only
+
         topk_idx, pos_len_list = torch.split(rec_mat, [max(self.topk), 1], dim=1)
         return topk_idx.to(torch.bool).numpy(), pos_len_list.squeeze(-1).numpy()
-
-    def topk_result(self, metric, value):
+    
+    def topk_result(self, metric, value, metric_dict={}):
         """Match the metric value to the `k` and put them in `dictionary` form.
 
         Args:
@@ -74,7 +77,6 @@ class TopkMetric(AbstractMetric):
         Returns:
             dict: metric values required in the configuration.
         """
-        metric_dict = {}
         avg_result = value.mean(axis=0)
         for k in self.topk:
             key = "{}@{}".format(metric, k)

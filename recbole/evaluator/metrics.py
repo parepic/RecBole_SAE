@@ -53,7 +53,7 @@ class Hit(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject):
+    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
         pos_index, _ = self.used_info(dataobject)
         result = self.metric_info(pos_index)
         metric_dict = self.topk_result("hit", result)
@@ -79,7 +79,7 @@ class MRR(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject):
+    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
         pos_index, _ = self.used_info(dataobject)
         result = self.metric_info(pos_index)
         metric_dict = self.topk_result("mrr", result)
@@ -150,7 +150,7 @@ class Recall(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject):
+    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
         pos_index, pos_len = self.used_info(dataobject)
         result = self.metric_info(pos_index, pos_len)
         metric_dict = self.topk_result("recall", result)
@@ -158,7 +158,7 @@ class Recall(TopkMetric):
 
     def metric_info(self, pos_index, pos_len):
         return np.cumsum(pos_index, axis=1) / pos_len.reshape(-1, 1)
-
+import torch
 
 class NDCG(TopkMetric):
     r"""NDCG_ (also known as normalized discounted cumulative gain) is a measure of ranking quality,
@@ -177,10 +177,40 @@ class NDCG(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject):
+    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
+
+        head_rows = chunks[0]
+        mid_rows = chunks[1]
+        tail_rows = chunks[2]
+        metric_dict = {}
+        pos_index, pos_len = self.used_info(dataobject, row_indices=head_rows)
+        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
+        metric_dict = self.topk_result("ndcg-head", result, metric_dict)
+        
+        pos_index, pos_len = self.used_info(dataobject, row_indices=mid_rows)
+        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
+        metric_dict = self.topk_result("ndcg-mid", result, metric_dict)
+        
+        pos_index, pos_len = self.used_info(dataobject, row_indices=tail_rows)
+        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
+        metric_dict = self.topk_result("ndcg-tail", result, metric_dict)
+        
         pos_index, pos_len = self.used_info(dataobject)
-        result = self.metric_info(pos_index, pos_len)
-        metric_dict = self.topk_result("ndcg", result)
+        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
+        metric_dict = self.topk_result("ndcg", result, metric_dict)
+        
+        
+        if ips_scores is not None:
+            ndcg_at_10 = result[:, -1]  # shape (N,)
+            ips_weights = np.array(ips_scores, dtype=np.float32)  # shape (N,)
+            
+            weighted_sum = np.sum(ndcg_at_10 * ips_weights)
+            normalizer = np.sum(ips_weights)
+            
+            ips_adjusted_ndcg = weighted_sum / normalizer
+            
+            metric_dict["ips_ndcg@10"] = float(ips_adjusted_ndcg)
+
         return metric_dict
 
     def metric_info(self, pos_index, pos_len):
@@ -217,7 +247,7 @@ class Precision(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject):
+    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
         pos_index, _ = self.used_info(dataobject)
         result = self.metric_info(pos_index)
         metric_dict = self.topk_result("precision", result)

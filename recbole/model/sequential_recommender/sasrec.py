@@ -27,7 +27,9 @@ from recbole.utils import (
     make_items_unpopular,
     make_items_popular,
     save_batch_activations,
-    get_extreme_correlations
+    get_extreme_correlations,
+    skew_sample,
+    calculate_IPS
 )
 
 import pandas as pd
@@ -132,25 +134,30 @@ class SASRec(SequentialRecommender):
         
         return output  # [B H]
 
-    def calculate_loss(self, interaction):
+    def calculate_loss(self, interaction, scores=None):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        seq_output = self.forward(item_seq, item_seq_len)
-        pos_items = interaction[self.POS_ITEM_ID]
-        if self.loss_type == "BPR":
-            neg_items = interaction[self.NEG_ITEM_ID]
-            pos_items_emb = self.item_embedding(pos_items)
-            neg_items_emb = self.item_embedding(neg_items)
-            pos_score = torch.sum(seq_output * pos_items_emb, dim=-1)  # [B]
-            neg_score = torch.sum(seq_output * neg_items_emb, dim=-1)  # [B]
-            loss = self.loss_fct(pos_score, neg_score)
-            return loss
-        else:  # self.loss_type = 'CE'
-            test_item_emb = self.item_embedding.weight
-            logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
-            loss = self.loss_fct(logits, pos_items)
-            return loss
+        pos_items = interaction[self.POS_ITEM_ID]  # shape: (batch_size,)
+        
+        # Forward pass
+        seq_output = self.forward(item_seq, item_seq_len)  # shape: (batch_size, hidden_dim)
+        test_item_emb = self.item_embedding.weight          # shape: (num_items, hidden_dim)
+        logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))  # (batch_size, num_items)
+        
+        # Cross-entropy loss per sample (no reduction!)
+        loss_fn = nn.CrossEntropyLoss(reduction='none')
+        ce_loss = loss_fn(logits, pos_items)  # shape: (batch_size,)
 
+        if scores is not None:
+            # Clamp scores to avoid exploding weights
+            scores = torch.clamp(scores, min=1e-4)
+            # Inverse propensity weighting
+            weighted_loss = (ce_loss / scores).mean()
+        else:
+            weighted_loss = ce_loss.mean()
+        print("ISP-weighed loss", weighted_loss)
+        return weighted_loss
+    
     def predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
@@ -162,7 +169,7 @@ class SASRec(SequentialRecommender):
 
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
-        # item_seq = make_items_unpopular(item_seq)
+        # # item_seq = make_items_unpopular(item_seq)
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
         if self.corr_file:
@@ -176,13 +183,59 @@ class SASRec(SequentialRecommender):
         return scores
 
 
-
     def dampen_neurons_sasrec(self, pre_acts):
         if(self.neuron_count == 0): 
             return pre_acts
-        unpop_indexes, unpop_values = zip(*get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
         print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
-        pre_acts[:, unpop_indexes] += self.damp_percent
+        
+        if self.unpopular_only:
+            unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+            unpop_indexes, unpop_values = zip(*get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
+            unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
+            print(unpop_mean_sd.columns.tolist())
+
+            means = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
+            sds = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
+            for i, neuron_idx in enumerate(list(unpop_indexes)):
+                # Get values for this neuron across all rows
+                vals = pre_acts[:, neuron_idx]
+
+                # Condition: lower than mean and also lower than (mean - sd)
+                condition = (vals > means[i])
+
+                # Apply dampening only where the condition is true
+                pre_acts[condition, neuron_idx] += self.damp_percent
+
+        else:
+            (lowest_corrs, highest_corrs) = get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
+            unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+            
+            unpop_indexes, unpop_values = zip(*highest_corrs)
+            pop_indexes, pop_values = zip(*lowest_corrs)
+            
+            unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
+            means_unpop = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
+            sds_unpop = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
+            
+            for i, neuron_idx in enumerate(list(unpop_indexes)):
+                # Get values for this neuron across all rows
+                vals = pre_acts[:, neuron_idx]
+
+                # Condition: lower than mean and also lower than (mean - sd)
+                condition = (vals > means_unpop[i])
+
+                # Apply dampening only where the condition is true
+                pre_acts[condition, neuron_idx] += self.damp_percent
+            
+            
+            for i, neuron_idx in enumerate(list(pop_indexes)):
+                # Get values for this neuron across all rows
+                vals = pre_acts[:, neuron_idx]
+
+                # Condition: lower than mean and also lower than (mean - sd)
+                condition = (vals < means_unpop[i])
+
+                # Apply dampening only where the condition is true
+                pre_acts[condition, neuron_idx] -= self.damp_percent
+        
         return pre_acts	
-
-
