@@ -150,6 +150,7 @@ class SASRec(SequentialRecommender):
 
         if scores is not None:
             # Clamp scores to avoid exploding weights
+            scores = torch.tensor(scores, dtype=torch.float32, device=logits.device)
             scores = torch.clamp(scores, min=1e-4)
             # Inverse propensity weighting
             weighted_loss = (ce_loss / scores).mean()
