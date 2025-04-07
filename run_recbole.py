@@ -71,18 +71,24 @@ from IPython.display import display
 def calculate_percentage_change(new_values, base_value):
     return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
 
-def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis):
+def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis, ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails):
     # Hardcoded first row for 'sasrec'
     dampen_labels = [f'{dp}' for dp in dampen_percs]
     
     data = {
         'Alpha': dampen_labels,
         'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[0]),
-        'Hit@10': calculate_percentage_change(hits, hits[0]),
+        'NDCG-HEAD@10': calculate_percentage_change(ndcg_heads, ndcg_heads[0]),
+        'NDCG-MID@10': calculate_percentage_change(ndcg_mids, ndcg_mids[0]),
+        'NDCG-TAIL@10': calculate_percentage_change(ndcg_tails, ndcg_tails[0]),
+        # 'Hit@10': calculate_percentage_change(hits, hits[0]),
         # 'Coverage@10': calculate_percentage_change(coverages, coverages[0]),
         'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
         'Deep LT Coverage@10': calculate_percentage_change(deep_lt_coverages, deep_lt_coverages[0]),
-        'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0])
+        # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0]),
+        'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
+        # 'ARP@10': calculate_percentage_change(arps, arps[0])
+        
     }
     df = pd.DataFrame(data)
     
@@ -128,30 +134,42 @@ def create_visualizations_neurons():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    ndcgs = [0.1573]
-    hits = [0.2805]
-    coverages = [0.6180]
-    lt_coverages = [0.6063]
-    deep_lt_coverages = [0.4487]
-    dampen_percs = ['Sasrec']
-    ginis = [0.7631]
+    arps = []
+    ndcgs = []
+    hits = []
+    coverages = []
+    lt_coverages = []
+    deep_lt_coverages = []
+    dampen_percs = []
+    ginis = []
+    ips_ndcgs = []
+    ndcg_heads = []
+    ndcg_mids = []
+    ndcg_tails = []
     dampen_perc = 0
-    neuron_count = 1
-    for i in range(15):
+    neuron_count = 0
+    for i in range(10):
         test_result = trainer.evaluate(
-            test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = neuron_count
+            valid_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = neuron_count
         )
         ndcgs.append(test_result['ndcg@10'])
+        ndcg_heads.append(test_result['ndcg-head@10'])
+        ndcg_mids.append(test_result['ndcg-mid@10'])
+        ndcg_tails.append(test_result['ndcg-tail@10'])
         hits.append(test_result['hit@10'])
         coverages.append(test_result['coverage@10'])
         lt_coverages.append(test_result['LT_coverage@10'])
         deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
+        ips_ndcgs.append(test_result['ips_ndcg@10'])
         dampen_percs.append(neuron_count)
+        # arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
+        print(test_result['ips_ndcg@10'])
         print(test_result['coverage@10'])
-        neuron_count += 2
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis)
+        neuron_count += 1
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
+                          ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails)
 
 
 from scipy.stats import pearsonr
@@ -264,7 +282,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'lfm1b-artists',
+            'ml-1m',
             config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,

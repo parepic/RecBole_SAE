@@ -725,40 +725,6 @@ def calculate_pearson_correlation(file2_path, output_csv_path):
 
 import matplotlib.pyplot as plt
 
-def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
-    """
-    Retrieves the highest and lowest correlation indexes and their values.
-    
-    Parameters:
-    file_name (str): CSV file name containing correlation values.
-    n (int): Number of extreme values to retrieve.
-    unpopular_only (bool): Whether to return only the lowest values.
-    
-    Returns:
-    list or tuple: If unpopular_only is True, returns a list of lowest indexes and their values.
-                   Otherwise, returns a tuple of (highest_indexes, highest_values, lowest_indexes, lowest_values).
-    """
-    file_path = r"./dataset/ml-1m/" + file_name
-    df = pd.read_csv(file_path)
-    
-    # Assuming the column name is unknown, take the first column
-    column_name = df.columns[0]
-    values = df[column_name]
-    
-    # Get indexes and values of highest and lowest n/2 values
-    highest = values.nlargest(n)
-    lowest = values.nsmallest(n)
-
-    highest_indexes = highest.index.tolist()
-    highest_values = highest.tolist()
-    lowest_indexes = lowest.index.tolist()
-    lowest_values = lowest.tolist()
-    
-    if unpopular_only:
-        return list(zip(lowest_indexes, lowest_values))
-    return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
-
-
 
 def get_extreme_correlations2(file_name: str, n: int, unpopular_only: bool):
     """
@@ -1175,4 +1141,197 @@ def build_popularity_tensor(num_items=3706):
         index = item_id - 1  # shift: ID 1 → index 0
         if 0 <= index < num_items:
             popularity_tensor[index] = row['popularity_label']
-    return popularity_tensor
+    return 
+
+
+import torch
+
+
+def plot_item_distribution(item_ids, title):
+    item_counts = Counter(item_ids.tolist())
+    items, freqs = zip(*item_counts.items())
+    sorted_freqs = sorted(freqs, reverse=True)
+
+    plt.figure(figsize=(10, 4))
+    plt.bar(range(len(sorted_freqs)), sorted_freqs)
+    plt.title(title)
+    plt.xlabel("Items (sorted by frequency)")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.show()
+
+
+def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
+    """
+    Retrieves the highest and lowest correlation indexes and their values.
+    
+    Parameters:
+    file_name (str): CSV file name containing correlation values.
+    n (int): Number of extreme values to retrieve.
+    unpopular_only (bool): Whether to return only the lowest values.
+    
+    Returns:
+    list or tuple: If unpopular_only is True, returns a list of lowest indexes and their values.
+                   Otherwise, returns a tuple of (highest_indexes, highest_values, lowest_indexes, lowest_values).
+    """
+    file_path = r"./dataset/ml-1m/" + file_name
+    df = pd.read_csv(file_path)
+    
+    # Assuming the column name is unknown, take the first column
+    column_name = df.columns[0]
+    values = df[column_name]
+    
+    # Get indexes and values of highest and lowest n/2 values
+    highest = values.nlargest(n)
+    lowest = values.nsmallest(n)
+
+    highest_indexes = highest.index.tolist()
+    highest_values = highest.tolist()
+    lowest_indexes = lowest.index.tolist()
+    lowest_values = lowest.tolist()
+    if unpopular_only:
+        return list(zip(lowest_indexes, lowest_values))
+    return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
+
+    
+import torch
+import math
+from collections import Counter
+
+
+
+def calculate_average_popularity(item_ids: torch.Tensor, label) -> float:
+    df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+    
+    # Create a mapping from item_id to interaction_count
+    interaction_dict = dict(zip(df['item_id:token'], df['interaction_count']))
+
+    # Calculate total number of interactions
+    total_interactions = df['interaction_count'].sum()
+
+    # Compute the popularity scores list
+    popularity_scores = [
+        interaction_dict.get(item_id, 0) / total_interactions
+        for item_id in item_ids.tolist()
+    ]
+
+    # Print the average popularity score
+    average_popularity = sum(popularity_scores) / len(popularity_scores)
+    print(label, " Average Popularity Score:", average_popularity)    
+
+
+def calculate_IPS(item_ids, reverse=False):
+    """
+    Compute inverse propensity scores based on item popularity.
+
+    Args:
+        item_ids (Tensor): Tensor of item IDs (shape: N,)
+        reverse (bool): If True, return inverse popularity (for SKEW). If False, return direct popularity.
+
+    Returns:
+        List[float]: Propensity scores per item.
+    """
+    csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+    df = pd.read_csv(csv_path)
+
+    df['interaction_count'] = df['interaction_count'].astype(float)
+    df['item_id'] = df['item_id:token'].astype(str)
+
+    total_interactions = df['interaction_count'].sum()
+    interaction_series = df.set_index('item_id')['interaction_count']
+
+    fallback_value = 1.0  # fallback in case item ID is missing
+
+    ips_list = []
+    for item in item_ids:
+        item_str = str(item.item())
+        if item_str in interaction_series:
+            count = interaction_series[item_str]
+            ips = (total_interactions / count) if reverse else (count / total_interactions)
+        else:
+            ips = fallback_value
+        ips_list.append(ips)
+
+    return ips_list
+
+
+def skew_sample(interaction, num_samples):
+    """
+    Select a subset of interactions based on SKEW sampling (inverse item popularity).
+
+    Args:
+        interaction (dict): Dictionary with keys 'item_id', 'item_id_list', 'item_length'.
+        num_samples (int): Number of interactions to keep based on inverse popularity.
+
+    Returns:
+        Tensor: Indices of the sampled (retained) interactions (shape: num_samples,).
+    """
+
+    item_ids = interaction['item_id']             # (N,)
+    item_id_list = interaction['item_id_list']    # (N, 50)
+    item_length = interaction['item_length']      # (N,)
+    print(torch.unique(item_ids).numel())
+    # Log and compute entropy before sampling
+    calculate_average_popularity(item_ids, 'Before sampling')
+    # entropy_before = calculate_normalized_entropy(item_ids)
+    # print(f"🟡 Normalized Entropy BEFORE: {entropy_before:.4f}")
+
+    # Compute inverse popularity scores (low for popular, high for rare items)
+    sample_probs = calculate_IPS(item_ids, reverse=True)
+    sample_probs = list(map(lambda x: x**2, sample_probs))
+    probs = torch.tensor(sample_probs, dtype=torch.float)
+    probs = probs / probs.sum()
+
+    if torch.isnan(probs).any() or probs.sum() == 0:
+        raise ValueError("Invalid sampling probabilities. Check your popularity scores.")
+
+    N = item_ids.size(0)
+    all_indices = torch.arange(N)
+    sampled_indices = torch.multinomial(probs, num_samples, replacement=False)
+
+    # Keep only sampled interactions
+    interaction['item_id'] = item_ids[sampled_indices]
+    interaction['item_id_list'] = item_id_list[sampled_indices]
+    interaction['item_length'] = item_length[sampled_indices]
+
+    # Log and compute entropy after sampling
+    calculate_average_popularity(interaction['item_id'], 'After sampling')
+    # entropy_after = calculate_normalized_entropy(interaction['item_id'])
+    # print(f"🟢 Normalized Entropy AFTER:  {entropy_after:.4f}")
+
+    return sampled_indices
+
+
+def get_popularity_label_indices(id_tensor):
+    """
+    Args:
+        id_tensor (torch.Tensor): 1D tensor of item IDs of shape (N,)
+        df (pd.DataFrame): DataFrame with columns ['item_id:token', 'popularity_label']
+
+    Returns:
+        Tuple of 3 torch.Tensors: (indices_label_1, indices_label_0, indices_label_minus1)
+    """
+    
+    df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", encoding='latin1')
+
+    # Create a map from item ID to popularity_label
+    id_to_label = dict(zip(df['item_id:token'], df['popularity_label']))
+
+    indices_label_1 = []
+    indices_label_0 = []
+    indices_label_minus1 = []
+
+    for idx, item_id in enumerate(id_tensor.tolist()):
+        label = id_to_label.get(item_id, None)
+        if label == 1:
+            indices_label_1.append(idx)
+        elif label == 0:
+            indices_label_0.append(idx)
+        elif label == -1:
+            indices_label_minus1.append(idx)
+
+    return (
+        torch.tensor(indices_label_1, dtype=torch.long),
+        torch.tensor(indices_label_0, dtype=torch.long),
+        torch.tensor(indices_label_minus1, dtype=torch.long)
+    )

@@ -30,7 +30,10 @@ from recbole.utils.utils import (
     save_mean_SD,
     save_cohens_d,
     find_diff,
-    build_popularity_tensor
+    build_popularity_tensor,
+    calculate_IPS,
+    skew_sample,
+    get_popularity_label_indices
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -81,5 +84,8 @@ __all__ = [
     "save_mean_SD",
     "save_cohens_d",
     "find_diff",
-    "build_popularity_tensor"
+    "build_popularity_tensor",
+    "calculate_IPS",
+    "skew_sample",
+    "get_popularity_label_indices"
 ]

@@ -13,6 +13,8 @@ from recbole.evaluator.collector import DataStruct
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
+
+
 class Evaluator(object):
     """Evaluator is used to check parameter correctness, and summarize the results of all metrics."""
 
@@ -24,7 +26,7 @@ class Evaluator(object):
         for metric in self.metrics:
             self.metric_class[metric] = metrics_dict[metric](self.config)
 
-    def evaluate(self, dataobject: DataStruct):
+    def evaluate(self, dataobject: DataStruct, ips_scores=None, chunks=None):
         """calculate all the metrics. It is called at the end of each epoch
 
         Args:
@@ -36,56 +38,78 @@ class Evaluator(object):
         """
         result_dict = OrderedDict()
         for metric in self.metrics:
-            metric_val = self.metric_class[metric].calculate_metric(dataobject)
+            metric_val = self.metric_class[metric].calculate_metric(dataobject, ips_scores=ips_scores, chunks=chunks)
             result_dict.update(metric_val)
         return result_dict
     
     
-    def evaluate_fairness(self, recommendation_count):
+    def evaluate_fairness(self, recommendation_count, pop_scores):
         """
-        Evaluate Long Tail Coverage, Coverage, and Gini Coefficient.
+        Evaluate Long Tail Coverage, Coverage, Gini Coefficient, and Average Recommendation Popularity (ARP),
+        excluding item ID 0 (unused index).
         
         Args:
             recommendation_count (list): Array where index `i` represents the count for item with ID `i`.
             
         Returns:
-            dict: A dictionary with 'Long Tail Coverage', 'Coverage', and 'Gini Coefficient' metrics.
+            dict: A dictionary with 'Long Tail Coverage', 'Coverage', 'Gini Coefficient', and 'ARP' metrics.
         """
-        # Load the CSV file for item metadata
-        item_data = pd.read_csv(r'./dataset/ml-1m/item_popularity_labels_with_titles.csv')
-        
-        # Determine the maximum possible number of items
+        import pandas as pd
+        import numpy as np
+        file = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
+        # Load item metadata
+        item_data = pd.read_csv(file)
+
+        # Slice recommendation_count to ignore index 0
+        recommendation_count = recommendation_count[1:]
+        offset = 1  # Because IDs start at 1
+
+        # Adjust number of items
         num_items = len(recommendation_count)
-        
-        # Filter items within the valid range [0, len(recommendation_count)-1]
-        item_data = item_data[item_data['item_id:token'] < num_items]
-        
-        # Identify long-tail items (popularity_label == -1)
+
+        # Filter valid item_data range
+        item_data = item_data[item_data['item_id:token'] <= num_items]
+
+        # Identify long-tail groups
         long_tail_items = set(item_data[item_data['popularity_label'] != 1]['item_id:token'])
         deep_long_tail_items = set(item_data[item_data['popularity_label'] == -1]['item_id:token'])
 
-        # Items that were recommended at least once
-        recommended_items = {i for i, count in enumerate(recommendation_count) if count > 0}
-        
-        # Calculate Long Tail Coverage
+        # Items recommended at least once (excluding index 0)
+        recommended_items = {i + offset for i, count in enumerate(recommendation_count) if count > 0}
+
+        # Long Tail Coverage
         recommended_LT_items = recommended_items & long_tail_items
         recommended_deep_LT_items = recommended_items & deep_long_tail_items
-
         long_tail_coverage = len(recommended_LT_items) / len(long_tail_items) if long_tail_items else 0
         deep_long_tail_coverage = len(recommended_deep_LT_items) / len(deep_long_tail_items) if deep_long_tail_items else 0
-        # Calculate Coverage (based on all possible items)
+
+        # Coverage
         coverage = len(recommended_items) / num_items
-        
-        # Calculate Gini Coefficient
+
+        # Gini Coefficient
         sorted_counts = np.sort(recommendation_count)
         n = len(sorted_counts)
-        cumulative_sum = np.cumsum(sorted_counts)
-        gini_coefficient = (2 * np.sum((np.arange(1, n + 1) * sorted_counts))) / (n * np.sum(sorted_counts)) - (n + 1) / n if np.sum(sorted_counts) > 0 else 0
-        
-        # Return the metrics
+        gini_coefficient = (
+            (2 * np.sum((np.arange(1, n + 1) * sorted_counts))) / (n * np.sum(sorted_counts)) - (n + 1) / n
+            if np.sum(sorted_counts) > 0 else 0
+        )
+
+        # ARP calculation
+            # === ARP (Average Recommendation Popularity) from true interaction counts ===
+        # Create a dict of item_id → normalized popularity
+        total_interactions = item_data['interaction_count'].sum()
+        item_data['normalized_popularity'] = item_data['interaction_count'] / total_interactions
+
+        popularity_lookup = dict(zip(item_data['item_id:token'], item_data['normalized_popularity']))
+
+        # Look up the popularity for each recommended item
+        popularity_scores = [popularity_lookup.get(item_id, 0.0) for item_id in recommended_items]
+
+        arp = float(np.mean(popularity_scores)) if len(popularity_scores) > 0 else 0.0
         return {
             'LT_coverage@10': long_tail_coverage,
             'Deep_LT_coverage@10': deep_long_tail_coverage,
             'coverage@10': coverage,
-            'Gini_coef@10': gini_coefficient
+            'Gini_coef@10': gini_coefficient,
+            'ARP@10': arp
         }

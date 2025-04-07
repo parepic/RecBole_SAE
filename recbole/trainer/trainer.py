@@ -47,7 +47,10 @@ from recbole.utils import (
     get_gpu_usage,
     WandbLogger,
     save_user_popularity_score,
-    calculate_pearson_correlation
+    calculate_pearson_correlation,
+    calculate_IPS,
+    skew_sample,
+    get_popularity_label_indices
     )
 from recbole.model.sequential_recommender import SASRec_SAE, SASRecWithGating
 from torch.nn.parallel import DistributedDataParallel
@@ -262,11 +265,9 @@ class Trainer(AbstractTrainer):
             if not self.config["single_spec"]:
                 self.set_reduce_hook()
                 sync_loss = self.sync_grad_loss()
-            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-                losses = loss_func(interaction)
-                if(epoch_idx == 0):
-                    user_ids = interaction['user_id']
-                    item_seq = interaction['item_id_list']
+            with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):                
+                losses = loss_func(interaction, scores=calculate_IPS(interaction[self.model.POS_ITEM_ID]))
+                
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -648,9 +649,8 @@ class Trainer(AbstractTrainer):
     #             # self.model.sae_module.set_dampen_hyperparam(corr_file=corr_file, neuron_count=neuron_count, 
     #             #                                             damp_percent=damp_percent, unpopular_only=False)
     #             scores = self.model.full_sort_predict(interaction)
-    
-    
-    
+
+
     @torch.no_grad()
     def save_neuron_activations2(
         self, data, model_file=None, show_progress=True, eval_data=True, sae=True
@@ -843,11 +843,17 @@ class Trainer(AbstractTrainer):
                 valid_step += 1
         self._add_hparam_to_tensorboard(self.best_valid_score)
         return self.best_valid_score, self.best_valid_result
+    
 
     def _full_sort_batch_eval(self, batched_data):
         interaction, history_index, positive_u, positive_i = batched_data
+        interaction = interaction.to(self.device)
+        # N = 1900
+        # indices = skew_sample(interaction, N)
+        # # # history_index = history_index[indices]
+        # positive_u = positive_u[:N]
+        # positive_i = positive_i[indices]
         try:
-            # Note: interaction without item ids
             scores = self.model.full_sort_predict(interaction.to(self.device))
         except NotImplementedError:
             inter_len = len(interaction)
@@ -858,7 +864,6 @@ class Trainer(AbstractTrainer):
                 scores = self.model.predict(new_inter)
             else:
                 scores = self._spilt_predict(new_inter, batch_size)
-
         scores = scores.view(-1, self.tot_item_num)
         scores[:, 0] = -np.inf
         if history_index is not None:
@@ -934,13 +939,18 @@ class Trainer(AbstractTrainer):
             if show_progress
             else eval_data
         )
-
+        
         num_sample = 0
         self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
-                                            damp_percent=1.0, unpopular_only=True)
+                                            damp_percent=1, unpopular_only=False)
+        splits = []
+        inverse_propensities = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
+            splits = get_popularity_label_indices(positive_i)
+            batch_ips = calculate_IPS(positive_i, reverse=True)
+            inverse_propensities.extend(batch_ips)
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
                     set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
@@ -950,11 +960,13 @@ class Trainer(AbstractTrainer):
             )
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
-        result = self.evaluator.evaluate(struct)
-        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
+        result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=splits)
+        pop_labels = calculate_IPS(positive_i, reverse=False)
+        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, batch_ips)
         self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
+        result['ARP@10'] = fairness_dict['ARP@10']
         result['LT_coverage@10'] = fairness_dict['LT_coverage@10']
         result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
