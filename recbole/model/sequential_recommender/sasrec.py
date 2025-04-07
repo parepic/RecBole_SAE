@@ -55,6 +55,7 @@ class SASRec(SequentialRecommender):
         self.inner_size = config[
             "inner_size"
         ]  # the dimensionality in feed-forward layer
+        self.corr_file = None
         self.hidden_dropout_prob = config["hidden_dropout_prob"]
         self.attn_dropout_prob = config["attn_dropout_prob"]
         self.hidden_act = config["hidden_act"]
@@ -173,7 +174,7 @@ class SASRec(SequentialRecommender):
         # # item_seq = make_items_unpopular(item_seq)
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
-        if self.corr_file:
+        if self.corr_file != None:
             seq_output = self.dampen_neurons_sasrec(seq_output)
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
