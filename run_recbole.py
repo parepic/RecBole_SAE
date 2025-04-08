@@ -147,7 +147,7 @@ def tune_hyperparam():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    Ns = np.linspace(0, 32, 17).tolist()
+    Ns = np.linspace(10, 32, 12).tolist()
     betas = np.linspace(-7, -1, 7).tolist()
     gammas = np.linspace(1, 3, 5).tolist()
     baseline_ndcg = -1
