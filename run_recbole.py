@@ -29,7 +29,8 @@ from recbole.utils import (
     make_items_unpopular,
     save_mean_SD,
     save_cohens_d,
-    find_diff
+    find_diff, 
+    rank_neurons_by_chi2
 )
 
 
@@ -290,6 +291,14 @@ if __name__ == "__main__":
     # plot_binned_bar_chart('./dataset/ml-1m/correlations_pop.csv')
     # save_mean_SD()
     # exit()
+    
+    print(rank_neurons_by_chi2(
+    popular_csv= r"./dataset/ml-1m/popular_activations.csv",
+    unpopular_csv=r"./dataset/ml-1m/unpopular_activations.csv",
+    total_per_group=614400,
+    output_csv=r"./dataset/ml-1m/ranked_neuron_bias_scores.csv"
+    ))
+    exit()
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
@@ -360,6 +369,8 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
+        
+        
         config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
             model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
         )  
