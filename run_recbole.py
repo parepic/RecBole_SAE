@@ -148,7 +148,7 @@ def tune_hyperparam():
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     Ns = np.linspace(10, 32, 12).tolist()
-    betas = [0.0]
+    betas = np.linspace(-7, -1, -1).tolist()
     gammas = np.linspace(1, 3, 5).tolist()
     baseline_ndcg = -1
     baseline_arp = -1
@@ -172,12 +172,11 @@ def tune_hyperparam():
                 )
                 perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
                 perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
-                if perc_change_ndcg <= -0.5:
-                    if perc_change_arp >= -0.25:
-                        if(perc_change_arp - perc_change_ndcg < best_diff):
-                            best_diff = perc_change_arp - perc_change_ndcg
-                            best_triplet = [n, beta, gamma]
-                            best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
+                if perc_change_arp >= -0.2:
+                    if(perc_change_arp - perc_change_ndcg < best_diff):
+                        best_diff = perc_change_arp - perc_change_ndcg
+                        best_triplet = [n, beta, gamma]
+                        best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
                 print(f"Current Ndcg: {test_result['ndcg@10']} Current Arp {test_result['ARP@10']} " )
                 if len(best_metric) > 0:
