@@ -163,6 +163,7 @@ def tune_hyperparam():
             )
             baseline_ndcg = test_result['ndcg@10']
             baseline_arp = test_result['ARP@10']
+            it_num += 1
             continue
         for beta in betas:
             for gamma in gammas:
