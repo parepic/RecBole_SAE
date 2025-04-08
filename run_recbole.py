@@ -184,10 +184,10 @@ def tune_hyperparam():
                     print(f"Best metric so far Ndcg: {best_metric[0]} Arp {best_metric[1]} " )
 
                 it_num +=1
-        print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
-        for best in best_triplet:
-            print("blyat ", best)
-        return best_triplet, best_metric
+    print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
+    for best in best_triplet:
+        print("blyat ", best)
+    return best_triplet, best_metric
     
 
 def create_visualizations_neurons():
