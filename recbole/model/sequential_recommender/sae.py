@@ -35,7 +35,7 @@ class SAE(nn.Module):
 		self.to(self.device)
 		self.d_in = d_in
 		self.hidden_dim = d_in * self.scale_size
-		self.recommendation_count = np.zeros(self.hidden_dim)
+		self.activation_count = np.zeros(self.hidden_dim)
 		self.encoder = nn.Linear(self.d_in, self.hidden_dim, device=self.device,dtype = self.dtype)
 		self.encoder.bias.data.zero_()
 		self.W_dec = nn.Parameter(self.encoder.weight.data.clone())
@@ -85,8 +85,8 @@ class SAE(nn.Module):
 
 	def topk_activation(self, x, sequences, save_result):
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
+		self.activation_count[topk_indices] += 1
 
-  
 		self.activate_latents.update(topk_indices.cpu().numpy().flatten())
 
 		self.last_activations = x
@@ -172,8 +172,9 @@ class SAE(nn.Module):
 	def forward(self, x, sequences=None, train_mode=False, save_result=False):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
-		if self.corr_file:
-			pre_acts = self.dampen_neurons(pre_acts)
+		# if self.corr_file:
+		# 	pre_acts = self.dampen_neurons(pre_acts)
+		
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 		x_reconstructed = z @ self.W_dec + self.b_dec
 
