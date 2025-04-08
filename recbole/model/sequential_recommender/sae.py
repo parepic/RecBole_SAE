@@ -85,8 +85,14 @@ class SAE(nn.Module):
 
 	def topk_activation(self, x, sequences, save_result):
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
-		self.activation_count[topk_indices] += 1
+		# topk_indices: shape (B, N)
+		flat_indices = topk_indices.view(-1)  # shape (B * N)
 
+		# Count occurrences of each index
+		counts = torch.bincount(flat_indices, minlength=self.hidden_dim)
+
+		# Update activation count
+		self.activation_count += counts.to(self.activation_count.device)
 		self.activate_latents.update(topk_indices.cpu().numpy().flatten())
 
 		self.last_activations = x
