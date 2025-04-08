@@ -190,59 +190,57 @@ class SASRec(SequentialRecommender):
 
     def dampen_neurons_sasrec(self, pre_acts):
         if(self.N == None): 
-            return pre_acts
-        print("peyser ", self.N, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
-        
-        if self.unpopular_only:
-            unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
-            unpop_indexes, unpop_values = zip(*get_extreme_correlations(self.corr_file, self.N, self.unpopular_only))
-            unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
-            print(unpop_mean_sd.columns.tolist())
+            return pre_acts        
+        # if self.unpopular_only:
+        #     unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+        #     unpop_indexes, unpop_values = zip(*get_extreme_correlations(self.corr_file, self.N, self.unpopular_only))
+        #     unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
+        #     print(unpop_mean_sd.columns.tolist())
 
-            means = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
-            sds = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
-            for i, neuron_idx in enumerate(list(unpop_indexes)):
-                # Get values for this neuron across all rows
-                vals = pre_acts[:, neuron_idx]
+        #     means = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
+        #     sds = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
+        #     for i, neuron_idx in enumerate(list(unpop_indexes)):
+        #         # Get values for this neuron across all rows
+        #         vals = pre_acts[:, neuron_idx]
 
-                # Condition: lower than mean and also lower than (mean - sd)
-                condition = (vals > means[i] + 0.5)
+        #         # Condition: lower than mean and also lower than (mean - sd)
+        #         condition = (vals > means[i] + 0.5)
 
-                # Apply dampening only where the condition is true
-                pre_acts[condition, neuron_idx] += self.damp_percent
+        #         # Apply dampening only where the condition is true
+        #         # pre_acts[condition, neuron_idx] += self.damp_percent
 
-        else:
-            (lowest_corrs, highest_corrs) = get_extreme_correlations(self.corr_file, self.N, self.unpopular_only)
-            unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+        # else:
+        (lowest_corrs, highest_corrs) = get_extreme_correlations(self.corr_file, self.N, self.unpopular_only)
+        unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
 
-            unpop_indexes, unpop_values = zip(*highest_corrs)
-            pop_indexes, pop_values = zip(*lowest_corrs)
+        unpop_indexes, unpop_values = zip(*highest_corrs)
+        pop_indexes, pop_values = zip(*lowest_corrs)
 
-            # Convert Cohen's d values to tensor and normalize them to [0, 2]
-            unpop_cohens_d = torch.tensor([abs(v) for v in unpop_values], device=pre_acts.device)
-            pop_cohens_d = torch.tensor([abs(v) for v in pop_values], device=pre_acts.device)
+        # Convert Cohen's d values to tensor and normalize them to [0, 2]
+        unpop_cohens_d = torch.tensor([abs(v) for v in unpop_values], device=pre_acts.device)
+        pop_cohens_d = torch.tensor([abs(v) for v in pop_values], device=pre_acts.device)
 
-            def normalize_to_range(x, new_min=0.0, new_max=2):
-                min_val = torch.min(x)
-                max_val = torch.max(x)
-                if max_val == min_val:
-                    return torch.full_like(x, (new_min + new_max) / 2)  # fallback to midpoint if all values are equal
-                return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
+        def normalize_to_range(x, new_min=0.0, new_max=2):
+            min_val = torch.min(x)
+            max_val = torch.max(x)
+            if max_val == min_val:
+                return torch.full_like(x, (new_min + new_max) / 2)  # fallback to midpoint if all values are equal
+            return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
-            unpop_weights = normalize_to_range(unpop_cohens_d, new_max=self.gamma)
-            pop_weights = normalize_to_range(pop_cohens_d, new_max=self.gamma)
+        unpop_weights = normalize_to_range(unpop_cohens_d, new_max=self.gamma)
+        pop_weights = normalize_to_range(pop_cohens_d, new_max=self.gamma)
 
-            unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
-            means_unpop = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
-            sds_unpop = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
+        unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
+        means_unpop = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
+        sds_unpop = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
 
-            for i, neuron_idx in enumerate(list(unpop_indexes)):
-                vals = pre_acts[:, neuron_idx]
-                condition = (vals > (means_unpop[i] * self.beta))
-                pre_acts[condition, neuron_idx] += sds_unpop[i] * unpop_weights[i]
+        for i, neuron_idx in enumerate(list(unpop_indexes)):
+            vals = pre_acts[:, neuron_idx]
+            condition = (vals > (means_unpop[i] * self.beta))
+            pre_acts[condition, neuron_idx] += sds_unpop[i] * unpop_weights[i]
 
-            for i, neuron_idx in enumerate(list(pop_indexes)):
-                vals = pre_acts[:, neuron_idx]
-                condition = (vals < (means_unpop[i] * self.beta))
-                pre_acts[condition, neuron_idx] -= sds_unpop[i] * pop_weights[i]
+        for i, neuron_idx in enumerate(list(pop_indexes)):
+            vals = pre_acts[:, neuron_idx]
+            condition = (vals < (means_unpop[i] * self.beta))
+            pre_acts[condition, neuron_idx] -= sds_unpop[i] * pop_weights[i]
         return pre_acts	
