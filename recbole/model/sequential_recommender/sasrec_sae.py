@@ -66,7 +66,7 @@ class SASRec_SAE(SASRec):
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        item_seq = make_items_popular(item_seq).to(self.device)
+        # item_seq = make_items_popular(item_seq).to(self.device)
         seq_output = self.forward(item_seq, item_seq_len)
         
         test_items_emb = self.item_embedding.weight
