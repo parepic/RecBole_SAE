@@ -87,7 +87,7 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
         'Deep LT Coverage@10': calculate_percentage_change(deep_lt_coverages, deep_lt_coverages[0]),
         # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0]),
         'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
-        # 'ARP@10': calculate_percentage_change(arps, arps[0])
+        'ARP@10': calculate_percentage_change(arps, arps[0])
         
     }
     df = pd.DataFrame(data)
@@ -102,31 +102,88 @@ def create_visualizations():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    ndcgs = [0.1573]
-    hits = [0.2805]
-    coverages = [0.6180]
-    lt_coverages = [0.6063]
-    deep_lt_coverages = [0.4487]
-    dampen_percs = ['Sasrec']
-    ginis = [0.7631]
+    arps = []
+    ndcgs = []
+    hits = []
+    coverages = []
+    lt_coverages = []
+    deep_lt_coverages = []
+    dampen_percs = []
+    ginis = []
+    ips_ndcgs = []
+    ndcg_heads = []
+    ndcg_mids = []
+    ndcg_tails = []
     dampen_perc = 0
     neuron_count = 0
-    for i in range(11):
+    for i in range(17):
         test_result = trainer.evaluate(
-            test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
+            valid_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
         )
         ndcgs.append(test_result['ndcg@10'])
+        ndcg_heads.append(test_result['ndcg-head@10'])
+        ndcg_mids.append(test_result['ndcg-mid@10'])
+        ndcg_tails.append(test_result['ndcg-tail@10'])
         hits.append(test_result['hit@10'])
         coverages.append(test_result['coverage@10'])
         lt_coverages.append(test_result['LT_coverage@10'])
         deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
+        ips_ndcgs.append(test_result['ips_ndcg@10'])
         dampen_percs.append(dampen_perc)
+        arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
+        print(test_result['ips_ndcg@10'])
         print(test_result['coverage@10'])
-        dampen_perc += 0.2
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis)
-    # plot_graphs(ndcgs, hits, coverages, lt_coverages, ginis, dampen_percs)
+        dampen_perc += 0.1
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
+                          ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails)
+
+
+
+
+def tune_hyperparam():
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+    )  
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+    Ns = np.linspace(0, 32, 17).tolist()
+    betas = np.linspace(-1.5, 1.5, 7).tolist()
+    gammas = np.linspace(1, 3, 5).tolist()
+    baseline_ndcg = -1
+    baseline_arp = -1
+    best_triplet = []
+    best_metric = []
+    best_diff = 9999
+    it_num = 0
+    for n in Ns:
+        if it_num == 0:
+            test_result = trainer.evaluate(
+                valid_data, model_file=args.path, show_progress=config["show_progress"]
+            )
+            baseline_ndcg = test_result['ndcg@10']
+            baseline_arp = test_result['ARP@10']
+            continue
+        for beta in betas:
+            for gamma in gammas:
+                test_result = trainer.evaluate(
+                    valid_data, model_file=args.path, show_progress=config["show_progress"], N=n, beta=beta, gamma=gamma
+                )
+                perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
+                perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
+                if perc_change_ndcg >= -0.15:
+                    if perc_change_arp<= -0.1:
+                        if(perc_change_arp - perc_change_ndcg < best_diff):
+                            best_diff = perc_change_arp - perc_change_ndcg
+                            best_triplet = [n, beta, gamma]
+                            best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
+                print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
+                print(f"Iteration number: {it_num} Current Ndcg: {test_result['ndcg@10']} Current Arp {test_result['ARP@10']} " )
+                it_num +=1
+        print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
+        for best in best_triplet:
+            print("blyat ", best)
+        return best_triplet, best_metric
     
 
 def create_visualizations_neurons():
@@ -148,7 +205,7 @@ def create_visualizations_neurons():
     ndcg_tails = []
     dampen_perc = 0
     neuron_count = 0
-    for i in range(10):
+    for i in range(17):
         test_result = trainer.evaluate(
             valid_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = neuron_count
         )
@@ -163,11 +220,11 @@ def create_visualizations_neurons():
         ginis.append(test_result['Gini_coef@10'])
         ips_ndcgs.append(test_result['ips_ndcg@10'])
         dampen_percs.append(neuron_count)
-        # arps.append(test_result['ARP@10'])
+        arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
         print(test_result['ips_ndcg@10'])
         print(test_result['coverage@10'])
-        neuron_count += 1
+        neuron_count += 2
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
                           ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails)
 
@@ -313,7 +370,7 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            create_visualizations_neurons()
+            tune_hyperparam() 
             # test_result = trainer.evaluate(
             #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
             # )

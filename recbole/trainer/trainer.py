@@ -891,7 +891,7 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def evaluate(
-        self, eval_data, load_best_model=True, model_file=None, show_progress=False, dampen_perc=1
+        self, eval_data, load_best_model=True, model_file=None, show_progress=False, N=None, beta=None, gamma=None 
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -941,8 +941,8 @@ class Trainer(AbstractTrainer):
         )
         
         num_sample = 0
-        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', neuron_count=dampen_perc, 
-        #                                     damp_percent=1, unpopular_only=False)
+        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, beta=beta, 
+                                            gamma=gamma, unpopular_only=False)
         splits = []
         inverse_propensities = []
         for batch_idx, batched_data in enumerate(iter_data):
