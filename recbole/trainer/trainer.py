@@ -708,7 +708,7 @@ class Trainer(AbstractTrainer):
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
-        # self.model.sae_module.save_highest_activations(filename='highest_activations' + ending + '.txt' )
+        self.model.sae_module.save_highest_activations()
     
         
     def fit_SAE(
