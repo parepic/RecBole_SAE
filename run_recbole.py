@@ -360,11 +360,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
         
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.fit_gate( 
         #     train_data,
         #     valid_data=test_data,
