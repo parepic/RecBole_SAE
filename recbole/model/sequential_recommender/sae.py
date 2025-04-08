@@ -271,7 +271,7 @@ class SAE(nn.Module):
 			self.highest_activations[j]["recommendations"] = new_recommendations
 
     
-	def save_highest_activations(self, filename=r"./dataset/ml-1m"):		
+	def save_highest_activations(self, filename=r"./dataset/ml-1m/popular_activatins.csv"):		
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
