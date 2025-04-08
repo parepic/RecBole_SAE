@@ -148,7 +148,7 @@ def tune_hyperparam():
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     Ns = np.linspace(10, 32, 12).tolist()
-    betas = [0.0]
+    betas = np.linspace(-7, -1, 7).tolist()
     gammas = np.linspace(1, 3, 5).tolist()
     baseline_ndcg = -1
     baseline_arp = -1
@@ -181,7 +181,6 @@ def tune_hyperparam():
                 print(f"Current Ndcg: {test_result['ndcg@10']} Current Arp {test_result['ARP@10']} " )
                 if len(best_metric) > 0:
                     print(f"Best metric so far Ndcg: {best_metric[0]} Arp {best_metric[1]} " )
-
                 it_num +=1
     print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
     for best in best_triplet:
