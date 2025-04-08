@@ -76,7 +76,7 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
     dampen_labels = [f'{dp}' for dp in dampen_percs]
     
     data = {
-        'Alpha': dampen_labels,
+        'gamma': dampen_labels,
         'NDCG@10': calculate_percentage_change(ndcgs, ndcgs[0]),
         'NDCG-HEAD@10': calculate_percentage_change(ndcg_heads, ndcg_heads[0]),
         'NDCG-MID@10': calculate_percentage_change(ndcg_mids, ndcg_mids[0]),
@@ -209,10 +209,19 @@ def create_visualizations_neurons():
     ndcg_tails = []
     dampen_perc = 0
     neuron_count = 0
-    for i in range(17):
-        test_result = trainer.evaluate(
-            valid_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = neuron_count
-        )
+    
+    count = 0
+    gammas = np.linspace(0.5, 4, 8).tolist()
+    for gamma in gammas:
+        if count == 0:
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"]
+            )      
+        else:
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=20, beta=0, gamma=gamma
+            )
+        count += 1
         ndcgs.append(test_result['ndcg@10'])
         ndcg_heads.append(test_result['ndcg-head@10'])
         ndcg_mids.append(test_result['ndcg-mid@10'])
@@ -223,7 +232,7 @@ def create_visualizations_neurons():
         deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
         ips_ndcgs.append(test_result['ips_ndcg@10'])
-        dampen_percs.append(neuron_count)
+        dampen_percs.append(gamma)
         arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
         print(test_result['ips_ndcg@10'])
@@ -375,8 +384,9 @@ if __name__ == "__main__":
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
             tune_hyperparam() 
+            # create_visualizations_neurons()
             # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc=1
+            #     test_data, model_file=args.path, show_progress=config["show_progress"]
             # )
             # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
