@@ -23,7 +23,7 @@ class SAE(nn.Module):
 	
 	def __init__(self,config,d_in):
 		super(SAE, self).__init__()
-		self.k = 8
+		self.k = 32
 		self.scale_size = config["sae_scale_size"]
 		self.neuron_count = None
 		self.damp_percent = None
@@ -174,7 +174,7 @@ class SAE(nn.Module):
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
 		# if self.corr_file:
 		# 	pre_acts = self.dampen_neurons(pre_acts)
-		
+
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 		x_reconstructed = z @ self.W_dec + self.b_dec
 
@@ -207,7 +207,7 @@ class SAE(nn.Module):
 
 			auxk_loss = (e_hat - e).pow(2).sum()
 			self.auxk_loss = scale * auxk_loss / total_variance
-
+   
 		return x_reconstructed
 
 
@@ -271,24 +271,33 @@ class SAE(nn.Module):
 			self.highest_activations[j]["recommendations"] = new_recommendations
 
     
-	def save_highest_activations(self, filename="highest_activations.txt"):		
+	def save_highest_activations(self, filename=r"./dataset/ml-1m"):		
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
-		corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
-		corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
-		file_path = r'./dataset/ml-1m/ml-1m.item'
-		data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
-		with open(filename, "w") as f:
-			for neuron, data in self.highest_activations.items():
-				f.write(f"Neuron {neuron}:\n")
-				f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
-				f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
-				for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
-					f.write(f"  Activation: {value}\n")
-					f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
-					f.write(f"  Sequence ids: {sequence_ids}\n")
-					f.write(f"  top recommendation ids: {recommendations_ids}\n")
-					f.write(f"  top recommendations: {recommendations}\n")
-				f.write("\n")
+		df = pd.DataFrame({
+			'index': np.arange(len(self.activation_count)),
+			'count': self.activation_count
+		})
+
+		# Save to CSV
+		df.to_csv(filename, index=False)
+  
+  
+		# corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
+		# corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
+		# file_path = r'./dataset/ml-1m/ml-1m.item'
+		# data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
+		# with open(filename, "w") as f:
+		# 	for neuron, data in self.highest_activations.items():
+		# 		f.write(f"Neuron {neuron}:\n")
+		# 		f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
+		# 		f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
+		# 		for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
+		# 			f.write(f"  Activation: {value}\n")
+		# 			f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
+		# 			f.write(f"  Sequence ids: {sequence_ids}\n")
+		# 			f.write(f"  top recommendation ids: {recommendations_ids}\n")
+		# 			f.write(f"  top recommendations: {recommendations}\n")
+		# 		f.write("\n")
 
