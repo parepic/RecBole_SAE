@@ -35,7 +35,7 @@ class SAE(nn.Module):
 		self.to(self.device)
 		self.d_in = d_in
 		self.hidden_dim = d_in * self.scale_size
-		self.activation_count = np.zeros(self.hidden_dim).to(config["device"])
+		self.activation_count = np.zeros(self.hidden_dim, device=config["device"])
 		self.encoder = nn.Linear(self.d_in, self.hidden_dim, device=self.device,dtype = self.dtype)
 		self.encoder.bias.data.zero_()
 		self.W_dec = nn.Parameter(self.encoder.weight.data.clone())
