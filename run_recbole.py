@@ -173,8 +173,8 @@ def tune_hyperparam():
                 perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
                 perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
                 if perc_change_ndcg >= -0.15:
-                    if perc_change_ndcg >= -0.5:
-                        if perc_change_arp <= -0.25:
+                    if perc_change_ndcg <= -0.5:
+                        if perc_change_arp >= -0.25:
                             if(perc_change_arp - perc_change_ndcg < best_diff):
                                 best_diff = perc_change_arp - perc_change_ndcg
                                 best_triplet = [n, beta, gamma]
