@@ -148,7 +148,7 @@ def tune_hyperparam():
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     Ns = np.linspace(0, 32, 17).tolist()
-    betas = np.linspace(-1.5, 1.5, 7).tolist()
+    betas = np.linspace(-7, -1, 7).tolist()
     gammas = np.linspace(1, 3, 5).tolist()
     baseline_ndcg = -1
     baseline_arp = -1
@@ -172,11 +172,13 @@ def tune_hyperparam():
                 )
                 perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
                 perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
-                if perc_change_ndcg >= -0.05:
-                    if(perc_change_arp - perc_change_ndcg < best_diff):
-                        best_diff = perc_change_arp - perc_change_ndcg
-                        best_triplet = [n, beta, gamma]
-                        best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
+                if perc_change_ndcg >= -0.15:
+                    if perc_change_ndcg >= -0.5:
+                        if perc_change_arp <= -0.25:
+                            if(perc_change_arp - perc_change_ndcg < best_diff):
+                                best_diff = perc_change_arp - perc_change_ndcg
+                                best_triplet = [n, beta, gamma]
+                                best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
                 print(f"Current Ndcg: {test_result['ndcg@10']} Current Arp {test_result['ARP@10']} " )
                 if len(best_metric) > 0:
@@ -210,7 +212,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    gammas = np.linspace(0.5, 4, 8).tolist()
+    gammas = np.linspace(-1, 2.5, 8).tolist()
     for gamma in gammas:
         if count == 0:
             test_result = trainer.evaluate(
@@ -218,7 +220,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=20, beta=0, gamma=gamma
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=10, beta=0.5, gamma=gamma
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
