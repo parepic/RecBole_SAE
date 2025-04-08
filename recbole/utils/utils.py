@@ -1335,3 +1335,65 @@ def get_popularity_label_indices(id_tensor):
         torch.tensor(indices_label_0, dtype=torch.long),
         torch.tensor(indices_label_minus1, dtype=torch.long)
     )
+    
+from scipy.stats import chi2_contingency
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import chi2_contingency
+from kneed import KneeLocator
+
+def rank_neurons_by_chi2(popular_csv, unpopular_csv, total_per_group, output_csv, plot_path=None):
+    """
+    Computes chi-square scores per neuron, ranks by score, plots, saves, and finds elbow point.
+    
+    Returns:
+    - elbow_index: number of neurons with large chi-square values (before curve flattens)
+    """
+    # Load data
+    df_pop = pd.read_csv(popular_csv)
+    df_unpop = pd.read_csv(unpopular_csv)
+    df = pd.merge(df_pop, df_unpop, on='index', suffixes=('_pop', '_unpop'))
+
+    chi2_scores = []
+    for _, row in df.iterrows():
+        pop_count = row['count_pop']
+        unpop_count = row['count_unpop']
+        table = [
+            [pop_count, total_per_group - pop_count],
+            [unpop_count, total_per_group - unpop_count]
+        ]
+        try:
+            chi2_stat, _, _, _ = chi2_contingency(table)
+        except ValueError:
+            chi2_stat = 0
+        chi2_scores.append(chi2_stat)
+
+    df['chi2_score'] = chi2_scores
+    df_sorted = df[['index', 'chi2_score']].sort_values(by='chi2_score', ascending=False)
+    df_sorted.to_csv(output_csv, index=False)
+    print(f"Saved ranked results to {output_csv}")
+
+    # Elbow detection
+    x = list(range(len(df_sorted)))
+    y = df_sorted['chi2_score'].tolist()
+    knee = KneeLocator(x, y, curve='convex', direction='decreasing')
+    elbow_index = knee.knee if knee.knee is not None else 0
+
+    # # Plot
+    #     plt.figure(figsize=(12, 6))
+    #     plt.plot(x, y, marker='o', linestyle='', alpha=0.6)
+    #     plt.axhline(3.841, color='red', linestyle='--', label='p = 0.05 threshold (χ² = 3.841)')
+    #     if elbow_index:
+    #         plt.axvline(elbow_index, color='orange', linestyle='--', label=f'Elbow ≈ {elbow_index}')
+    #     plt.xlabel('Neuron Rank (sorted by chi2)')
+    #     plt.ylabel('Chi-square Statistic')
+    #     plt.title('Neuron Popularity Bias (Chi-square Values)')
+    #     plt.legend()
+    #     plt.tight_layout()
+    #     plt.savefig(plot_path)
+    #     plt.show()
+    #     print(f"Saved plot to {plot_path}")
+
+    return elbow_index

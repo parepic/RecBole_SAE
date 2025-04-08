@@ -33,7 +33,8 @@ from recbole.utils.utils import (
     build_popularity_tensor,
     calculate_IPS,
     skew_sample,
-    get_popularity_label_indices
+    get_popularity_label_indices,
+    rank_neurons_by_chi2
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -87,5 +88,6 @@ __all__ = [
     "build_popularity_tensor",
     "calculate_IPS",
     "skew_sample",
-    "get_popularity_label_indices"
+    "get_popularity_label_indices",
+    "rank_neurons_by_chi2"
 ]
