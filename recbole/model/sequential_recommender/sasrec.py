@@ -210,7 +210,7 @@ class SASRec(SequentialRecommender):
         #         # pre_acts[condition, neuron_idx] += self.damp_percent
 
         # else:
-        (lowest_corrs, highest_corrs) = get_extreme_correlations(self.corr_file, self.N, self.unpopular_only)
+        (lowest_corrs, highest_corrs) = get_extreme_correlations(self.corr_file, int(self.N), self.unpopular_only)
         unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
 
         unpop_indexes, unpop_values = zip(*highest_corrs)

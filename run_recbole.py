@@ -180,7 +180,8 @@ def tune_hyperparam():
                             best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
                 print(f"Current Ndcg: {test_result['ndcg@10']} Current Arp {test_result['ARP@10']} " )
-                print(f"Best metric so far Ndcg: {best_metric[0]} Arp {best_metric[1]} " )
+                if len(best_metric) > 0:
+                    print(f"Best metric so far Ndcg: {best_metric[0]} Arp {best_metric[1]} " )
 
                 it_num +=1
         print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
