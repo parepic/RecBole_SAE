@@ -277,7 +277,7 @@ class SAE(nn.Module):
 		"""
 		df = pd.DataFrame({
 			'index': np.arange(len(self.activation_count)),
-			'count': self.activation_count
+			'count': self.activation_count.cpu().numpy()
 		})
 
 		# Save to CSV
