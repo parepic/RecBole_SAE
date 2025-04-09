@@ -1344,17 +1344,23 @@ import matplotlib.pyplot as plt
 from scipy.stats import chi2_contingency
 from kneed import KneeLocator
 
+
+
 def rank_neurons_by_chi2(popular_csv, unpopular_csv, total_per_group, output_csv, plot_path=None):
     """
-    Computes chi-square scores per neuron, ranks by score, plots, saves, and finds elbow point.
-    
+    Computes chi-square scores for neurons where unpopular > popular activations,
+    ranks them, plots curve, finds elbow point, and saves output.
+
     Returns:
-    - elbow_index: number of neurons with large chi-square values (before curve flattens)
+    - elbow_index: number of unpop-biased neurons (before flattening)
     """
     # Load data
     df_pop = pd.read_csv(popular_csv)
     df_unpop = pd.read_csv(unpopular_csv)
     df = pd.merge(df_pop, df_unpop, on='index', suffixes=('_pop', '_unpop'))
+
+    # Filter: only where unpopular > popular
+    df = df[df['count_unpop'] > df['count_pop']].reset_index(drop=True)
 
     chi2_scores = []
     for _, row in df.iterrows():
@@ -1373,7 +1379,7 @@ def rank_neurons_by_chi2(popular_csv, unpopular_csv, total_per_group, output_csv
     df['chi2_score'] = chi2_scores
     df_sorted = df[['index', 'chi2_score']].sort_values(by='chi2_score', ascending=False)
     df_sorted.to_csv(output_csv, index=False)
-    print(f"Saved ranked results to {output_csv}")
+    print(f"Saved filtered & ranked results to {output_csv}")
 
     # Elbow detection
     x = list(range(len(df_sorted)))
@@ -1381,19 +1387,36 @@ def rank_neurons_by_chi2(popular_csv, unpopular_csv, total_per_group, output_csv
     knee = KneeLocator(x, y, curve='convex', direction='decreasing')
     elbow_index = knee.knee if knee.knee is not None else 0
 
-    # # Plot
-    #     plt.figure(figsize=(12, 6))
-    #     plt.plot(x, y, marker='o', linestyle='', alpha=0.6)
-    #     plt.axhline(3.841, color='red', linestyle='--', label='p = 0.05 threshold (χ² = 3.841)')
-    #     if elbow_index:
-    #         plt.axvline(elbow_index, color='orange', linestyle='--', label=f'Elbow ≈ {elbow_index}')
-    #     plt.xlabel('Neuron Rank (sorted by chi2)')
-    #     plt.ylabel('Chi-square Statistic')
-    #     plt.title('Neuron Popularity Bias (Chi-square Values)')
-    #     plt.legend()
-    #     plt.tight_layout()
-    #     plt.savefig(plot_path)
-    #     plt.show()
-    #     print(f"Saved plot to {plot_path}")
+    # Plotting
+    plt.figure(figsize=(12, 6))
+    plt.plot(x, y, marker='o', linestyle='', alpha=0.6)
+    plt.axhline(3.841, color='red', linestyle='--', label='p = 0.05 threshold (χ² = 3.841)')
+    if elbow_index:
+        plt.axvline(elbow_index, color='orange', linestyle='--', label=f'Elbow ≈ {elbow_index}')
+    plt.xlabel('Neuron Rank (sorted by chi2)')
+    plt.ylabel('Chi-square Statistic')
+    plt.title('Unpop-Biased Neuron Chi-square Scores')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
     return elbow_index
+
+
+def get_top_n_neuron_indexes(n):
+    """
+    Reads a CSV with ['index', 'chi2_score'], sorts by chi2 descending,
+    and returns the top-n indexes as a PyTorch tensor.
+
+    Parameters:
+    - csv_path: path to the CSV file
+    - n: number of top indexes to return
+
+    Returns:
+    - torch.Tensor of shape (n,)
+    """
+    csv_path = r"./dataset/ml-1m/ranked_neuron_bias_scores.csv"
+    df = pd.read_csv(csv_path)
+    df_sorted = df.sort_values(by='chi2_score', ascending=False).head(n)
+    top_indexes = df_sorted['index'].values
+    return torch.tensor(top_indexes, dtype=torch.long)

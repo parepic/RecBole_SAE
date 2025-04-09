@@ -8,6 +8,8 @@ from recbole.utils import (
     save_batch_activations
 )
 
+
+import numpy as np
 class SASRec_SAE(SASRec):
     def __init__(self, config, dataset, sasrec_model_path=None, mode="train"):
         super(SASRec_SAE, self).__init__(config, dataset)
@@ -68,17 +70,18 @@ class SASRec_SAE(SASRec):
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         # item_seq = make_items_popular(item_seq).to(self.device)
         seq_output = self.forward(item_seq, item_seq_len)
-        
+        self.recommendation_count = np.zeros(3707)
+
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        # top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         # if(self.mode == "test"):
         #     # user_ids = interaction['user_id']
         #     save_batch_activations(self.sae_module.last_activations, 4096) 
 
             # self.sae_module.update_highest_activations(item_seq, top_recs, user_ids)
-        # for key in top_recs.flatten():
-        #     self.recommendation_count[key.item()] += 1
+        for key in top_recs.flatten():
+            self.recommendation_count[key.item()] += 1
         return scores
 
 
