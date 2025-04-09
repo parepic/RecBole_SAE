@@ -148,8 +148,8 @@ def tune_hyperparam():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    Ns = np.linspace(20, 32, 7).tolist()
-    betas = [0]
+    Ns = np.linspace(4, 64, 31).tolist()
+    betas = np.linspace(-0.1, 1.0, 12).tolist()
     gammas = np.linspace(1, 7, 7).tolist()
     baseline_ndcg = -1
     baseline_arp = -1
@@ -175,15 +175,15 @@ def tune_hyperparam():
                     valid_data, model_file=args.path, show_progress=config["show_progress"], N=n, beta=beta, gamma=gamma
                 )
                 perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
-                # perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
+                perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
                 perc_change_isp = (test_result['ips_ndcg@10'] - baseline_isp) / baseline_isp
 
-                if perc_change_isp >= 0.15:
-                    if(perc_change_ndcg + perc_change_isp > best_diff):
-                        best_diff = perc_change_ndcg + perc_change_isp
+                if perc_change_isp >= 0.10:
+                    if(perc_change_isp - perc_change_ndcg > best_diff):
+                        best_diff = perc_change_isp - perc_change_ndcg
                         best_triplet = [n, beta, gamma]
                         best_metric = [test_result['ips_ndcg@10'], test_result['ndcg@10']]
-                print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
+                print(f"Iteration number: {it_num} N: {n} Beta: {beta}, Gamma: {gamma} ")
                 print(f"Current ips Ndcg: {test_result['ips_ndcg@10']} Current ndcg {test_result['ndcg@10']}, isp change:  {perc_change_isp}" )
                 if len(best_metric) > 0:
                     print(f"Best metric so far isp Ndcg: {best_metric[0]} ncdg {best_metric[1]} " )
@@ -215,15 +215,16 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    gammas = np.linspace(1, 6, 6).tolist()
-    for gamma in gammas:
+    tochange = np.linspace(0, 64, 17)
+    # tochange = np.linspace(0, 64, 17).tolist()
+    for change in tochange:
         if count == 0:
             test_result = trainer.evaluate(
                 test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=32, beta=0, gamma=gamma
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=0, gamma=2
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -236,7 +237,7 @@ def create_visualizations_neurons():
         deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
         ips_ndcgs.append(test_result['ips_ndcg@10'])
-        dampen_percs.append(gamma)
+        dampen_percs.append(change)
         arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
         print(test_result['ips_ndcg@10'])

@@ -189,58 +189,88 @@ class SASRec(SequentialRecommender):
 
 
     def dampen_neurons_sasrec(self, pre_acts):
-        if(self.N == None): 
-            return pre_acts        
-        # if self.unpopular_only:
-        #     unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
-        #     unpop_indexes, unpop_values = zip(*get_extreme_correlations(self.corr_file, self.N, self.unpopular_only))
-        #     unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
-        #     print(unpop_mean_sd.columns.tolist())
+        # If no neuron count is provided, return the original activations.
+        if self.N is None:
+            return pre_acts
 
-        #     means = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
-        #     sds = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
-        #     for i, neuron_idx in enumerate(list(unpop_indexes)):
-        #         # Get values for this neuron across all rows
-        #         vals = pre_acts[:, neuron_idx]
+        # Retrieve neurons from the correlations file.
+        pop_neurons, unpop_neurons = get_extreme_correlations(self.corr_file, 32, self.unpopular_only)
 
-        #         # Condition: lower than mean and also lower than (mean - sd)
-        #         condition = (vals > means[i] + 0.5)
+        # Combine both groups into one list while labeling the group type.
+        # 'unpop' neurons are those with higher activations for unpopular inputs (to be reinforced),
+        # while 'pop' neurons are those with lower activations (to be dampened).
+        combined_neurons = [(idx, cohen, 'unpop') for idx, cohen in unpop_neurons] + \
+                        [(idx, cohen, 'pop') for idx, cohen in pop_neurons]
 
-        #         # Apply dampening only where the condition is true
-        #         # pre_acts[condition, neuron_idx] += self.damp_percent
+        test1 = [cohen for cohen in unpop_neurons]
+        test2 = [cohen for cohen in pop_neurons]
+        # Now sort by the absolute Cohen's d value (in descending order) and pick the overall top N neurons.
+        combined_sorted = sorted(combined_neurons, key=lambda x: abs(x[1]), reverse=True)
+        top_neurons = combined_sorted[:int(self.N)]
 
-        # else:
-        (lowest_corrs, highest_corrs) = get_extreme_correlations(self.corr_file, int(self.N), self.unpopular_only)
-        unpop_mean_sd = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+        # Load the corresponding statistics files.
+        stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+        stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
 
-        unpop_indexes, unpop_values = zip(*highest_corrs)
-        pop_indexes, pop_values = zip(*lowest_corrs)
+        # Create tensors of the absolute Cohen's d values for the selected neurons.
+        abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
+        print("ukuku ", abs_cohens.shape)
 
-        # Convert Cohen's d values to tensor and normalize them to [0, 2]
-        unpop_cohens_d = torch.tensor([abs(v) for v in unpop_values], device=pre_acts.device)
-        pop_cohens_d = torch.tensor([abs(v) for v in pop_values], device=pre_acts.device)
-
-        def normalize_to_range(x, new_min=0.0, new_max=2):
+        # Define a helper normalization function.
+        def normalize_to_range(x, new_min, new_max):
             min_val = torch.min(x)
             max_val = torch.max(x)
             if max_val == min_val:
-                return torch.full_like(x, (new_min + new_max) / 2)  # fallback to midpoint if all values are equal
+                return torch.full_like(x, (new_min + new_max) / 2)
             return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
-        unpop_weights = normalize_to_range(unpop_cohens_d, new_max=self.gamma)
-        pop_weights = normalize_to_range(pop_cohens_d, new_max=self.gamma)
+        # Normalize the Cohen's d values to [0, 2.5]
+        norm_cohen = normalize_to_range(abs_cohens, new_min=self.beta, new_max=self.gamma)
 
-        unpop_mean_sd = unpop_mean_sd.iloc[list(unpop_indexes)]
-        means_unpop = torch.tensor(unpop_mean_sd["mean"].values, device=pre_acts.device)
-        sds_unpop = torch.tensor(unpop_mean_sd["std"].values, device=pre_acts.device)
+        # Calculate the impact for each selected neuron.
+        # For 'pop' neurons, the impact is determined by the absolute 'mean' from stats_pop,
+        # while for 'unpop' neurons, it is taken from stats_unpop.
+        impact_vals = []
+        for neuron_idx, _, group in top_neurons:
+            impact = abs(stats_unpop.iloc[neuron_idx]["mean"])
+            impact_vals.append(impact)
+        impact_tensor = torch.tensor(impact_vals, device=pre_acts.device, dtype=torch.float)
 
-        for i, neuron_idx in enumerate(list(unpop_indexes)):
-            vals = pre_acts[:, neuron_idx]
-            condition = (vals > (means_unpop[i] * self.beta))
-            pre_acts[:, neuron_idx] += sds_unpop[i] * unpop_weights[i]
+        # Normalize the impact values to the same range [0, 2.5].
+        norm_impact = normalize_to_range(impact_tensor, new_min=0, new_max=2)
 
-        for i, neuron_idx in enumerate(list(pop_indexes)):
-            vals = pre_acts[:, neuron_idx]
-            condition = (vals < (means_unpop[i] * self.beta))
-            pre_acts[:, neuron_idx] -= sds_unpop[i] * pop_weights[i]
-        return pre_acts	
+        # Get beta from the instance. beta=0 uses only the Cohen's d valsue, beta=1 uses only the impact.
+        # Combine the two factors. This computes an effective weight for each neuron.
+        # For each neuron: effective_weight = (1 - beta) * norm_cohen + beta * norm_impact.
+        effective_weights = norm_cohen 
+        # Now update the neuron activations based on group.
+        for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
+            weight = effective_weights[i]
+            if group == 'unpop':
+                # For neurons to be reinforced, fetch stats from the unpopular file.
+                row = stats_unpop.iloc[neuron_idx]
+                mean_val = row["mean"]
+                std_val = row["std"]
+
+                # Identify positions where the neuron's activation is above its mean.
+                vals = pre_acts[:, neuron_idx]
+                condition = vals > mean_val
+                # Increase activations by an amount proportional to the standard deviation and effective weight.
+                pre_acts[condition, neuron_idx] += std_val * weight
+
+            else:  # group == 'pop'
+                # For neurons to be dampened, use the popular statistics for impact.
+                pop_mean = stats_pop.iloc[neuron_idx]["mean"]
+                # Still fetch the comparison stats from the unpopular stats file
+                # (this is from your original logic; adjust if needed).
+                row = stats_unpop.iloc[neuron_idx]
+                mean_val = row["mean"]
+                std_val = row["std"]
+
+                # Identify positions where the neuron's activation is below its mean.
+                vals = pre_acts[:, neuron_idx]
+                condition = vals < mean_val
+                # Decrease activations proportionally.
+                pre_acts[condition, neuron_idx] -= std_val * weight
+
+        return pre_acts

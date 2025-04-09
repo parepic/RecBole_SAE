@@ -945,7 +945,7 @@ class Trainer(AbstractTrainer):
         #                                             damp_percent=beta, unpopular_only=True)
         self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
                                                     beta=beta, gamma=gamma, unpopular_only=False)
-    
+        
         splits = []
         inverse_propensities = []
         for batch_idx, batched_data in enumerate(iter_data):
@@ -961,6 +961,7 @@ class Trainer(AbstractTrainer):
             self.eval_collector.eval_batch_collect(
                 scores, interaction, positive_u, positive_i
             )
+        
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=splits)
