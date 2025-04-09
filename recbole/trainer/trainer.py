@@ -941,8 +941,11 @@ class Trainer(AbstractTrainer):
         )
         
         num_sample = 0
-        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, beta=beta, 
-                                            gamma=gamma, unpopular_only=False)
+        # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
+        #                                             damp_percent=beta, unpopular_only=True)
+        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
+                                                    beta=beta, gamma=gamma, unpopular_only=False)
+    
         splits = []
         inverse_propensities = []
         for batch_idx, batched_data in enumerate(iter_data):
@@ -962,7 +965,7 @@ class Trainer(AbstractTrainer):
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=splits)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, batch_ips)
-        self.model.recommendation_count = np.zeros(self.model.n_items)
+        self.model.recommendation_count = np.zeros(3707)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['ARP@10'] = fairness_dict['ARP@10']

@@ -59,7 +59,7 @@ class SAE(nn.Module):
 
 		return
 
-	def set_dampen_hyperparam(self, corr_file=None, neuron_count=20, damp_percent=0.1, unpopular_only=False ):
+	def set_dampen_hyperparam(self, corr_file=None, neuron_count=42, damp_percent=0.1, unpopular_only=True):
 		self.corr_file = corr_file
 		self.neuron_count = neuron_count
 		self.damp_percent = damp_percent
@@ -146,13 +146,29 @@ class SAE(nn.Module):
 					data["recommendations"].append(topk_indices.tolist())
 
 	def dampen_neurons(self, pre_acts):
-		print(self.sae_k)
 		if self.unpopular_only:
 			if(self.neuron_count == 0): 
 				return pre_acts
-			unpop_indexes, unpop_values = zip(*utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
-			print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
-			pre_acts[:, unpop_indexes] *= (1 + self.damp_percent)
+			unpop_indexes = utils.get_top_n_neuron_indexes(self.neuron_count).to(self.device)
+
+			# Create a scaling vector: linearly spaced from 2 (most unpop-biased) to 0 (least)
+			scales = torch.linspace(2.0, 0.0, steps=self.neuron_count, device=self.device)  # shape: (neuron_count,)
+
+			# Find which of the selected indexes are active (non-zero) in pre_acts
+			nonzero_mask = pre_acts[:, unpop_indexes] > 0  # shape: (batch_size, neuron_count)
+
+			# Apply damping only where activation > 0
+			pre_acts[:, unpop_indexes] = torch.where(
+				nonzero_mask,
+				pre_acts[:, unpop_indexes] + scales,  # multiply by scaling factor
+				pre_acts[:, unpop_indexes]            # else leave unchanged
+			)
+
+			# pre_acts[:, unpop_indexes] *= (1 + self.damp_percent)
+   
+			# unpop_indexes, unpop_values = zip(*utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
+			# print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
+			# pre_acts[:, unpop_indexes] *= (1 + self.damp_percent)
    			# differences = utils.get_difference_values(unpop_idxs)
 			# # Convert to PyTorch tensors
 			# unpop_idxs = torch.tensor(unpop_idxs, dtype=torch.long, device=self.device)  # Ensure correct indexing type
@@ -178,8 +194,10 @@ class SAE(nn.Module):
 	def forward(self, x, sequences=None, train_mode=False, save_result=False):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
-		# if self.corr_file:
-		# 	pre_acts = self.dampen_neurons(pre_acts)
+
+		if self.corr_file:
+			pre_acts = self.dampen_neurons(pre_acts)
+
 
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 		x_reconstructed = z @ self.W_dec + self.b_dec

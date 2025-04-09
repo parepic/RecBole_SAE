@@ -148,14 +148,16 @@ def tune_hyperparam():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    Ns = np.linspace(10, 32, 12).tolist()
-    betas = np.linspace(-7, -1, 7).tolist()
-    gammas = np.linspace(1, 3, 5).tolist()
+    Ns = np.linspace(20, 32, 7).tolist()
+    betas = np.linspace(-10, 2, 13).tolist()
+    gammas = np.linspace(1, 7, 7).tolist()
     baseline_ndcg = -1
     baseline_arp = -1
+    baseline_isp = -1
+
     best_triplet = []
     best_metric = []
-    best_diff = 9999
+    best_diff = -9999
     it_num = 0
     for n in Ns:
         if it_num == 0:
@@ -164,6 +166,7 @@ def tune_hyperparam():
             )
             baseline_ndcg = test_result['ndcg@10']
             baseline_arp = test_result['ARP@10']
+            baseline_isp = test_result['ips_ndcg@10']
             it_num += 1
             continue
         for beta in betas:
@@ -172,16 +175,18 @@ def tune_hyperparam():
                     valid_data, model_file=args.path, show_progress=config["show_progress"], N=n, beta=beta, gamma=gamma
                 )
                 perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
-                perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
-                if perc_change_arp <= -0.15:
-                    if(perc_change_arp - perc_change_ndcg < best_diff):
-                        best_diff = perc_change_arp - perc_change_ndcg
+                # perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
+                perc_change_isp = (test_result['ips_ndcg@10'] - baseline_isp) / baseline_isp
+
+                if perc_change_isp >= 0.15:
+                    if(perc_change_ndcg + perc_change_isp > best_diff):
+                        best_diff = perc_change_ndcg + perc_change_isp
                         best_triplet = [n, beta, gamma]
-                        best_metric = [test_result['ndcg@10'], test_result['ARP@10']]
+                        best_metric = [test_result['ips_ndcg@10'], test_result['ndcg@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
-                print(f"Current Ndcg: {test_result['ndcg@10']} Current Arp {test_result['ARP@10']} " )
+                print(f"Current ips Ndcg: {test_result['ips_ndcg@10']} Current ndcg {test_result['ndcg@10']} " )
                 if len(best_metric) > 0:
-                    print(f"Best metric so far Ndcg: {best_metric[0]} Arp {best_metric[1]} " )
+                    print(f"Best metric so far isp Ndcg: {best_metric[0]} ncdg {best_metric[1]} " )
                 it_num +=1
     print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
     for best in best_triplet:
@@ -210,7 +215,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    gammas = np.linspace(-1, 2.5, 8).tolist()
+    gammas = np.linspace(1, 6, 6).tolist()
     for gamma in gammas:
         if count == 0:
             test_result = trainer.evaluate(
@@ -218,7 +223,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=10, beta=0.5, gamma=gamma
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=32, beta=0, gamma=gamma
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -292,13 +297,13 @@ if __name__ == "__main__":
     # save_mean_SD()
     # exit()
     
-    print(rank_neurons_by_chi2(
-    popular_csv= r"./dataset/ml-1m/popular_activations.csv",
-    unpopular_csv=r"./dataset/ml-1m/unpopular_activations.csv",
-    total_per_group=614400,
-    output_csv=r"./dataset/ml-1m/ranked_neuron_bias_scores.csv"
-    ))
-    exit()
+    # print(rank_neurons_by_chi2(
+    # popular_csv= r"./dataset/ml-1m/popular_activations.csv",
+    # unpopular_csv=r"./dataset/ml-1m/unpopular_activations.csv",
+    # total_per_group=614400,
+    # output_csv=r"./dataset/ml-1m/ranked_neuron_bias_scores.csv"
+    # ))
+    # exit()
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
@@ -369,13 +374,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
         
-        
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
-        
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.fit_gate( 
         #     train_data,
         #     valid_data=test_data,
@@ -395,7 +398,7 @@ if __name__ == "__main__":
             tune_hyperparam() 
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"]
+            #     test_data, model_file=args.path, show_progress=config["show_progress"], N=200, beta=0.6
             # )
             # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
