@@ -149,8 +149,8 @@ def tune_hyperparam():
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     Ns = np.linspace(4, 64, 31).tolist()
-    betas = np.linspace(-0.1, 1.0, 12).tolist()
-    gammas = np.linspace(1, 7, 7).tolist()
+    betas = np.linspace(0.0, 1.5, 4).tolist()
+    gammas = np.linspace(2.0, 3, 3).tolist()
     baseline_ndcg = -1
     baseline_arp = -1
     baseline_isp = -1
