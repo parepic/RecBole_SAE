@@ -237,10 +237,10 @@ class SASRec(SequentialRecommender):
         for i, neuron_idx in enumerate(list(unpop_indexes)):
             vals = pre_acts[:, neuron_idx]
             condition = (vals > (means_unpop[i] * self.beta))
-            pre_acts[condition, neuron_idx] += sds_unpop[i] * unpop_weights[i]
+            pre_acts[:, neuron_idx] += sds_unpop[i] * unpop_weights[i]
 
         for i, neuron_idx in enumerate(list(pop_indexes)):
             vals = pre_acts[:, neuron_idx]
             condition = (vals < (means_unpop[i] * self.beta))
-            pre_acts[condition, neuron_idx] -= sds_unpop[i] * pop_weights[i]
+            pre_acts[:, neuron_idx] -= sds_unpop[i] * pop_weights[i]
         return pre_acts	
