@@ -184,7 +184,7 @@ def tune_hyperparam():
                         best_triplet = [n, beta, gamma]
                         best_metric = [test_result['ips_ndcg@10'], test_result['ndcg@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta} Gamma: {gamma} ")
-                print(f"Current ips Ndcg: {test_result['ips_ndcg@10']} Current ndcg {test_result['ndcg@10']} " )
+                print(f"Current ips Ndcg: {test_result['ips_ndcg@10']} Current ndcg {test_result['ndcg@10']}, isp change:  {perc_change_isp}" )
                 if len(best_metric) > 0:
                     print(f"Best metric so far isp Ndcg: {best_metric[0]} ncdg {best_metric[1]} " )
                 it_num +=1
