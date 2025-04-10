@@ -179,8 +179,8 @@ def tune_hyperparam():
                 perc_change_isp = (test_result['ips_ndcg@10'] - baseline_isp) / baseline_isp
 
                 if perc_change_isp >= 0.10:
-                    if(perc_change_isp - perc_change_ndcg > best_diff):
-                        best_diff = perc_change_isp - perc_change_ndcg
+                    if(perc_change_isp + perc_change_ndcg > best_diff):
+                        best_diff = perc_change_isp + perc_change_ndcg
                         best_triplet = [n, beta, gamma]
                         best_metric = [test_result['ips_ndcg@10'], test_result['ndcg@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta}, Gamma: {gamma} ")
