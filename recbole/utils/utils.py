@@ -1304,37 +1304,30 @@ def skew_sample(interaction, num_samples):
 
 def get_popularity_label_indices(id_tensor):
     """
+    Given a 1D tensor of item IDs, returns a 1D tensor of the same shape 
+    that indicates the popularity label for each item.
+    
     Args:
         id_tensor (torch.Tensor): 1D tensor of item IDs of shape (N,)
-        df (pd.DataFrame): DataFrame with columns ['item_id:token', 'popularity_label']
-
+        
     Returns:
-        Tuple of 3 torch.Tensors: (indices_label_1, indices_label_0, indices_label_minus1)
+        torch.Tensor: 1D tensor of popularity labels corresponding to 
+                      each item in id_tensor.
     """
-    
+    # Read the CSV that maps item IDs to popularity labels.
     df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", encoding='latin1')
-
-    # Create a map from item ID to popularity_label
+    
+    # Create a mapping from item ID to popularity label.
     id_to_label = dict(zip(df['item_id:token'], df['popularity_label']))
-
-    indices_label_1 = []
-    indices_label_0 = []
-    indices_label_minus1 = []
-
-    for idx, item_id in enumerate(id_tensor.tolist()):
-        label = id_to_label.get(item_id, None)
-        if label == 1:
-            indices_label_1.append(idx)
-        elif label == 0:
-            indices_label_0.append(idx)
-        elif label == -1:
-            indices_label_minus1.append(idx)
-
-    return (
-        torch.tensor(indices_label_1, dtype=torch.long),
-        torch.tensor(indices_label_0, dtype=torch.long),
-        torch.tensor(indices_label_minus1, dtype=torch.long)
-    )
+    
+    # For each item in the tensor, retrieve the corresponding label.
+    # If an item ID is not found, we assign a default label of -2.
+    default_label = -2
+    labels = [id_to_label.get(item_id, default_label) for item_id in id_tensor.tolist()]
+    
+    # Convert the list of labels to a torch tensor.
+    label_tensor = torch.tensor(labels, dtype=torch.long)
+    return label_tensor
     
 from scipy.stats import chi2_contingency
 
@@ -1420,3 +1413,297 @@ def get_top_n_neuron_indexes(n):
     df_sorted = df.sort_values(by='chi2_score', ascending=False).head(n)
     top_indexes = df_sorted['index'].values
     return torch.tensor(top_indexes, dtype=torch.long)
+
+
+
+import h5py
+import matplotlib.pyplot as plt
+
+def plot_h5_columns(row_x=None, row_y=None, row_z=None, num_rows=100000):
+    """
+    Plots data from two HDF5 files (with dataset name 'dataset') using different modes
+    depending on the provided row parameters.
+    
+    Modes:
+      1. Scatter Plot:
+         - If both row_x and row_y are provided, a scatter plot is produced.
+         - If row_z is also provided, a 3D scatter plot is generated.
+      
+      2. Histogram for Single Row:
+         - If only row_x is provided (row_y and row_z are None), a histogram (bar chart) is created.
+           The histogram uses bins from -2.5 to 2.5 (with a bin width of 0.05) and plots frequency counts.
+      
+      3. Histograms for All Rows:
+         - If row_x is not provided (i.e. row_x is None), then a histogram is generated for each row (all indices)
+           from both files in a grid of subplots.
+    
+    Parameters:
+        row_x (int or None): Index for the x-axis data or, if used alone, the row whose histogram is computed.
+        row_y (int or None): Index for the y-axis data (required for scatter plot).
+        row_z (int or None): Index for the z-axis data (optional, for 3D scatter plot).
+        num_rows (int, optional): Number of columns to read from the dataset. Defaults to 100000.
+    
+    The function loads the dataset named 'dataset' from two files:
+      - "./dataset/ml-1m/sasrec_unpop_activations.h5"
+      - "./dataset/ml-1m/sasrec_pop_activations.h5"
+    """
+    # Define file paths.
+    file1 = r"./dataset/ml-1m/sasrec_unpop_activations.h5"
+    file2 = r"./dataset/ml-1m/sasrec_pop_activations.h5"
+    
+    # Load the first num_rows columns from the 'dataset' in both files.
+    with h5py.File(file1, 'r') as f1:
+        data1 = f1['dataset'][:, :num_rows]
+    with h5py.File(file2, 'r') as f2:
+        data2 = f2['dataset'][:, :num_rows]
+    
+    # Define histogram bins: from -2.5 to 2.5, bin width of 0.05.
+    bins = np.arange(-2.5, 2.5 + 0.05, 0.05)
+    
+    # Case 1: Scatter plot if both row_x and row_y are provided.
+    if row_x is not None and row_y is not None:
+        # Extract the specified rows from each dataset.
+        x1, y1 = data1[row_x, :], data1[row_y, :]
+        x2, y2 = data2[row_x, :], data2[row_y, :]
+        
+        if row_z is not None:
+            # 3D scatter plot.
+            z1 = data1[row_z, :]
+            z2 = data2[row_z, :]
+            fig = plt.figure(figsize=(10, 8))
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(x1, y1, z1, color='blue', marker='o', label='Unpopular')
+            ax.scatter(x2, y2, z2, color='red', marker='x', label='Popular')
+            ax.set_xlabel(f'Row {row_x}')
+            ax.set_ylabel(f'Row {row_y}')
+            ax.set_zlabel(f'Row {row_z}')
+            ax.set_title('3D Scatter Plot of Selected Rows from Two HDF5 Files')
+            ax.legend()
+        else:
+            # 2D scatter plot.
+            plt.figure(figsize=(8, 6))
+            plt.scatter(x1, y1, color='blue', marker='o', label='Unpopular')
+            plt.scatter(x2, y2, color='red', marker='x', label='Popular')
+            plt.xlabel(f'Row {row_x}')
+            plt.ylabel(f'Row {row_y}')
+            plt.title('2D Scatter Plot of Selected Rows from Two HDF5 Files')
+            plt.legend()
+            plt.grid(True)
+        plt.show()
+    
+    # Case 2: Histogram for a single row if only row_x is provided.
+    elif row_x is not None and row_y is None and row_z is None:
+        # Extract the data for the selected row from both datasets.
+        data_row1 = data1[row_x, :]
+        data_row2 = data2[row_x, :]
+        
+        # Compute histograms for each file.
+        hist1, _ = np.histogram(data_row1, bins=bins)
+        hist2, _ = np.histogram(data_row2, bins=bins)
+        # Compute bin centers.
+        bin_centers = (bins[:-1] + bins[1:]) / 2
+        
+        plt.figure(figsize=(8, 6))
+        # Offset the bars slightly to avoid overlap.
+        width = 0.025  # Half of the bin width.
+        plt.bar(bin_centers - width, hist1, width=0.025, color='blue', alpha=0.7, label='File 1')
+        plt.bar(bin_centers + width, hist2, width=0.025, color='red', alpha=0.7, label='File 2')
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+        plt.title(f'Histogram for Row {row_x} from -2.5 to 2.5 (bin width 0.05)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+    
+    # Case 3: No row parameters provided: histogram for all rows.
+    elif row_x is None:
+        n_rows_data = data1.shape[0]  # Total number of rows (activations) in the dataset.
+        # Determine subplot grid size.
+        ncols = int(math.ceil(math.sqrt(n_rows_data)))
+        nrows_subplot = int(math.ceil(n_rows_data / ncols))
+        
+        fig, axs = plt.subplots(nrows_subplot, ncols, figsize=(4 * ncols, 3 * nrows_subplot))
+        axs = axs.flatten()  # Flatten the array for easier indexing.
+        
+        for idx in range(n_rows_data):
+            # Compute histograms for the current row for both files.
+            d1 = data1[idx, :]
+            d2 = data2[idx, :]
+            h1, _ = np.histogram(d1, bins=bins)
+            h2, _ = np.histogram(d2, bins=bins)
+            bin_centers = (bins[:-1] + bins[1:]) / 2
+            
+            ax = axs[idx]
+            width = 0.025
+            ax.bar(bin_centers - width, h1, width=0.025, color='blue', alpha=0.7, label='F1')
+            ax.bar(bin_centers + width, h2, width=0.025, color='red', alpha=0.7, label='F2')
+            ax.set_title(f'Row {idx}')
+            ax.set_xlim([-2.5, 2.5])
+            ax.grid(True)
+            # Optionally, add legend only for the first subplot.
+            if idx == 0:
+                ax.legend()
+        
+        # Hide any unused subplots.
+        for j in range(n_rows_data, len(axs)):
+            axs[j].axis('off')
+            
+        plt.tight_layout()
+        plt.show()
+        
+        
+def compute_covariances(h5_file, row_index):
+    """
+    Compute the covariance between the specified row and all rows in the dataset.
+
+    Parameters:
+        h5_file (str): Path to the HDF5 file.
+        row_index (int): Index of the row whose covariance with every row is computed.
+
+    Returns:
+        cov (np.ndarray): A 1D array of covariance values of shape (n_rows,).
+                          cov[j] is the covariance between the row at row_index and row j.
+    """
+    # Open the HDF5 file and load the entire dataset.
+    with h5py.File(h5_file, 'r') as f:
+        data = f['dataset'][:]  # Assumed shape: (n_rows, n_columns)
+    
+    # Number of rows and columns.
+    n_rows, n_cols = data.shape
+    
+    # Get the specified row and its mean.
+    x = data[row_index, :]
+    x_mean = np.mean(x)
+    
+    # Compute the mean for each row.
+    row_means = np.mean(data, axis=1)  # shape: (n_rows,)
+    
+    # Compute the covariance between row_index and every row.
+    # For each row j:
+    #   cov(x, y_j) = sum((x - mean_x) * (y_j - mean_y_j)) / (n_cols - 1)
+    # We compute this in a vectorized way.
+    cov = np.sum((x - x_mean) * (data - row_means[:, None]), axis=1) / (n_cols - 1)
+    
+    return cov
+
+import numpy as np
+import h5py
+
+def compute_covariances(h5_file, row_index):
+    """
+    Compute the covariance between the specified row and all rows in the dataset.
+
+    Parameters:
+        h5_file (str): Path to the HDF5 file.
+        row_index (int): Index of the row whose covariance with every row is computed.
+
+    Returns:
+        cov (np.ndarray): A 1D array of covariance values of shape (n_rows,).
+                          cov[j] is the covariance between the row at row_index and row j.
+    """
+    # Open the HDF5 file and load the entire dataset.
+    with h5py.File(h5_file, 'r') as f:
+        data = f['dataset'][:]  # Assumed shape: (n_rows, n_columns)
+    
+    # Number of rows and columns.
+    n_rows, n_cols = data.shape
+    
+    # Get the specified row and compute its mean.
+    x = data[row_index, :]
+    x_mean = np.mean(x)
+    
+    # Compute the mean for each row.
+    row_means = np.mean(data, axis=1)  # shape: (n_rows,)
+    
+    # Compute the covariance between the specified row and every row.
+    cov = np.sum((x - x_mean) * (data - row_means[:, None]), axis=1) / (n_cols - 1)
+    
+    return cov
+
+
+
+def compute_covariances(h5_file, row_index, num_rows=100000):
+    """
+    Compute the covariance between the specified row and all rows in the dataset.
+
+    Parameters:
+        h5_file (str): Path to the HDF5 file.
+        row_index (int): Index of the row for which covariance with every row is computed.
+        num_rows (int): Number of columns to read from the dataset (default is 100000).
+
+    Returns:
+        np.ndarray: An array of covariance values between the specified row and every row.
+    """
+    with h5py.File(h5_file, 'r') as f:
+        data = f['dataset'][:, :num_rows]  # Assumed data shape: (n_rows, n_columns)
+    
+    n_rows, n_cols = data.shape
+    x = data[row_index, :]
+    x_mean = np.mean(x)
+    # Compute the mean for every row.
+    row_means = np.mean(data, axis=1)
+    # Compute the covariance between the specified row and each row.
+    cov = np.sum((x - x_mean) * (data - row_means[:, None]), axis=1) / (n_cols - 1)
+    return cov
+
+
+def compute_and_save_correlations(row1, row2, min_corr, num_rows=500000, output_prefix="correlation_results"):
+    """
+    For each of the two given rows, compute the Pearson correlation between that row 
+    and all other rows in the HDF5 file's dataset, normalize using per-row standard deviations 
+    obtained from a CSV file, filter out correlations below a given threshold, and save the results.
+
+    The CSV files saved will each have two columns: 'row' and 'correlation'.
+
+    Parameters:
+        h5_file (str): Path to the HDF5 file.
+        row1 (int): Index of the first row.
+        row2 (int): Index of the second row.
+        min_corr (float): The correlation threshold. Only correlation values greater than this value are saved.
+        stats_csv_path (str): Path to the CSV file containing row statistics (with a "std" column).
+        num_rows (int, optional): Number of columns to load from the dataset. Defaults to 100000.
+        output_prefix (str, optional): Prefix for the output CSV filenames.
+    """
+    
+    h5_file = r"./dataset/ml-1m/sasrec_unpop_activations.h5"
+    stats_csv_path = r"./dataset/ml-1m/row_stats_unpopular.csv"
+    
+    # Load the per-row statistics (we assume the CSV file uses the row index as its index).
+    stats_df = pd.read_csv(stats_csv_path, index_col=0)
+    # Ensure the 'std' column is numeric.
+    std_row1 = stats_df.iloc[row1]["std"]
+    std_row2 = stats_df.iloc[row2]["std"]
+    # Also get the standard deviations for all rows (assumed order corresponds to dataset rows).
+    std_all = stats_df["std"].to_numpy()
+    
+    # Compute the covariance arrays for each specified row.
+    cov1 = compute_covariances(h5_file, row1, num_rows)
+    cov2 = compute_covariances(h5_file, row2, num_rows)
+    
+    # Compute Pearson correlation for each row:
+    # correlation = covariance / (std(target_row) * std(other_row))
+    corr1 = cov1 / (std_row1 * std_all)
+    corr2 = cov2 / (std_row2 * std_all)
+    
+    # Filter to retain only correlation values greater than the provided threshold.
+    indices = np.arange(len(corr1))
+    mask1 = (corr1 > min_corr) | (corr1 < -1 * min_corr)
+    mask2 = (corr2 > min_corr) | (corr2 < -1 * min_corr)
+    filtered_indices1 = indices[mask1]
+    filtered_corr1 = corr1[mask1]
+    filtered_indices2 = indices[mask2]
+    filtered_corr2 = corr2[mask2]
+    
+    # Stack the filtered row positions and correlation values.
+    results_row1 = np.column_stack((filtered_indices1, filtered_corr1))
+    results_row2 = np.column_stack((filtered_indices2, filtered_corr2))
+    
+    # Save the filtered results to CSV files.
+    filename1 = f"{output_prefix}_row{row1}.csv"
+    filename2 = f"{output_prefix}_row{row2}.csv"
+    
+    np.savetxt(filename1, results_row1, delimiter=",", header="row,correlation", comments="")
+    np.savetxt(filename2, results_row2, delimiter=",", header="row,correlation", comments="")
+    
+    print(f"Saved correlation results for row {row1} (corr > {min_corr}) to '{filename1}'.")
+    print(f"Saved correlation results for row {row2} (corr > {min_corr}) to '{filename2}'.")

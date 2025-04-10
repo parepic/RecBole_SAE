@@ -35,7 +35,9 @@ from recbole.utils.utils import (
     skew_sample,
     get_popularity_label_indices,
     rank_neurons_by_chi2,
-    get_top_n_neuron_indexes
+    get_top_n_neuron_indexes,
+    plot_h5_columns,
+    compute_and_save_correlations
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -91,5 +93,7 @@ __all__ = [
     "skew_sample",
     "get_popularity_label_indices",
     "rank_neurons_by_chi2",
-    "get_top_n_neuron_indexes"
+    "get_top_n_neuron_indexes",
+    "plot_h5_columns",
+    "compute_and_save_correlations"
 ]

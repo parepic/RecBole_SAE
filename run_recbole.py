@@ -30,7 +30,9 @@ from recbole.utils import (
     save_mean_SD,
     save_cohens_d,
     find_diff, 
-    rank_neurons_by_chi2
+    rank_neurons_by_chi2,
+    plot_h5_columns,
+    compute_and_save_correlations
 )
 
 
@@ -215,16 +217,16 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 64, 17)
+    tochange = np.linspace(0, 6, 2)
     # tochange = np.linspace(0, 64, 17).tolist()
     for change in tochange:
         if count == 0:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"]
+                valid_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=1, gamma=2.5
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=32, beta=1, gamma=2
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -304,6 +306,10 @@ if __name__ == "__main__":
     # total_per_group=614400,
     # output_csv=r"./dataset/ml-1m/ranked_neuron_bias_scores.csv"
     # ))
+    # exit()
+    # plot_h5_columns(11, 59, num_rows=1000)
+    
+    # # compute_and_save_correlations(56, 59, 0.4)    
     # exit()
     parser = argparse.ArgumentParser()
     

@@ -946,12 +946,12 @@ class Trainer(AbstractTrainer):
         self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
                                                     beta=beta, gamma=gamma, unpopular_only=False)
         
-        splits = []
         inverse_propensities = []
+        labels = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
-            splits = get_popularity_label_indices(positive_i)
+            labels.extend(get_popularity_label_indices(positive_i))
             batch_ips = calculate_IPS(positive_i, reverse=True)
             inverse_propensities.extend(batch_ips)
             if self.gpu_available and show_progress:
@@ -964,8 +964,8 @@ class Trainer(AbstractTrainer):
         
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
-        result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=splits)
-        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, batch_ips)
+        result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=labels)
+        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, inverse_propensities)
         self.model.recommendation_count = np.zeros(3707)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
