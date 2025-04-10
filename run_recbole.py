@@ -178,9 +178,9 @@ def tune_hyperparam():
                 perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
                 perc_change_isp = (test_result['ips_ndcg@10'] - baseline_isp) / baseline_isp
 
-                if perc_change_isp >= 0.10:
-                    if(perc_change_isp + perc_change_ndcg > best_diff):
-                        best_diff = perc_change_isp + perc_change_ndcg
+                if perc_change_arp <= -0.07:
+                    if(perc_change_ndcg - perc_change_arp > best_diff):
+                        best_diff = perc_change_ndcg - perc_change_arp
                         best_triplet = [n, beta, gamma]
                         best_metric = [test_result['ips_ndcg@10'], test_result['ndcg@10']]
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta}, Gamma: {gamma} ")
@@ -215,7 +215,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 64, 17)
+    tochange = np.linspace(0, 64, 2)
     # tochange = np.linspace(0, 64, 17).tolist()
     for change in tochange:
         if count == 0:
@@ -224,7 +224,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=0, gamma=2
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=44, beta=1, gamma=2
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -396,8 +396,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam() 
-            # create_visualizations_neurons()
+            # tune_hyperparam() 
+            create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     test_data, model_file=args.path, show_progress=config["show_progress"], N=200, beta=0.6
             # )
