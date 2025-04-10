@@ -177,42 +177,76 @@ class NDCG(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
 
-        head_rows = chunks[0]
-        mid_rows = chunks[1]
-        tail_rows = chunks[2]
+    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
+        """
+        Calculate evaluation metrics (e.g., NDCG scores) for different popularity groups.
+        
+        The parameter `chunks` is now expected to be a list or tensor of popularity labels,
+        where an element equals 1 indicates a "head" (popular) item, 0 indicates a mid-popularity item,
+        and -1 indicates a "tail" (less popular) item.
+        
+        For each group (head, mid, tail), this function extracts the corresponding indices,
+        computes the metric via self.used_info and self.metric_info, and then aggregates the results
+        using self.topk_result. Finally, it computes an overall metric over all data and, if provided,
+        an importance-sampled (IPS) adjusted NDCG@10.
+        
+        Args:
+            dataobject: Data for which to compute the metrics.
+            ips_scores (optional): A list or array of importance sampling scores.
+            chunks (list or torch.Tensor): A 1D array-like of popularity labels (with values 1, 0, or -1)
+                for each data instance.
+                
+        Returns:
+            dict: A dictionary containing computed metrics.
+        """
+        import numpy as np
+
+        # If chunks is provided, compute indices for each label group.
+        if chunks is not None:
+            # Convert to numpy array if not already.
+            chunks_arr = np.array(chunks)
+            head_rows = np.where(chunks_arr == 1)[0].tolist()
+            mid_rows  = np.where(chunks_arr == 0)[0].tolist()
+            tail_rows = np.where(chunks_arr == -1)[0].tolist()
+        else:
+            head_rows = mid_rows = tail_rows = None
+
         metric_dict = {}
-        pos_index, pos_len = self.used_info(dataobject, row_indices=head_rows)
-        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
-        metric_dict = self.topk_result("ndcg-head", result, metric_dict)
+
+        # Compute metrics for head items.
+        if head_rows is not None and len(head_rows) > 0:
+            pos_index, pos_len = self.used_info(dataobject, row_indices=head_rows)
+            result = self.metric_info(pos_index, pos_len)  # result is a numpy array of shape (N, k)
+            metric_dict = self.topk_result("ndcg-head", result, metric_dict)
         
-        pos_index, pos_len = self.used_info(dataobject, row_indices=mid_rows)
-        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
-        metric_dict = self.topk_result("ndcg-mid", result, metric_dict)
+        # Compute metrics for mid-popularity items.
+        if mid_rows is not None and len(mid_rows) > 0:
+            pos_index, pos_len = self.used_info(dataobject, row_indices=mid_rows)
+            result = self.metric_info(pos_index, pos_len)
+            metric_dict = self.topk_result("ndcg-mid", result, metric_dict)
         
-        pos_index, pos_len = self.used_info(dataobject, row_indices=tail_rows)
-        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
-        metric_dict = self.topk_result("ndcg-tail", result, metric_dict)
+        # Compute metrics for tail (less popular) items.
+        if tail_rows is not None and len(tail_rows) > 0:
+            pos_index, pos_len = self.used_info(dataobject, row_indices=tail_rows)
+            result = self.metric_info(pos_index, pos_len)
+            metric_dict = self.topk_result("ndcg-tail", result, metric_dict)
         
+        # Compute overall metrics using all data.
         pos_index, pos_len = self.used_info(dataobject)
-        result = self.metric_info(pos_index, pos_len)  # result is numpy array of shape (N, k)
+        result = self.metric_info(pos_index, pos_len)
         metric_dict = self.topk_result("ndcg", result, metric_dict)
         
-        
+        # If ips_scores is provided, compute the IPS-adjusted NDCG@10.
         if ips_scores is not None:
             ndcg_at_10 = result[:, -1]  # shape (N,)
             ips_weights = np.array(ips_scores, dtype=np.float32)  # shape (N,)
-            
             weighted_sum = np.sum(ndcg_at_10 * ips_weights)
             normalizer = np.sum(ips_weights)
-            
             ips_adjusted_ndcg = weighted_sum / normalizer
-            
             metric_dict["ips_ndcg@10"] = float(ips_adjusted_ndcg)
-
         return metric_dict
-
+    
     def metric_info(self, pos_index, pos_len):
         len_rank = np.full_like(pos_len, pos_index.shape[1])
         idcg_len = np.where(pos_len > len_rank, len_rank, pos_len)

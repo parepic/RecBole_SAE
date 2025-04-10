@@ -237,7 +237,7 @@ class SASRec(SequentialRecommender):
         impact_tensor = torch.tensor(impact_vals, device=pre_acts.device, dtype=torch.float)
 
         # Normalize the impact values to the same range [0, 2.5].
-        norm_impact = normalize_to_range(impact_tensor, new_min=0, new_max=2)
+        # norm_impact = normalize_to_range(impact_tensor, new_min=1, new_max=2)
 
         # Get beta from the instance. beta=0 uses only the Cohen's d valsue, beta=1 uses only the impact.
         # Combine the two factors. This computes an effective weight for each neuron.
@@ -256,7 +256,7 @@ class SASRec(SequentialRecommender):
                 vals = pre_acts[:, neuron_idx]
                 condition = vals > mean_val
                 # Increase activations by an amount proportional to the standard deviation and effective weight.
-                pre_acts[condition, neuron_idx] += std_val * weight
+                pre_acts[condition, neuron_idx] +=  weight
 
             else:  # group == 'pop'
                 # For neurons to be dampened, use the popular statistics for impact.
