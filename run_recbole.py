@@ -396,8 +396,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            # tune_hyperparam() 
-            create_visualizations_neurons()
+            tune_hyperparam() 
+            # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     test_data, model_file=args.path, show_progress=config["show_progress"], N=200, beta=0.6
             # )
