@@ -84,7 +84,7 @@ class Config(object):
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
         self.cmd_config_dict = self._load_cmd_line()
         self._merge_external_config_dict()
-
+        
         self.model, self.model_class, self.dataset = self._get_model_and_dataset(
             model, dataset
         )
@@ -294,18 +294,18 @@ class Config(object):
             ModelType.DECISIONTREE,
         }:
             self._update_internal_config_dict(context_aware_init)
-            if dataset == "ml-100k" or dataset == "ml-1m":
+            if dataset == "ml-100k":
                 self._update_internal_config_dict(context_aware_on_ml_100k_init)
         elif self.internal_config_dict["MODEL_TYPE"] == ModelType.SEQUENTIAL:
             if model in ["DIN", "DIEN"]:
                 self._update_internal_config_dict(DIN_init)
-                if dataset == "ml-100k" or dataset == "ml-1m":
+                if dataset == "ml-100k":
                     self._update_internal_config_dict(DIN_on_ml_100k_init)
             elif model in ["GRU4RecKG", "KSR"]:
                 self._update_internal_config_dict(sequential_embedding_model_init)
             else:
                 self._update_internal_config_dict(sequential_init)
-                if dataset == "ml-100k" or dataset == "ml-1m" and model in [
+                if dataset == "ml-100k" and model in [
                     "GRU4RecF",
                     "SASRecF",
                     "FDSA",
@@ -327,7 +327,8 @@ class Config(object):
     def _set_default_parameters(self):
         self.final_config_dict["dataset"] = self.dataset
         self.final_config_dict["model"] = self.model
-        if self.dataset == "ml-100k" or self.dataset == "ml-1m":
+        print(self.dataset, " axi ")
+        if self.dataset == "ml-100k":
             current_path = os.path.dirname(os.path.realpath(__file__))
             self.final_config_dict["data_path"] = os.path.join(
                 current_path, "../dataset_example/" + self.dataset
@@ -336,7 +337,6 @@ class Config(object):
             self.final_config_dict["data_path"] = os.path.join(
                 self.final_config_dict["data_path"], self.dataset
             )
-
         if hasattr(self.model_class, "input_type"):
             self.final_config_dict["MODEL_INPUT_TYPE"] = self.model_class.input_type
         elif "loss_type" in self.final_config_dict:

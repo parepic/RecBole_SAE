@@ -118,6 +118,9 @@ def run_recbole(
         config_file_list=config_file_list,
         config_dict=config_dict,
     )
+    
+    print("duzelib de ", config["data_path"])
+    
     init_seed(config["seed"], config["reproducibility"])
     # logger initialization
     init_logger(config)

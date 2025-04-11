@@ -37,7 +37,8 @@ from recbole.utils.utils import (
     rank_neurons_by_chi2,
     get_top_n_neuron_indexes,
     plot_h5_columns,
-    compute_and_save_correlations
+    compute_and_save_correlations,
+    remove_sparse_users_items
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -95,5 +96,6 @@ __all__ = [
     "rank_neurons_by_chi2",
     "get_top_n_neuron_indexes",
     "plot_h5_columns",
-    "compute_and_save_correlations"
+    "compute_and_save_correlations",
+    "remove_sparse_users_items"
 ]

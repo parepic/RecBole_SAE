@@ -968,7 +968,7 @@ class Trainer(AbstractTrainer):
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=labels)
         fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, inverse_propensities)
-        self.model.recommendation_count = np.zeros(3707)
+        self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
         result['ARP@10'] = fairness_dict['ARP@10']
