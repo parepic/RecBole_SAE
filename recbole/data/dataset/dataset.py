@@ -1771,7 +1771,7 @@ class Dataset(torch.utils.data.Dataset):
         )
         if leave_one_mode == "valid_and_test":
             next_index = self._split_index_by_leave_n_out(
-                grouped_inter_feat_index, leave_one_num=2, n_each=16
+                grouped_inter_feat_index, leave_one_num=2, n_each=25
             )
         elif leave_one_mode == "valid_only":
             next_index = self._split_index_by_leave_one_out(
