@@ -366,7 +366,6 @@ if __name__ == "__main__":
             )
         parameter_dict = {
             'train_neg_sample_args': None,
-            'gpu_id': '-1'
         }   
 
         # config_file_list = [r'./recbole/recbole/properties/overall.yaml',
