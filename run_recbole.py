@@ -222,11 +222,11 @@ def create_visualizations_neurons():
     for change in tochange:
         if count == 0:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"]
+                test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=32, beta=1, gamma=2
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=32, beta=1, gamma=2
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])

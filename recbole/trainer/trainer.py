@@ -122,7 +122,7 @@ class Trainer(AbstractTrainer):
         self.logger = getLogger()
         
         self.logger.setLevel(logging.DEBUG)  # Set the root logger to debug
-
+        self.unique_elements = set()
         # Remove all existing handlers (to prevent duplicate logging)
         if self.logger.hasHandlers():
             self.logger.handlers.clear()
@@ -847,6 +847,7 @@ class Trainer(AbstractTrainer):
 
     def _full_sort_batch_eval(self, batched_data):
         interaction, history_index, positive_u, positive_i = batched_data
+        self.unique_elements.update(positive_i.tolist())
         interaction = interaction.to(self.device)
         # N = 1900
         # indices = skew_sample(interaction, N)
@@ -949,6 +950,7 @@ class Trainer(AbstractTrainer):
         inverse_propensities = []
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
+            print("Unique elements: ", len(self.unique_elements))
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
             labels.extend(get_popularity_label_indices(positive_i))
@@ -974,6 +976,8 @@ class Trainer(AbstractTrainer):
         result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
+        print("Final Unique elements: ", len(self.unique_elements))
+        self.unique_elements = set()
         return result
 
     def _map_reduce(self, result, num_sample):
