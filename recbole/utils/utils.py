@@ -1707,3 +1707,52 @@ def compute_and_save_correlations(row1, row2, min_corr, num_rows=500000, output_
     
     print(f"Saved correlation results for row {row1} (corr > {min_corr}) to '{filename1}'.")
     print(f"Saved correlation results for row {row2} (corr > {min_corr}) to '{filename2}'.")
+
+
+
+
+
+def remove_sparse_users_items():
+    # --- Step 1: Load the Data ---
+    # The files use tab as the delimiter and have headers that include type annotations.
+    items = pd.read_csv(r"./dataset/ml-1m/ml-1m.item", sep="\t", header=0)
+    interactions = pd.read_csv(r"./dataset/ml-1m/ml-1m.inter", sep="\t", header=0)
+    users = pd.read_csv(r"./dataset/ml-1m/ml-1m.user", sep="\t", header=0)
+    
+    # --- Step 2: Iterative Filtering ---
+    # We use a threshold of at least 5 interactions for both users and items.
+    iteration = 0
+    while True:
+        iteration += 1
+        current_shape = interactions.shape[0]
+        
+        # Remove users with fewer than 5 interactions:
+        user_counts = interactions["user_id:token"].value_counts()
+        valid_users = user_counts[user_counts >= 5].index
+        interactions = interactions[interactions["user_id:token"].isin(valid_users)]
+        
+        # Immediately update the users dataframe to reflect removals.
+        users = users[users["user_id:token"].isin(valid_users)]
+        
+        # Remove items with fewer than 5 interactions:
+        item_counts = interactions["item_id:token"].value_counts()
+        valid_items = item_counts[item_counts >= 5].index
+        interactions = interactions[interactions["item_id:token"].isin(valid_items)]
+        
+        new_shape = interactions.shape[0]
+        print(f"Iteration {iteration}: {current_shape} -> {new_shape} interactions remain")
+        
+        if new_shape == current_shape:
+            break
+
+    # --- Step 3: Synchronize Items With Interactions ---
+    # Keep only those items that still appear in the filtered interactions.
+    items = items[items["item_id:token"].isin(interactions["item_id:token"])]
+
+    # --- Step 4: Save the Filtered Files ---
+    # Files are saved with the header intact (including the type annotations).
+    items.to_csv(r"./dataset/ml-1m/ml-1m.item.filtered", sep="\t", index=False, header=True)
+    interactions.to_csv(r"./dataset/ml-1m/ml-1m.inter.filtered", sep="\t", index=False, header=True)
+    users.to_csv(r"./dataset/ml-1m/ml-1m.user.filtered", sep="\t", index=False, header=True)
+
+    print("Filtering complete. Files saved as 'ml-1m.item.filtered', 'ml-1m.inter.filtered', and 'ml-1m.user.filtered'.")

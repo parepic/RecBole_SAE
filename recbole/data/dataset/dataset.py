@@ -1162,15 +1162,16 @@ class Dataset(torch.utils.data.Dataset):
                 remap_list.append((feat, field, ftype))
         return remap_list
 
+
     def _remap_ID_all(self):
         """Remap all token-like fields."""
         for alias in self.alias.values():
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
             # if(alias == 'item_id'):
-                # self.remap_item_data( r'./dataset/lfm1b-artists/lfm1b-artists.item', r'./dataset/lfm1b-artists/items_remapped.csv',
-                #                       r'./dataset/lfm1b-artists/lfm1b-artists.inter', r'./dataset/lfm1b-artists/interactions_remapped.csv'
-                #                      )
+            #     self.remap_item_data( r'./dataset/ml-1m/ml-1m.item', r'./dataset/ml-1m/items_remapped.csv',
+            #                           r'./dataset/ml-1m/ml-1m.inter', r'./dataset/ml-1m/interactions_remapped.csv'
+            #                          )
 
         for field in self._rest_fields:
             remap_list = self._get_remap_list(np.array([field]))

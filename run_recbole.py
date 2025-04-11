@@ -311,6 +311,8 @@ if __name__ == "__main__":
     
     # # compute_and_save_correlations(56, 59, 0.4)    
     # exit()
+    # remove_sparse_users_items()
+    # exit()
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
@@ -364,15 +366,18 @@ if __name__ == "__main__":
             )
         parameter_dict = {
             'train_neg_sample_args': None,
-            # 'sae_k': 8,
-            # 'sae_scale_size': 32,
-            # 'sae_lr':1e-3
+            'gpu_id': '-1'
         }   
+
+        # config_file_list = [r'./recbole/recbole/properties/overall.yaml',
+        #             r'./recbole/recbole/properties/model/SASRec.yaml',
+        #             r'./recbole/recbole/properties/dataset/ml-1m.yaml'
+        #             ]
         
         run(
             'SASRec',
             'ml-1m',
-            config_file_list=config_file_list,
+            # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
             world_size=args.world_size,
