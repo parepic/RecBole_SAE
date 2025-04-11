@@ -327,7 +327,6 @@ class Config(object):
     def _set_default_parameters(self):
         self.final_config_dict["dataset"] = self.dataset
         self.final_config_dict["model"] = self.model
-        print(self.dataset, " axi ")
         if self.dataset == "ml-100k":
             current_path = os.path.dirname(os.path.realpath(__file__))
             self.final_config_dict["data_path"] = os.path.join(
