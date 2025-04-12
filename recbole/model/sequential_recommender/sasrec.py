@@ -174,6 +174,26 @@ class SASRec(SequentialRecommender):
 
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
+        pattern = torch.tensor([2810, 2162,   39, 1814,  218,   23, 2635])
+        # start_slice = item_seq[:, :pattern.size(0)]
+
+        # Compare element-wise
+        # matches = (start_slice == pattern)
+        
+        # # Compare element-wise
+        # matches = (start_slice == pattern)
+
+        # # Check if all elements match along dim=1 (row-wise)
+        # row_matches = matches.all(dim=1)
+
+        # # Print the matching row(s), if any
+        # if row_matches.any():
+        #     matching_rows = item_seq[row_matches]
+        #     print(matching_rows)
+        #     print("Truth:")
+        #     print(interaction[self.ITEM_ID][row_matches])
+        # else:
+        #     print("No matching row found.")
         # # item_seq = make_items_unpopular(item_seq)
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         seq_output = self.forward(item_seq, item_seq_len)
