@@ -161,7 +161,7 @@ class SASRec(SequentialRecommender):
         # else:
         #     weighted_loss = ce_loss.mean()
         # print("ISP-weighed loss", weighted_loss)
-        return ce_loss
+        return ce_loss.mean()
     
     def predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
