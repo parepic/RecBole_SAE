@@ -149,7 +149,7 @@ def run_recbole(
 
     # model training
     best_valid_score, best_valid_result = trainer.fit(
-        train_data, valid_data, saved=saved, show_progress=config["show_progress"]
+        train_data, valid_data, saved=saved, show_progress=config["show_progress"], model_file=r"./recbole/saved/SASRec-Apr-12-2025.pth"
     )
 
     # model evaluation
