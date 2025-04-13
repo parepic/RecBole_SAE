@@ -479,7 +479,6 @@ class Trainer(AbstractTrainer):
                 sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             )
             training_end_time = time()
-            self.epoch_time.append(training_end_time - training_start_time)
             train_loss_output = self._generate_train_loss_output(
                 epoch_idx, training_start_time, training_end_time, train_loss
             )
@@ -793,6 +792,8 @@ class Trainer(AbstractTrainer):
                 sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             )
             training_end_time = time()
+            self.epoch_time.append(training_end_time - training_start_time)
+
             train_loss_output = self._generate_train_loss_output(
                 epoch_idx, training_start_time, training_end_time, train_loss
             )
