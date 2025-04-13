@@ -208,7 +208,7 @@ class SAE(nn.Module):
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
-			if self.death_patience >= 1000000:
+			if self.death_patience >= 100000:
 				dead = self.get_dead_latent_ratio(need_update=1)
 				print(" dead percentage: ", dead )
 				self.death_patience = 0
