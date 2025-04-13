@@ -91,7 +91,7 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
         'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
         'Deep LT Coverage@10': calculate_percentage_change(deep_lt_coverages, deep_lt_coverages[0]),
         # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0]),
-        'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
+        # 'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
         'ARP@10': calculate_percentage_change(arps, arps[0])
         
     }
@@ -152,25 +152,20 @@ def tune_hyperparam():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    Ns = np.linspace(4, 64, 31).tolist()
-    betas = np.linspace(0.0, 1.5, 4).tolist()
-    gammas = np.linspace(2.0, 3, 3).tolist()
-    baseline_ndcg = -1
-    baseline_arp = -1
-    baseline_isp = -1
-
+    Ns = np.linspace(2, 64, 33)
+    betas = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
+    gammas = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
+    
     best_triplet = []
-    best_metric = []
-    best_diff = -9999
+    best_ndcg = -1
     it_num = 0
+    baseline_ndcg = -1
     for n in Ns:
         if it_num == 0:
             test_result = trainer.evaluate(
                 valid_data, model_file=args.path, show_progress=config["show_progress"]
             )
             baseline_ndcg = test_result['ndcg@10']
-            baseline_arp = test_result['ARP@10']
-            baseline_isp = test_result['ips_ndcg@10']
             it_num += 1
             continue
         for beta in betas:
@@ -178,24 +173,16 @@ def tune_hyperparam():
                 test_result = trainer.evaluate(
                     valid_data, model_file=args.path, show_progress=config["show_progress"], N=n, beta=beta, gamma=gamma
                 )
-                perc_change_ndcg = (test_result['ndcg@10'] - baseline_ndcg) / baseline_ndcg
-                perc_change_arp = (test_result['ARP@10'] - baseline_arp) / baseline_arp
-                perc_change_isp = (test_result['ips_ndcg@10'] - baseline_isp) / baseline_isp
-
-                if perc_change_arp <= -0.07:
-                    if(perc_change_ndcg - perc_change_arp > best_diff):
-                        best_diff = perc_change_ndcg - perc_change_arp
-                        best_triplet = [n, beta, gamma]
-                        best_metric = [test_result['ips_ndcg@10'], test_result['ndcg@10']]
+                if test_result['ndcg@10'] >= best_ndcg:
+                    best_triplet = [n, beta, gamma]
+                    best_ndcg = test_result['ndcg@10']
                 print(f"Iteration number: {it_num} N: {n} Beta: {beta}, Gamma: {gamma} ")
-                print(f"Current ips Ndcg: {test_result['ips_ndcg@10']} Current ndcg {test_result['ndcg@10']}, isp change:  {perc_change_isp}" )
-                if len(best_metric) > 0:
-                    print(f"Best metric so far isp Ndcg: {best_metric[0]} ncdg {best_metric[1]} " )
+                print(f"Current ndcg {test_result['ndcg@10']}, best ndcg:  {best_ndcg}, best triplet: {best_triplet}" )
                 it_num +=1
-    print(f"Best ever triplet: {best_triplet}, with results {best_metric}")
+    print(f"Best ever triplet: {best_triplet}, with results {best_ndcg}, baseline was {baseline_ndcg}")
     for best in best_triplet:
         print("blyat ", best)
-    return best_triplet, best_metric
+    return best_triplet, best_ndcg
     
 
 def create_visualizations_neurons():
@@ -219,16 +206,19 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 6, 1)
+    tochange = np.linspace(0, 64, 16)
+    tochange = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
+    lists_gamma = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
+    
     # tochange = np.linspace(0, 64, 17).tolist()
     for change in tochange:
         if count == 0:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"]
+                valid_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=32, beta=1, gamma=2
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[0.0, 1.0], gamma=[0.2, 0.5]
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -291,34 +281,7 @@ if __name__ == "__main__":
 
     # print(f"Saved correlation results to '{output_csv}' using {num_workers} cores.")
     
-    
-    
     # save_cohens_d()
-    # exit()
-    # remove_sparse_users_items()
-    # label_popular_items()
-    # label_popular_items()
-    # plot_binned_bar_chart('./dataset/ml-1m/correlations_pop.csv')
-    # save_mean_SD()
-    # exit()
-    
-    # print(rank_neurons_by_chi2(
-    # popular_csv= r"./dataset/ml-1m/popular_activations.csv",
-    # unpopular_csv=r"./dataset/ml-1m/unpopular_activations.csv",
-    # total_per_group=614400,
-    # output_csv=r"./dataset/ml-1m/ranked_neuron_bias_scores.csv"
-    # ))
-    # exit()
-    # plot_h5_columns(11, 59, num_rows=1000)
-    
-    # # compute_and_save_correlations(56, 59, 0.4)    
-    # exit()
-    # remove_sparse_users_items()
-    # exit()
-    
-    # create_unbiased_set()
-    # exit()
-    # create_item_popularity_csv()
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -413,7 +376,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            create_visualizations_neurons()
+            tune_hyperparam()
+            # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     test_data, model_file=args.path, show_progress=config["show_progress"], N=200, beta=0.6
@@ -421,10 +385,10 @@ if __name__ == "__main__":
             # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
+            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
         elif(args.model == "SASRec" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
+            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
         elif(args.model == "SASRec_SAE" and args.train):
             trainer.fit_SAE(config, 
                 args.path,

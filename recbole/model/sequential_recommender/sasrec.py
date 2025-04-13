@@ -152,16 +152,16 @@ class SASRec(SequentialRecommender):
         loss_fn = nn.CrossEntropyLoss(reduction='none')
         ce_loss = loss_fn(logits, pos_items)  # shape: (batch_size,)
 
-        if scores is not None:
-            # Clamp scores to avoid exploding weights
-            scores = torch.tensor(scores, dtype=torch.float32, device=logits.device)
-            scores = torch.clamp(scores, min=1e-4)
-            # Inverse propensity weighting
-            weighted_loss = (ce_loss / scores).mean()
-        else:
-            weighted_loss = ce_loss.mean()
+        # if scores is not None:
+        #     # Clamp scores to avoid exploding weights
+        #     scores = torch.tensor(scores, dtype=torch.float32, device=logits.device)
+        #     scores = torch.clamp(scores, min=1e-4)
+        #     # Inverse propensity weighting
+        #     weighted_loss = (ce_loss / scores).mean()
+        # else:
+        #     weighted_loss = ce_loss.mean()
         # print("ISP-weighed loss", weighted_loss)
-        return weighted_loss
+        return ce_loss.mean()
     
     def predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
@@ -225,8 +225,8 @@ class SASRec(SequentialRecommender):
             return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
         # Normalize the Cohen's d values to [0, 2.5]
-        norm_cohen = normalize_to_range(abs_cohens, new_min=self.beta, new_max=self.gamma)
-
+        norm_cohen = normalize_to_range(abs_cohens, new_min=self.beta[0], new_max=self.beta[1])
+        norm_cohen2 = reversed(normalize_to_range(abs_cohens, new_min=self.gamma[0], new_max=self.gamma[1]))
         # Calculate the impact for each selected neuron.
         # For 'pop' neurons, the impact is determined by the absolute 'mean' from stats_pop,
         # while for 'unpop' neurons, it is taken from stats_unpop.
@@ -234,7 +234,7 @@ class SASRec(SequentialRecommender):
         for neuron_idx, _, group in top_neurons:
             impact = abs(stats_unpop.iloc[neuron_idx]["mean"])
             impact_vals.append(impact)
-        impact_tensor = torch.tensor(impact_vals, device=pre_acts.device, dtype=torch.float)
+        # impact_tensor = torch.tensor(impact_vals, device=pre_acts.device, dtype=torch.float)
 
         # Normalize the impact values to the same range [0, 2.5].
         # norm_impact = normalize_to_range(impact_tensor, new_min=1, new_max=2)
@@ -243,9 +243,13 @@ class SASRec(SequentialRecommender):
         # Combine the two factors. This computes an effective weight for each neuron.
         # For each neuron: effective_weight = (1 - beta) * norm_cohen + beta * norm_impact.
         effective_weights = norm_cohen 
+
         # Now update the neuron activations based on group.
         for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
             weight = effective_weights[i]
+            weight2 = norm_cohen2[i]
+            
+            
             if group == 'unpop':
                 # For neurons to be reinforced, fetch stats from the unpopular file.
                 row = stats_unpop.iloc[neuron_idx]
@@ -254,9 +258,9 @@ class SASRec(SequentialRecommender):
 
                 # Identify positions where the neuron's activation is above its mean.
                 vals = pre_acts[:, neuron_idx]
-                condition = vals > mean_val
+                condition = vals > mean_val + weight2
                 # Increase activations by an amount proportional to the standard deviation and effective weight.
-                pre_acts[condition, neuron_idx] +=  weight
+                pre_acts[condition, neuron_idx] += weight
 
             else:  # group == 'pop'
                 # For neurons to be dampened, use the popular statistics for impact.
@@ -269,8 +273,9 @@ class SASRec(SequentialRecommender):
 
                 # Identify positions where the neuron's activation is below its mean.
                 vals = pre_acts[:, neuron_idx]
-                condition = vals < mean_val
+                condition = vals < mean_val - weight2 * std_val
                 # Decrease activations proportionally.
-                pre_acts[condition, neuron_idx] -= std_val * weight
+                pre_acts[condition, neuron_idx] -= weight * std_val
+            
 
         return pre_acts
