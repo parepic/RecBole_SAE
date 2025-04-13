@@ -66,8 +66,6 @@ class SASRec_SAE(SASRec):
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         # item_seq = make_items_popular(item_seq).to(self.device)
         seq_output = self.forward(item_seq, item_seq_len, mode='eval')
-        self.recommendation_count = np.zeros(self.n_items)
-
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
