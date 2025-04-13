@@ -206,8 +206,8 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 64, 16)
-    tochange = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
+    tochange = np.linspace(0, 64, 2)
+    # tochange = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     lists_gamma = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
     # tochange = np.linspace(0, 64, 17).tolist()
@@ -218,7 +218,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[0.0, 1.0], gamma=[0.2, 0.5]
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=44, beta=[0.5, 2.0], gamma=[0.0, 0.5]
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -376,8 +376,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam()
-            # create_visualizations_neurons()
+            # tune_hyperparam()
+            create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     test_data, model_file=args.path, show_progress=config["show_progress"], N=200, beta=0.6

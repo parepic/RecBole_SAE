@@ -48,7 +48,7 @@ class SASRec_SAE(SASRec):
 
         return sae_output
 
-    def calculate_loss(self, interaction):
+    def calculate_loss(self, interaction, scores=None):
         # Compute SASRec loss first
         # sasrec_loss = super().calculate_loss(interaction)
 
@@ -58,6 +58,7 @@ class SASRec_SAE(SASRec):
         sasrec_output = self.forward(item_seq, item_seq_len)
         if self.mode == 'train':
             sae_loss = self.sae_module.fvu + self.sae_module.auxk_loss / 32
+            print(f"FVU: {self.sae_module.fvu}, AUXK Loss: {self.sae_module.auxk_loss}, AUXK Loss /32: {self.sae_module.auxk_loss / 32} SAE Total Loss: {sae_loss}")
         else:
             sae_loss = self.sae_module.fvu
 
@@ -70,7 +71,7 @@ class SASRec_SAE(SASRec):
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         # item_seq = make_items_popular(item_seq).to(self.device)
         seq_output = self.forward(item_seq, item_seq_len)
-        self.recommendation_count = np.zeros(3707)
+        self.recommendation_count = np.zeros(self.n_items)
 
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
