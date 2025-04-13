@@ -857,6 +857,7 @@ class Trainer(AbstractTrainer):
     
 
     def _full_sort_batch_eval(self, batched_data):
+
         interaction, history_index, positive_u, positive_i = batched_data
         self.unique_elements.update(positive_i.tolist())
         interaction = interaction.to(self.device)

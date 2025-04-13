@@ -34,17 +34,12 @@ class SASRec_SAE(SASRec):
         else:
             raise ValueError(f"Invalid mode {mode} set for SASRec_SAE")
 
-    def forward(self, item_seq, item_seq_len):
+    def forward(self, item_seq, item_seq_len, mode=None):
         # Use SASRec to process the sequence
         sasrec_output = super().forward(item_seq, item_seq_len)  # Final hidden states from SASRec
         
-        # Feed the SASRec output to SAE
-        if self.mode in ['train', 'test']:
-            sae_output = self.sae_module(sasrec_output, train_mode=(self.mode == 'train'))
-        elif self.mode == 'inference':
-            sae_output = self.sae_module(sasrec_output, train_mode=False)
-        else:
-            raise ValueError("Invalid mode for SAE forward pass")
+        sae_output = self.sae_module(sasrec_output, train_mode=(mode=='train'))
+
 
         return sae_output
 
@@ -55,7 +50,7 @@ class SASRec_SAE(SASRec):
         # Compute SAE loss
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        sasrec_output = self.forward(item_seq, item_seq_len)
+        sasrec_output = self.forward(item_seq, item_seq_len, mode='train')
         if self.mode == 'train':
             sae_loss = self.sae_module.fvu + self.sae_module.auxk_loss / 32
             print(f"FVU: {self.sae_module.fvu}, AUXK Loss: {self.sae_module.auxk_loss}, AUXK Loss /32: {self.sae_module.auxk_loss / 32} SAE Total Loss: {sae_loss}")
@@ -70,7 +65,7 @@ class SASRec_SAE(SASRec):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         # item_seq = make_items_popular(item_seq).to(self.device)
-        seq_output = self.forward(item_seq, item_seq_len)
+        seq_output = self.forward(item_seq, item_seq_len, mode='eval')
         self.recommendation_count = np.zeros(self.n_items)
 
         test_items_emb = self.item_embedding.weight
