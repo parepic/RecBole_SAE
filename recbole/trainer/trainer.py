@@ -718,7 +718,7 @@ class Trainer(AbstractTrainer):
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
-        self.model.sae_module.save_highest_activations()
+        # self.model.sae_module.save_highest_activations()
     
         
     def fit_SAE(
@@ -939,7 +939,6 @@ class Trainer(AbstractTrainer):
             eval_func = self._neg_sample_batch_eval
         if self.config["eval_type"] == EvaluatorType.RANKING:
             self.tot_item_num = eval_data._dataset.item_num
-
         iter_data = (
             tqdm(
                 eval_data,
@@ -960,7 +959,6 @@ class Trainer(AbstractTrainer):
         inverse_propensities = []
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
-            print("Unique elements: ", len(self.unique_elements))
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
             labels.extend(get_popularity_label_indices(positive_i))
@@ -986,7 +984,6 @@ class Trainer(AbstractTrainer):
         result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
-        print("Final Unique elements: ", len(self.unique_elements))
         self.unique_elements = set()
         return result
 
