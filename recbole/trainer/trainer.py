@@ -732,6 +732,7 @@ class Trainer(AbstractTrainer):
         saved=True,
         show_progress=False,
         callback_fn=None,
+        sasrec_sae_file=None
     ):
         r"""Train the model based on the train data and the valid data.
 
@@ -748,6 +749,15 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
+        
+        
+        # checkpoint = torch.load(sasrec_sae_file, map_location=self.device)
+        # self.model.load_state_dict(checkpoint["state_dict"])
+        # self.model.load_other_parameter(checkpoint.get("other_parameter"))
+        # message_output = "Loading model structure and parameters from {}".format(
+        #     checkpoint_file
+        # )
+        # self.logger.info(message_output)
         sasrec_sae = SASRec_SAE(config, dataset, sasrec_model_path=checkpoint_file)
         self.model = sasrec_sae
         config["model"] = "SASRec_SAE"
