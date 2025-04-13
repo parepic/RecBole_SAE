@@ -814,6 +814,7 @@ class Trainer(AbstractTrainer):
                     self.cur_step,
                     max_step=self.stopping_step,
                     bigger=self.valid_metric_bigger,
+                    epoch_idx=epoch_idx
                 )
                 valid_end_time = time()
                 valid_score_output = (
