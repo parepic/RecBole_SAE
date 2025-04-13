@@ -1791,7 +1791,7 @@ class Dataset(torch.utils.data.Dataset):
         self._drop_unused_col()
         next_df = [self.inter_feat[index] for index in next_index]
         
-        test = np.load(r'./dataset/ml-1m/test_unbiased.npz')
+        test = np.load(r'./dataset/ml-1m/val_unbiased.npz')
         test_seq = test["features"]
         test_label = test["labels"]
         next_df[2]['item_id_list'] = torch.from_numpy(test_seq)
@@ -1799,7 +1799,7 @@ class Dataset(torch.utils.data.Dataset):
         next_df[2].length = test_label.shape[0]
 
         
-        val = np.load(r'./dataset/ml-1m/val_unbiased.npz')
+        val = np.load(r'./dataset/ml-1m/test_unbiased.npz')
         val_seq = val["features"]
         val_label = val["labels"]
         next_df[1]['item_id_list'] = torch.from_numpy(val_seq)
