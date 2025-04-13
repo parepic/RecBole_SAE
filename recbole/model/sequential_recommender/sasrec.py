@@ -152,15 +152,15 @@ class SASRec(SequentialRecommender):
         loss_fn = nn.CrossEntropyLoss(reduction='none')
         ce_loss = loss_fn(logits, pos_items)  # shape: (batch_size,)
 
-        # if scores is not None:
-        #     # Clamp scores to avoid exploding weights
-        #     scores = torch.tensor(scores, dtype=torch.float32, device=logits.device)
-        #     scores = torch.clamp(scores, min=1e-4)
-        #     # Inverse propensity weighting
-        #     weighted_loss = (ce_loss / scores).mean()
-        # else:
-        #     weighted_loss = ce_loss.mean()
-        # print("ISP-weighed loss", weighted_loss)
+        if scores is not None:
+            # Clamp scores to avoid exploding weights
+            scores = torch.tensor(scores, dtype=torch.float32, device=logits.device)
+            scores = torch.clamp(scores, min=1e-4)
+            # Inverse propensity weighting
+            weighted_loss = (ce_loss / scores).mean()
+        else:
+            weighted_loss = ce_loss.mean()
+        print("ISP-weighed loss", weighted_loss)
         return ce_loss.mean()
     
     def predict(self, interaction):

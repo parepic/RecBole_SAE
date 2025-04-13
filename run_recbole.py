@@ -32,7 +32,9 @@ from recbole.utils import (
     find_diff, 
     rank_neurons_by_chi2,
     plot_h5_columns,
-    compute_and_save_correlations
+    compute_and_save_correlations,
+    create_unbiased_set,
+    create_item_popularity_csv
 )
 
 
@@ -217,7 +219,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 6, 2)
+    tochange = np.linspace(0, 6, 1)
     # tochange = np.linspace(0, 64, 17).tolist()
     for change in tochange:
         if count == 0:
@@ -312,6 +314,11 @@ if __name__ == "__main__":
     # # compute_and_save_correlations(56, 59, 0.4)    
     # exit()
     # remove_sparse_users_items()
+    # exit()
+    
+    # create_unbiased_set()
+    # exit()
+    # create_item_popularity_csv()
     # exit()
     parser = argparse.ArgumentParser()
     
