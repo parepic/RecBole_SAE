@@ -168,6 +168,7 @@ class Trainer(AbstractTrainer):
         self.evaluator = Evaluator(config)
         self.item_tensor = None
         self.tot_item_num = None
+        self.epoch_time = []
 
     def _build_optimizer(self, **kwargs):
         r"""Init the Optimizer
@@ -478,6 +479,7 @@ class Trainer(AbstractTrainer):
                 sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             )
             training_end_time = time()
+            self.epoch_time.append(training_end_time - training_start_time)
             train_loss_output = self._generate_train_loss_output(
                 epoch_idx, training_start_time, training_end_time, train_loss
             )
@@ -758,10 +760,10 @@ class Trainer(AbstractTrainer):
         #     checkpoint_file
         # )
         # self.logger.info(message_output)
-        sasrec_sae = SASRec_SAE(config, dataset, sasrec_model_path=checkpoint_file)
-        self.model = sasrec_sae
-        config["model"] = "SASRec_SAE"
-        self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=config['sae_lr'])
+        # sasrec_sae = SASRec_SAE(config, dataset, sasrec_model_path=checkpoint_file)
+        # self.model = sasrec_sae
+        # config["model"] = "SASRec_SAE"
+        # self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=config['sae_lr'])
 
         message_output = "Loading SASREC model structure and parameters from {}".format(
             checkpoint_file
@@ -983,7 +985,7 @@ class Trainer(AbstractTrainer):
             self.eval_collector.eval_batch_collect(
                 scores, interaction, positive_u, positive_i
             )
-        
+        print("Train time for epoch: ", sum(self.epoch_time)/len(self.epoch_time))
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=labels)
