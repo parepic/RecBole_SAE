@@ -195,7 +195,6 @@ class SAE(nn.Module):
 	def forward(self, x, sequences=None, train_mode=False, save_result=False):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
-		print(self.scale_size, ' blya olcu ')
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
 
