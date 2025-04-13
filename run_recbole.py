@@ -355,11 +355,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
         
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.fit_gate( 
         #     train_data,
         #     valid_data=test_data,
@@ -377,10 +377,10 @@ if __name__ == "__main__":
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
             # tune_hyperparam()
-            create_visualizations_neurons()
             # create_visualizations_neurons()
+            create_visualizations_neurons()
             # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"], N=200, beta=0.6
+            #     valid_data, model_file=args.path, show_progress=config["show_progress"]
             # )
             # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
