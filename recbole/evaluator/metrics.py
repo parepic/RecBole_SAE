@@ -211,29 +211,34 @@ class NDCG(TopkMetric):
             tail_rows = np.where(chunks_arr == -1)[0].tolist()
         else:
             head_rows = mid_rows = tail_rows = None
-
         metric_dict = {}
+
+        pos_index, pos_len = self.used_info(dataobject)     
+        total =  len(pos_index)
 
         # Compute metrics for head items.
         if head_rows is not None and len(head_rows) > 0:
             pos_index, pos_len = self.used_info(dataobject, row_indices=head_rows)
+            print(" head blya ", len(pos_index)/total)
             result = self.metric_info(pos_index, pos_len)  # result is a numpy array of shape (N, k)
             metric_dict = self.topk_result("ndcg-head", result, metric_dict)
         
         # Compute metrics for mid-popularity items.
         if mid_rows is not None and len(mid_rows) > 0:
             pos_index, pos_len = self.used_info(dataobject, row_indices=mid_rows)
+            print(" mid blya ", len(pos_index)/total)   
             result = self.metric_info(pos_index, pos_len)
             metric_dict = self.topk_result("ndcg-mid", result, metric_dict)
         
         # Compute metrics for tail (less popular) items.
         if tail_rows is not None and len(tail_rows) > 0:
             pos_index, pos_len = self.used_info(dataobject, row_indices=tail_rows)
+            print(" tail blya ", len(pos_index)/total)
             result = self.metric_info(pos_index, pos_len)
             metric_dict = self.topk_result("ndcg-tail", result, metric_dict)
         
-        # Compute overall metrics using all data.
-        pos_index, pos_len = self.used_info(dataobject)
+        pos_index, pos_len = self.used_info(dataobject)     
+        total =  len(pos_index)
         result = self.metric_info(pos_index, pos_len)
         metric_dict = self.topk_result("ndcg", result, metric_dict)
         

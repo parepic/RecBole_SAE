@@ -1756,3 +1756,287 @@ def remove_sparse_users_items():
     users.to_csv(r"./dataset/ml-1m/ml-1m.user.filtered", sep="\t", index=False, header=True)
 
     print("Filtering complete. Files saved as 'ml-1m.item.filtered', 'ml-1m.inter.filtered', and 'ml-1m.user.filtered'.")
+
+
+
+def create_unbiased_set():
+    # -------------------------------
+    # Utility function for KL Divergence
+    # -------------------------------
+    def kl_divergence(P, Q, epsilon=1e-12):
+        """
+        Compute KL divergence KL(P || Q) = sum_i P[i] * log(P[i] / (Q[i] + epsilon)).
+        P and Q should be valid probability distributions.
+        """
+        Q_safe = Q + epsilon
+        return np.sum(P * np.log(P / Q_safe))
+    
+    # -------------------------------
+    # Step 1: Load all three NPZ files and compute overall item counts.
+    # -------------------------------
+    train_file = r"./dataset/ml-1m/biased_eval_train.npz"
+    val_file  = r"./dataset/ml-1m/biased_eval_test.npz"
+    test_file   = r"./dataset/ml-1m/biased_eval_val.npz"
+    
+    train_data = np.load(train_file)
+    test_data  = np.load(test_file)
+    val_data   = np.load(val_file)
+    
+    train_labels = train_data["labels"].astype(int)
+    test_labels  = test_data["labels"].astype(int)
+    val_labels   = val_data["labels"].astype(int)
+    
+    # Total number of possible items (IDs 0 to 3416)
+    n_items = 3417
+    
+    # Combine labels from all three files to compute overall frequencies.
+    all_labels = np.concatenate((train_labels, test_labels, val_labels))
+    counts_all = np.bincount(all_labels, minlength=n_items)
+    
+    # Compute the minimum nonzero count among items.
+    nonzero_counts = counts_all[counts_all > 0]
+    if len(nonzero_counts) == 0:
+        min_count = 1  # Should not happen normally.
+    else:
+        min_count = np.min(nonzero_counts)
+    print("Minimum (nonzero) count across all items:", min_count)
+    
+    # For each item, calculate the negative sampling acceptance probability.
+    # Items with the least interactions get p_i = 1, others get p_i = (min_count)/(count_i)
+    p_items = np.zeros(n_items)
+    for i in range(n_items):
+        if counts_all[i] > 0:
+            p_items[i] = min_count / counts_all[i]
+        else:
+            p_items[i] = 0.0  # If an item is never seen.
+    
+    # -------------------------------
+    # Step 2: Apply negative sampling on the test set.
+    # -------------------------------
+    # We use the test set to select interactions.
+    test_features = test_data["features"]  # shape: (N_test, dim)
+    test_labels   = test_data["labels"].astype(int)  # shape: (N_test,)
+    N_test = len(test_labels)
+    
+    # For each test interaction with item label i, accept it with probability p_items[i].
+    random_values = np.random.rand(N_test)
+    accept_mask = random_values < p_items[test_labels]
+    accepted_indices = np.where(accept_mask)[0]
+    
+    new_test_features = test_features[accepted_indices]
+    new_test_labels = test_labels[accepted_indices]
+    N_new = len(new_test_labels)
+    
+    print("Original number of test interactions:", N_test)
+    print("Number of test interactions after negative sampling:", N_new)
+    
+    # -------------------------------
+    # Step 3: Compute KL divergence before and after negative sampling.
+    # -------------------------------
+    counts_test = np.bincount(test_labels, minlength=n_items)
+    p_test = counts_test / N_test
+
+    if N_new > 0:
+        counts_new = np.bincount(new_test_labels, minlength=n_items)
+        p_new = counts_new / N_new
+    else:
+        p_new = np.zeros(n_items)
+    
+    # Dream (optimal) uniform distribution.
+    p_optimal = np.ones(n_items) / n_items
+    
+    kl_before = kl_divergence(p_optimal, p_test)
+    kl_after  = kl_divergence(p_optimal, p_new)
+    
+    print("KL divergence in test set before negative sampling: {:.6f}".format(kl_before))
+    print("KL divergence in test set after negative sampling:  {:.6f}".format(kl_after))
+    
+    # -------------------------------
+    # Step 4: Save the new unbiased test set.
+    # -------------------------------
+    output_file = r"./dataset/ml-1m/val_unbiased.npz"
+    np.savez(output_file, features=new_test_features, labels=new_test_labels)
+    print("Saved unbiased test set with {} interactions to '{}'".format(N_new, output_file))
+    
+    # -------------------------------
+    # Step 5: Plot frequency counts before and after negative sampling,
+    #         sorted by test set frequency (most popular items first).
+    # -------------------------------
+    # For plotting, sort the original test frequency counts in descending order.
+    sorted_idx = np.argsort(counts_test)[::-1]
+    
+    counts_test_sorted = counts_test[sorted_idx]
+    counts_new_sorted = (np.bincount(new_test_labels, minlength=n_items))[sorted_idx]
+    
+    plt.figure(figsize=(14, 6))
+    
+    # Plot before negative sampling.
+    plt.subplot(1, 2, 1)
+    plt.bar(range(n_items), counts_test_sorted, color='skyblue')
+    plt.xlabel("Rank (sorted by test frequency)")
+    plt.ylabel("Count")
+    plt.title("Test Set Frequency Before Negative Sampling")
+    
+    # Plot after negative sampling.
+    plt.subplot(1, 2, 2)
+    plt.bar(range(n_items), counts_new_sorted, color='salmon')
+    plt.xlabel("Rank (sorted by test frequency)")
+    plt.ylabel("Count")
+    plt.title("Test Set Frequency After Negative Sampling")
+    
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+def create_item_popularity_csv():
+    # -------------------------------
+    # Step 1: Load the training NPZ file and compute item frequencies.
+    # -------------------------------
+    train_npz_path = r"./dataset/ml-1m/biased_eval_train.npz"
+    data = np.load(train_npz_path)
+    labels = data["labels"]  # Assuming this array contains item IDs (item_id:token)
+    total_interactions = len(labels)
+    
+    # Compute frequency counts for each unique item.
+    unique_items, counts = np.unique(labels, return_counts=True)
+    
+    # Calculate the popularity score: interaction_count divided by the total interactions.
+    pop_scores = counts / total_interactions
+    
+    # Create a DataFrame from the counts.
+    df_counts = pd.DataFrame({
+        "item_id:token": unique_items,
+        "interaction_count": counts,
+        "pop_score": pop_scores
+    })
+    
+    # -------------------------------
+    # Step 2: Load the items_remapped CSV file.
+    # -------------------------------
+    items_csv_path = r"./dataset/ml-1m/items_remapped.csv"
+    df_titles = pd.read_csv(items_csv_path)
+    
+    # -------------------------------
+    # Step 3: Merge the NPZ counts with the items_remapped DataFrame.
+    # -------------------------------
+    df_merged = pd.merge(df_titles, df_counts, on="item_id:token", how="left")
+    
+    # Fill missing values with 0 for items not in the training NPZ.
+    df_merged["interaction_count"] = df_merged["interaction_count"].fillna(0).astype(int)
+    df_merged["pop_score"] = df_merged["pop_score"].fillna(0)
+    
+    # -------------------------------
+    # Step 4: Drop the unwanted columns.
+    # -------------------------------
+    # If these columns exist, drop them.
+    columns_to_drop = ["release_year:token", "genre:token_seq"]
+    df_merged = df_merged.drop(columns=columns_to_drop, errors="ignore")
+    
+    # Optionally, sort by item_id for consistent ordering.
+    df_merged = df_merged.sort_values("item_id:token")
+    
+    # -------------------------------
+    # Step 5: Save the final DataFrame to a CSV file.
+    # -------------------------------
+    output_csv = "item_popularity_labels_with_titles2.csv"
+    df_merged.to_csv(output_csv, index=False)
+    print(f"CSV file '{output_csv}' created successfully.")
+    
+    
+    
+
+
+
+def create_item_popularity_csv():
+    # -------------------------------
+    # Step 1: Load the training NPZ file and compute item frequencies.
+    # -------------------------------
+    train_npz_path = r"./dataset/ml-1m/biased_eval_train.npz"
+    data = np.load(train_npz_path)
+    labels = data["labels"]  # assuming this array contains item IDs (item_id:token)
+    total_interactions = len(labels)
+    
+    # Compute frequency counts for each unique item.
+    unique_items, counts = np.unique(labels, return_counts=True)
+    # Calculate popularity score: interaction_count divided by total_interactions.
+    pop_scores = counts / total_interactions
+    
+    # Create a DataFrame from the computed counts.
+    df_counts = pd.DataFrame({
+        "item_id:token": unique_items,
+        "interaction_count": counts,
+        "pop_score": pop_scores
+    })
+    
+    # -------------------------------
+    # Step 2: Load the items_remapped CSV file.
+    # -------------------------------
+    items_csv_path = r"./dataset/ml-1m/items_remapped.csv"
+    df_titles = pd.read_csv(items_csv_path)
+    
+    # -------------------------------
+    # Step 3: Merge the NPZ counts with the items_remapped DataFrame.
+    # -------------------------------
+    df_merged = pd.merge(df_titles, df_counts, on="item_id:token", how="left")
+    df_merged["interaction_count"] = df_merged["interaction_count"].fillna(0).astype(int)
+    df_merged["pop_score"] = df_merged["pop_score"].fillna(0)
+    
+    # -------------------------------
+    # Step 4: Drop the unwanted columns.
+    # -------------------------------
+    columns_to_drop = ["release_year:token", "genre:token_seq"]
+    df_merged = df_merged.drop(columns=columns_to_drop, errors="ignore")
+    
+    # -------------------------------
+    # Step 5: Compute popularity_label based on contribution to total interactions.
+    # -------------------------------
+    # To decide which items contribute to the top 20% (and bottom 20%) of total interactions,
+    # sort by interaction_count and use the cumulative sum.
+    
+    # Make a copy for computing the top labels.
+    df_top = df_merged.sort_values(by="interaction_count", ascending=False).reset_index(drop=True)
+    total_sum = df_top["interaction_count"].sum()
+    # Compute cumulative interaction count and its fraction.
+    df_top["cum_interaction"] = df_top["interaction_count"].cumsum()
+    df_top["cum_frac"] = df_top["cum_interaction"] / total_sum
+    # Mark items in the top 20% cumulative.
+    df_top["popularity_label_top"] = (df_top["cum_frac"] <= 0.2).astype(int)
+    
+    # Similarly, compute for bottom labels.
+    df_bottom = df_merged.sort_values(by="interaction_count", ascending=True).reset_index(drop=True)
+    df_bottom["cum_interaction"] = df_bottom["interaction_count"].cumsum()
+    df_bottom["cum_frac"] = df_bottom["cum_interaction"] / total_sum
+    # Mark items in the bottom 20% cumulative.
+    df_bottom["popularity_label_bottom"] = (df_bottom["cum_frac"] <= 0.2).astype(int)
+    
+    # Create dictionaries mapping item_id:token to top and bottom labels.
+    top_labels = df_top.set_index("item_id:token")["popularity_label_top"].to_dict()
+    bottom_labels = df_bottom.set_index("item_id:token")["popularity_label_bottom"].to_dict()
+    
+    # Now assign overall popularity_label:
+    #   If an item is marked as top (i.e. top_labels == 1) then label 1.
+    #   Else if it is marked as bottom (i.e. bottom_labels == 1) then label -1.
+    #   Else label 0.
+    def assign_pop_label(item_id):
+        if top_labels.get(item_id, 0) == 1:
+            return 1
+        elif bottom_labels.get(item_id, 0) == 1:
+            return -1
+        else:
+            return 0
+    
+    df_merged["popularity_label"] = df_merged["item_id:token"].apply(assign_pop_label)
+    
+    # Drop the temporary columns if they exist in our working frames.
+    df_merged = df_merged.drop(columns=[], errors="ignore")
+    
+    # -------------------------------
+    # Step 6: Save the final DataFrame to a CSV file.
+    # -------------------------------
+    # Optionally, sort the final DataFrame by item_id for consistent ordering.
+    df_final = df_merged.sort_values(by="interaction_count", ascending=False).reset_index(drop=True)
+    output_csv =  r"./dataset/ml-1m/item_popularity_labels_with_titles2.csv"
+    df_final.to_csv(output_csv, index=False)
+    print(f"CSV file '{output_csv}' created successfully.")
