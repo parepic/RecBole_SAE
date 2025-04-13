@@ -451,14 +451,14 @@ class Trainer(AbstractTrainer):
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
         
-        checkpoint_file = model_file
-        checkpoint = torch.load(checkpoint_file, map_location=self.device)
-        self.model.load_state_dict(checkpoint["state_dict"])
-        self.model.load_other_parameter(checkpoint.get("other_parameter"))
-        message_output = "Loading model structure and parameters from {}".format(
-            checkpoint_file
-        )
-        self.logger.info(message_output)
+        # checkpoint_file = model_file
+        # checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        # self.model.load_state_dict(checkpoint["state_dict"])
+        # self.model.load_other_parameter(checkpoint.get("other_parameter"))
+        # message_output = "Loading model structure and parameters from {}".format(
+        #     checkpoint_file
+        # )
+        # self.logger.info(message_output)
 
         if saved and self.start_epoch >= self.epochs:
             self._save_checkpoint(-1, verbose=verbose)
