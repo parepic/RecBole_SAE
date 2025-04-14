@@ -268,7 +268,7 @@ class Trainer(AbstractTrainer):
                 sync_loss = self.sync_grad_loss()
             with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
                 show_res = True if batch_idx % 50 == 0 else False
-                losses = loss_func(interaction, scores=calculate_IPS(interaction[self.model.POS_ITEM_ID]), show_res=show_res)
+                losses = loss_func(interaction, scores=epoch_idx, show_res=show_res)
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
