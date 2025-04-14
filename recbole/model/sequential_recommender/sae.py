@@ -127,9 +127,9 @@ class SAE(nn.Module):
 				)
 				self.epoch_activations["values"] = np.concatenate(
 					(self.epoch_activations["values"], topk_values.detach().cpu().numpy()), axis=0
-				)
-		print("these are k values, ", topk_values[0])
-		print("these are k indices, ", topk_indices[0])
+		  		)
+		# print("these are k values, ", topk_values[0])
+		# print("these are k indices, ", topk_indices[0])
 		sparse_x = torch.zeros_like(x)
 		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
 		return sparse_x
@@ -249,8 +249,8 @@ class SAE(nn.Module):
 			)
 			auxk_latents = torch.where(dead_mask[None], pre_acts, -torch.inf)
 			auxk_acts, auxk_indices = auxk_latents.topk(k_aux, sorted=False)
-			print("these are aux values, ", auxk_indices[0])
-			print("these are aux indices, ", auxk_acts[0])
+			# print("these are aux values, ", auxk_indices[0])
+			# print("these are aux indices, ", auxk_acts[0])
    
 			e_hat = torch.zeros_like(auxk_latents)
 			e_hat.scatter_(1, auxk_indices, auxk_acts.to(self.dtype))
