@@ -34,11 +34,11 @@ class SASRec_SAE(SASRec):
         else:
             raise ValueError(f"Invalid mode {mode} set for SASRec_SAE")
 
-    def forward(self, item_seq, item_seq_len, mode=None):
+    def forward(self, item_seq, item_seq_len, mode=None, scores=None):
         # Use SASRec to process the sequence
         sasrec_output = super().forward(item_seq, item_seq_len)  # Final hidden states from SASRec
         
-        sae_output = self.sae_module(sasrec_output, train_mode=(mode=='train'))
+        sae_output = self.sae_module(sasrec_output, train_mode=(mode=='train'), scores)
 
 
         return sae_output
