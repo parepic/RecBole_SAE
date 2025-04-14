@@ -227,7 +227,7 @@ class SAE(nn.Module):
 			if self.death_patience >=50000:
 				dead = self.get_dead_latent_ratio(need_update=1)
 				print(" dead percentage: ", dead )
-				self.epoch_idx = epoch
+				self.death_patience = 0
 
 			self.death_patience += pre_acts.shape[0]
 			# First epoch, do not have dead latent info
