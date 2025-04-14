@@ -224,10 +224,11 @@ class SAE(nn.Module):
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
-			if self.epoch_idx != epoch:
+			if self.death_patience >=50000:
 				dead = self.get_dead_latent_ratio(need_update=1)
 				print(" dead percentage: ", dead )
 				self.epoch_idx = epoch
+
 			self.death_patience += pre_acts.shape[0]
 			# First epoch, do not have dead latent info
 			if self.previous_activate_latents is None:
