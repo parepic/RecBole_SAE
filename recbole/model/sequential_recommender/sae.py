@@ -128,7 +128,8 @@ class SAE(nn.Module):
 				self.epoch_activations["values"] = np.concatenate(
 					(self.epoch_activations["values"], topk_values.detach().cpu().numpy()), axis=0
 				)
-
+		print("these are k values, ", topk_values)
+		print("these are k indices, ", topk_indices)
 		sparse_x = torch.zeros_like(x)
 		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
 		return sparse_x
@@ -212,9 +213,11 @@ class SAE(nn.Module):
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
-		if self.corr_file:
-			pre_acts = self.dampen_neurons(pre_acts)
+		# if self.corr_file:
+		# 	pre_acts = self.dampen_neurons(pre_acts)
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
+
+
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
 		total_variance = (x - x.mean(0)).pow(2).sum()
@@ -243,8 +246,13 @@ class SAE(nn.Module):
 				self.previous_activate_latents,
 				invert=True
 			)
+			print("these are k values, ", auxk_indices[0])
+			print("these are k indices, ", auxk_acts[0])
 			auxk_latents = torch.where(dead_mask[None], pre_acts, -torch.inf)
 			auxk_acts, auxk_indices = auxk_latents.topk(k_aux, sorted=False)
+			print("these are aux values, ", auxk_indices[0])
+			print("these are aux indices, ", auxk_acts[0])
+   
 			e_hat = torch.zeros_like(auxk_latents)
 			e_hat.scatter_(1, auxk_indices, auxk_acts.to(self.dtype))
 			e_hat = e_hat @ self.W_dec + self.b_dec
