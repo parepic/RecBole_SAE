@@ -46,6 +46,8 @@ class SAE(nn.Module):
 		self.previous_activate_latents = None
 		self.epoch_activations = {"indices": None, "values": None} 
 		self.last_activations = torch.empty(0, dtype=torch.float32, device=self.device)
+		self.epoch_idx=0
+
         # 2) highest_activations dict, each neuron j -> dict of GPU tensors
         #    (values, sequences, recommendations)
 		self.highest_activations = {
@@ -192,25 +194,22 @@ class SAE(nn.Module):
 			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)
 		return pre_acts	
   
-	def forward(self, x, sequences=None, train_mode=False, save_result=False):
+	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
-
-
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 		x_reconstructed = z @ self.W_dec + self.b_dec
-
 		e = x_reconstructed - x
 		total_variance = (x - x.mean(0)).pow(2).sum()
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
-			if self.death_patience >= 5000000:
+			if self.epoch_idx != epoch:
 				dead = self.get_dead_latent_ratio(need_update=1)
 				print(" dead percentage: ", dead )
-				self.death_patience = 0
+				self.epoch_idx = epoch
 			self.death_patience += pre_acts.shape[0]
 			# First epoch, do not have dead latent info
 			if self.previous_activate_latents is None:
