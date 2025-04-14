@@ -38,7 +38,7 @@ class SASRec_SAE(SASRec):
         # Use SASRec to process the sequence
         sasrec_output = super().forward(item_seq, item_seq_len)  # Final hidden states from SASRec
         
-        sae_output = self.sae_module(sasrec_output, train_mode=(mode=='train'), scores)
+        sae_output = self.sae_module(sasrec_output, train_mode=(mode=='train'), epoch=scores)
 
 
         return sae_output
