@@ -378,11 +378,11 @@ if __name__ == "__main__":
             #     )            
             # tune_hyperparam()
             # create_visualizations_neurons()
-            create_visualizations_neurons()
-            # test_result = trainer.evaluate(
-            #     valid_data, model_file=args.path, show_progress=config["show_progress"]
-            # )
-            # print(test_result)
+            # create_visualizations_neurons()
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"]
+            )
+            print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
             trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
