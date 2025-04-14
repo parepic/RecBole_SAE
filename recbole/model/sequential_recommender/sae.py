@@ -68,15 +68,30 @@ class SAE(nn.Module):
 		self.damp_percent = damp_percent
 		self.unpopular_only = unpopular_only
   
-	def get_dead_latent_ratio(self, need_update = 0):
-		ans =  1 - len(self.activate_latents)/self.hidden_dim
-		# only update training situation for auxk_loss
+	def get_dead_latent_ratio(self, need_update=0):
+		# Calculate the dead latent ratio
+		ans = 1 - len(self.activate_latents) / self.hidden_dim
+		# Calculate the current number of dead latents
+		current_dead = self.hidden_dim - len(self.activate_latents)
+		
 		if need_update:
-			# logging.info("[SAE] update previous activated Latent here")
-			self.previous_activate_latents = torch.tensor(list(self.activate_latents)).to(self.device)
+			# Convert current active latents to a tensor
+			current_active = torch.tensor(list(self.activate_latents), device=self.device)
+			
+			# Compute revived latents if there’s a previous state
+			if self.previous_activate_latents is not None:
+				# Find latents in current_active that were not in previous_activate_latents
+				revived_mask = ~torch.isin(current_active, self.previous_activate_latents)
+				num_revived = revived_mask.sum().item()
+				# Print the requested information
+				print(f"Number of revived latents: {num_revived}, Current dead latents: {current_dead}")
+			
+			# Update previous_activate_latents to the current active latents
+			self.previous_activate_latents = current_active
+		
+		# Reset activate_latents for the next period
 		self.activate_latents = set()
 		return ans
-
 
 	def set_decoder_norm_to_unit_norm(self):
 		assert self.W_dec is not None, "Decoder weight was not initialized."
