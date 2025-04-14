@@ -397,5 +397,4 @@ if __name__ == "__main__":
                 dataset,
                 valid_data=valid_data,
                 show_progress=True,
-                sasrec_sae_file = r'./recbole/saved/SASRec_SAE-Apr-13-k8-128.pth'
                 )
