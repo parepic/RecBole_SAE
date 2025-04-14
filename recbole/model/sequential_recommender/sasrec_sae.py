@@ -50,7 +50,7 @@ class SASRec_SAE(SASRec):
         # Compute SAE loss
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        sasrec_output = self.forward(item_seq, item_seq_len, mode='train', epoch=self.epoch_idx)
+        sasrec_output = self.forward(item_seq, item_seq_len, mode='train', epoch=scores)
         if self.mode == 'train':
             sae_loss = self.sae_module.fvu + self.sae_module.auxk_loss / 32
             if show_res:
