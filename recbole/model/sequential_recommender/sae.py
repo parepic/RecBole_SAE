@@ -231,7 +231,7 @@ class SAE(nn.Module):
 				self.auxk_loss = 0.0
 				return x_reconstructed
 			num_dead = self.hidden_dim - len(self.previous_activate_latents)
-			print("num dead ", num_dead)
+			# print("num dead ", num_dead)
 			k_aux = int(x.shape[-1] * 16)
 			if num_dead == 0:
 				self.auxk_loss = 0.0
