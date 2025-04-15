@@ -229,7 +229,7 @@ class SAE(nn.Module):
 				print("dead percentage: ", dead)
 
 				# Resampling dead latents if any exist
-				if dead > 0.05:  # Threshold can be adjusted, e.g., dead > 0.1
+				if dead > 0.02:  # Threshold can be adjusted, e.g., dead > 0.1
 					# Compute mean residual over the batch
 					mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
 					norm_e = torch.norm(mean_e)
@@ -242,7 +242,7 @@ class SAE(nn.Module):
 						# Update weights for each dead latent
 						for i in dead_latents:
 							self.W_dec.data[i, :] = mean_e
-							self.encoder.weight.data[:, i] = mean_e
+							self.encoder.weight.data[i, :] = mean_e
 					else:
 						print("Norm of mean residual is too small, skipping resampling")
 
