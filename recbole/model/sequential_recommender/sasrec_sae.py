@@ -51,7 +51,6 @@ class SASRec_SAE(SASRec):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         sasrec_output = self.forward(item_seq, item_seq_len, mode='train', scores=scores)
-        print("Sikerem brat ", self.mode)
         if self.mode == 'train':
             sae_loss = self.sae_module.fvu + self.sae_module.auxk_loss / 16
             if show_res:
