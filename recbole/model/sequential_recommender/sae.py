@@ -224,12 +224,12 @@ class SAE(nn.Module):
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
-			if self.death_patience >= 200000:
+			if self.death_patience >= 100000:
 				dead = self.get_dead_latent_ratio(need_update=1)
 				print("dead percentage: ", dead)
 
 				# Resampling dead latents if any exist
-				if dead > 0.1:  # Threshold can be adjusted, e.g., dead > 0.1
+				if dead > 0.05:  # Threshold can be adjusted, e.g., dead > 0.1
 					# Compute mean residual over the batch
 					mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
 					norm_e = torch.norm(mean_e)
