@@ -228,25 +228,23 @@ class SAE(nn.Module):
 				self.epoch_idx = epoch
 				dead = self.get_dead_latent_ratio(need_update=1)
 				print("dead percentage: ", dead)
-
 				# Resampling dead latents if any exist
-				if dead > 0.02:  # Threshold can be adjusted, e.g., dead > 0.1
-					# Compute mean residual over the batch
-					mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
-					norm_e = torch.norm(mean_e)
-					if norm_e > 1e-6:  # Avoid division by zero or insignificant updates
-						mean_e = mean_e / norm_e  # Normalize to unit vector
-						# Identify dead latents
-						all_latents = torch.arange(self.hidden_dim, device=self.device)
-						dead_mask = ~torch.isin(all_latents, self.previous_activate_latents)
-						dead_latents = all_latents[dead_mask]
-						# Update weights for each dead latent
-						for i in dead_latents:
-							self.W_dec.data[i, :] = mean_e
-							self.encoder.weight.data[i, :] = mean_e
-					else:
-						print("Norm of mean residual is too small, skipping resampling")
-
+				# if dead > 0.02:  # Threshold can be adjusted, e.g., dead > 0.1
+				# 	# Compute mean residual over the batch
+				# 	mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
+				# 	norm_e = torch.norm(mean_e)
+				# 	if norm_e > 1e-6:  # Avoid division by zero or insignificant updates
+				# 		mean_e = mean_e / norm_e  # Normalize to unit vector
+				# 		# Identify dead latents
+				# 		all_latents = torch.arange(self.hidden_dim, device=self.device)
+				# 		dead_mask = ~torch.isin(all_latents, self.previous_activate_latents)
+				# 		dead_latents = all_latents[dead_mask]
+				# 		# Update weights for each dead latent
+				# 		for i in dead_latents:
+				# 			self.W_dec.data[i, :] = mean_e
+				# 			self.encoder.weight.data[i, :] = mean_e
+				# 	else:
+				# 		print("Norm of mean residual is too small, skipping resampling")
 				self.death_patience = 0
 
 			self.death_patience += pre_acts.shape[0]
@@ -256,7 +254,7 @@ class SAE(nn.Module):
 				return x_reconstructed
 			num_dead = self.hidden_dim - len(self.previous_activate_latents)
 			# print("num dead ", num_dead)
-			k_aux = int(x.shape[-1])
+			k_aux = int(x.shape[-1]) * 2
 			if num_dead == 0:
 				self.auxk_loss = 0.0
 				return x_reconstructed
