@@ -53,7 +53,7 @@ class SASRec_SAE(SASRec):
         sasrec_output = self.forward(item_seq, item_seq_len, mode='train', scores=scores)
         print("Sikerem brat ", self.mode)
         if self.mode == 'train':
-            sae_loss = self.sae_module.fvu
+            sae_loss = self.sae_module.fvu + self.sae_module.auxk_loss / 2
             if show_res:
                 print(f"FVU: {self.sae_module.fvu}, AUXK Loss: {self.sae_module.auxk_loss}, AUXK Loss /16: {self.sae_module.auxk_loss / 32} SAE Total Loss: {sae_loss}")
         else:
