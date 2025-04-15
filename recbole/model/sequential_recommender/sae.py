@@ -241,8 +241,8 @@ class SAE(nn.Module):
 						dead_latents = all_latents[dead_mask]
 						# Update weights for each dead latent
 						for i in dead_latents:
-							self.W_dec.data[:, i] = mean_e
-							self.encoder.weight.data[i, :] = mean_e
+							self.W_dec.data[i, :] = mean_e
+							self.encoder.weight.data[:, i] = mean_e
 					else:
 						print("Norm of mean residual is too small, skipping resampling")
 
