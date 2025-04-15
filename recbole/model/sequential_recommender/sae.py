@@ -209,14 +209,14 @@ class SAE(nn.Module):
 			pre_acts[:, pop_idxs] *= (1 - self.damp_percent)
 			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)
 		return pre_acts	
-  
+
+
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = nn.functional.relu(self.encoder(sae_in))
 		# if self.corr_file:
-		# 	pre_acts = self.dampen_neurons(pre_acts)
+		#     pre_acts = self.dampen_neurons(pre_acts)
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
-
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
@@ -224,9 +224,28 @@ class SAE(nn.Module):
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
-			if self.death_patience >=50000:
+			if self.death_patience >= 100000:
 				dead = self.get_dead_latent_ratio(need_update=1)
-				print(" dead percentage: ", dead )
+				print("dead percentage: ", dead)
+
+				# Resampling dead latents if any exist
+				if dead > 0.1:  # Threshold can be adjusted, e.g., dead > 0.1
+					# Compute mean residual over the batch
+					mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
+					norm_e = torch.norm(mean_e)
+					if norm_e > 1e-6:  # Avoid division by zero or insignificant updates
+						mean_e = mean_e / norm_e  # Normalize to unit vector
+						# Identify dead latents
+						all_latents = torch.arange(self.hidden_dim, device=self.device)
+						dead_mask = ~torch.isin(all_latents, self.previous_activate_latents)
+						dead_latents = all_latents[dead_mask]
+						# Update weights for each dead latent
+						for i in dead_latents:
+							self.W_dec.data[:, i] = mean_e
+							self.encoder.weight.data[i, :] = mean_e
+					else:
+						print("Norm of mean residual is too small, skipping resampling")
+
 				self.death_patience = 0
 
 			self.death_patience += pre_acts.shape[0]
@@ -251,14 +270,14 @@ class SAE(nn.Module):
 			auxk_acts, auxk_indices = auxk_latents.topk(k_aux, sorted=False)
 			# print("these are aux values, ", auxk_indices[0])
 			# print("these are aux indices, ", auxk_acts[0])
-   
+
 			e_hat = torch.zeros_like(auxk_latents)
 			e_hat.scatter_(1, auxk_indices, auxk_acts.to(self.dtype))
 			e_hat = e_hat @ self.W_dec + self.b_dec
 
 			auxk_loss = (e_hat - e).pow(2).sum()
 			self.auxk_loss = scale * auxk_loss / total_variance
-   
+
 		return x_reconstructed
 
 
