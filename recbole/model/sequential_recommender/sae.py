@@ -62,11 +62,14 @@ class SAE(nn.Module):
 
 		return
 
-	def set_dampen_hyperparam(self, corr_file=None, neuron_count=42, damp_percent=0.1, unpopular_only=True):
+
+	def set_dampen_hyperparam(self, corr_file=None, N=None, beta=None, gamma=None, unpopular_only=False):
 		self.corr_file = corr_file
-		self.neuron_count = neuron_count
-		self.damp_percent = damp_percent
-		self.unpopular_only = unpopular_only
+		self.N = N
+		self.beta = beta
+		self.gamma = gamma
+		self.unpopular_only = unpopular_only	
+  
   
 	def get_dead_latent_ratio(self, need_update=0):
 		# Calculate the dead latent ratio
@@ -112,10 +115,7 @@ class SAE(nn.Module):
 		# Update activation count
 		self.activation_count += counts.to(self.activation_count.device)
 		self.activate_latents.update(topk_indices.cpu().numpy().flatten())
-
-		self.last_activations = x
 		# Update highest activations
-		# self.update_highest_activations(x, sequences)
 
 		if save_result:
 			if self.epoch_activations["indices"] is None:
@@ -165,6 +165,66 @@ class SAE(nn.Module):
 					data["recommendations"].append(topk_indices.tolist())
 
 	def dampen_neurons(self, pre_acts):
+		if self.N is None:
+			return pre_acts
+
+		# Retrieve neurons from the correlations file.
+		unpop_neurons = utils.get_extreme_correlations(self.corr_file, self.N, self.unpopular_only)
+
+		# Combine both groups into one list while labeling the group type.
+		# 'unpop' neurons are those with higher activations for unpopular inputs (to be reinforced),
+		# while 'pop' neurons are those with lower activations (to be dampened).
+		combined_neurons = [(idx, cohen, 'unpop') for idx, cohen in unpop_neurons]
+
+		# Now sort by the absolute Cohen's d value (in descending order) and pick the overall top N neurons.
+		combined_sorted = sorted(combined_neurons, key=lambda x: abs(x[1]), reverse=True)
+		top_neurons = combined_sorted[:int(self.N)]
+
+		# Load the corresponding statistics files.
+		stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+		stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
+
+		# Create tensors of the absolute Cohen's d values for the selected neurons.
+		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
+		print("ukuku ", abs_cohens.shape)
+
+		# Define a helper normalization function.
+		def normalize_to_range(x, new_min, new_max):
+			min_val = torch.min(x)
+			max_val = torch.max(x)
+			if max_val == min_val:
+				return torch.full_like(x, (new_min + new_max) / 2)
+			return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
+
+		# Normalize the Cohen's d values to [0, 2.5]
+		norm_cohen = normalize_to_range(abs_cohens, new_min=self.beta[0], new_max=self.beta[1])
+		effective_weights = norm_cohen 
+
+		# Now update the neuron activations based on group.
+		for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
+			weight = effective_weights[i]			
+			if group == 'unpop':
+				# For neurons to be reinforced, fetch stats from the unpopular file.
+				row = stats_unpop.iloc[neuron_idx]
+				mean_val = row["mean"]
+				std_val = row["std"]
+
+				# Identify positions where the neuron's activation is above its mean.
+				vals = pre_acts[:, neuron_idx]
+				condition = vals > mean_val
+				# Increase activations by an amount proportional to the standard deviation and effective weight.
+				pre_acts[condition, neuron_idx] += weight * std_val
+		return pre_acts
+		
+		
+     
+     
+     
+     
+     
+     
+     
+     
 		if self.unpopular_only:
 			if(self.neuron_count == 0): 
 				return pre_acts
@@ -213,9 +273,11 @@ class SAE(nn.Module):
 
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
-		pre_acts = nn.functional.relu(self.encoder(sae_in))
-		# if self.corr_file:
-		#     pre_acts = self.dampen_neurons(pre_acts)
+		pre_acts = self.encoder(sae_in)
+		self.last_activations = pre_acts
+		if self.corr_file:
+			pre_acts = self.dampen_neurons(pre_acts)
+		pre_acts = nn.functional.relu(pre_acts)
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
@@ -291,9 +353,9 @@ class SAE(nn.Module):
 								We'll extract top-10 recommended items per sample.
 		"""
 		# utils.save_user_popularity_score(0.9, user_ids, sequences)
-		total_pop_scores, total_unpop_scores = utils.fetch_user_popularity_score(user_ids,sequences)
-		utils.save_batch_user_popularities(total_pop_scores, total_unpop_scores)
-		utils.save_batch_activations(self.last_activations, 4096) 
+		# total_pop_scores, total_unpop_scores = utils.fetch_user_popularity_score(user_ids,sequences)
+		# utils.save_batch_user_popularities(total_pop_scores, total_unpop_scores)
+		utils.save_batch_activations(self.last_activations, self.hidden_dim) 
 
 		# ------------------------
 		# A) Get top-10 per neuron (column)
@@ -340,7 +402,7 @@ class SAE(nn.Module):
 			self.highest_activations[j]["recommendations"] = new_recommendations
 
     
-	def save_highest_activations(self, filename=r"./dataset/ml-1m/popular_activatins.csv"):		
+	def save_highest_activations(self, filename=r"./dataset/ml-1m/neuron_activations_unpopular.csv"):		
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
@@ -353,15 +415,15 @@ class SAE(nn.Module):
 		df.to_csv(filename, index=False)
   
   
-		# corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
-		# corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
-		# file_path = r'./dataset/ml-1m/ml-1m.item'
-		# data_item = pd.read_csv(file_path, sep='\t', encoding='latin1')  # Try 'latin1', change to 'cp1252' if needed
+		# # corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
+		# # corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
+		# file_path = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
+		# data_item = pd.read_csv(file_path)  # Try 'latin1', change to 'cp1252' if needed
 		# with open(filename, "w") as f:
 		# 	for neuron, data in self.highest_activations.items():
 		# 		f.write(f"Neuron {neuron}:\n")
-		# 		f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
-		# 		f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
+		# 		# f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
+		# 		# f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
 		# 		for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
 		# 			f.write(f"  Activation: {value}\n")
 		# 			f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
