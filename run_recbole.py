@@ -91,7 +91,7 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
         'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
         'Deep LT Coverage@10': calculate_percentage_change(deep_lt_coverages, deep_lt_coverages[0]),
         # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0]),
-        # 'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
+        'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
         'ARP@10': calculate_percentage_change(arps, arps[0])
         
     }
@@ -214,11 +214,11 @@ def create_visualizations_neurons():
     for change in tochange:
         if count == 0:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"]
+                test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[1.0, 2.0], gamma=[1.0, 2.0]
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[1.0, 2.0], gamma=[1.0, 2.0]
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
