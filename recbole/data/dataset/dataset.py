@@ -1791,20 +1791,20 @@ class Dataset(torch.utils.data.Dataset):
         self._drop_unused_col()
         next_df = [self.inter_feat[index] for index in next_index]
         
-        # test = np.load(r'./dataset/ml-1m/test_unbiased.npz')
-        # test_seq = test["features"]
-        # test_label = test["labels"]
-        # next_df[2]['item_id_list'] = torch.from_numpy(test_seq)
-        # next_df[2]['item_id'] = torch.from_numpy(test_label)
-        # next_df[2].length = test_label.shape[0]
+        test = np.load(r'./dataset/ml-1m/test_unbiased.npz')
+        test_seq = test["features"]
+        test_label = test["labels"]
+        next_df[2]['item_id_list'] = torch.from_numpy(test_seq)
+        next_df[2]['item_id'] = torch.from_numpy(test_label)
+        next_df[2].length = test_label.shape[0]
 
         
-        # val = np.load(r'./dataset/ml-1m/val_unbiased.npz')
-        # val_seq = val["features"]
-        # val_label = val["labels"]
-        # next_df[1]['item_id_list'] = torch.from_numpy(val_seq)
-        # next_df[1]['item_id'] = torch.from_numpy(val_label)
-        # next_df[1].length = val_label.shape[0]
+        val = np.load(r'./dataset/ml-1m/val_unbiased.npz')
+        val_seq = val["features"]
+        val_label = val["labels"]
+        next_df[1]['item_id_list'] = torch.from_numpy(val_seq)
+        next_df[1]['item_id'] = torch.from_numpy(val_label)
+        next_df[1].length = val_label.shape[0]
         
         next_ds = [self.copy(_) for _ in next_df]
         return next_ds
