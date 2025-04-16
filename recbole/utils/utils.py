@@ -1191,6 +1191,7 @@ def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
     highest_values = highest.tolist()
     lowest_indexes = lowest.index.tolist()
     lowest_values = lowest.tolist()
+    
     if unpopular_only:
         return list(zip(lowest_indexes, lowest_values))
     return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))

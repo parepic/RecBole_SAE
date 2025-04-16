@@ -206,7 +206,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 1000, 11).tolist()
+    tochange = np.linspace(400, 2000, 17).tolist()
     # tochange = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     lists_gamma = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
@@ -214,11 +214,11 @@ def create_visualizations_neurons():
     for change in tochange:
         if count == 0:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"]
+                test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[1.0, 2.0], gamma=[0.0, 0.5]
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[1.0, 2.0], gamma=[0.0, 0.5]
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])

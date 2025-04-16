@@ -27,7 +27,7 @@ class SAE(nn.Module):
 		self.scale_size = config["sae_scale_size"]
 		self.neuron_count = None
 		self.damp_percent = None
-		self.unpopular_only = False
+		self.unpopular_only = None
 		self.corr_file = None
 		self.user_pop_scores = []
 		self.device = config["device"]
@@ -171,6 +171,7 @@ class SAE(nn.Module):
 		# Retrieve neurons from the correlations file.
 		unpop_neurons = utils.get_extreme_correlations(self.corr_file, int(self.N), self.unpopular_only)
 
+  
 		# Combine both groups into one list while labeling the group type.
 		# 'unpop' neurons are those with higher activations for unpopular inputs (to be reinforced),
 		# while 'pop' neurons are those with lower activations (to be dampened).
@@ -208,10 +209,10 @@ class SAE(nn.Module):
 				row = stats_unpop.iloc[neuron_idx]
 				mean_val = row["mean"]
 				std_val = row["std"]
-
+    
 				# Identify positions where the neuron's activation is above its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals > mean_val
+				condition = vals > mean_val + std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
 				pre_acts[condition, neuron_idx] += weight * std_val
 		return pre_acts

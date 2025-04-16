@@ -28,7 +28,7 @@ class SASRec_SAE(SASRec):
             param.requires_grad = True  # Unfreeze SAE parameters
             
     def set_dampen_hyperparam(self, corr_file=None, N=None, beta=None, gamma=None, unpopular_only=False):
-        self.sae_module.set_dampen_hyperparam(corr_file=corr_file, N=N, beta=beta, gamma=gamma)
+        self.sae_module.set_dampen_hyperparam(corr_file=corr_file, N=N, beta=beta, gamma=gamma, unpopular_only=unpopular_only)
 
     def set_sae_mode(self, mode):
         if mode in ['train', 'test', 'dampened']:
