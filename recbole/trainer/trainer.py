@@ -969,7 +969,7 @@ class Trainer(AbstractTrainer):
         # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
         #                                             damp_percent=beta, unpopular_only=True)
         self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
-                                                    beta=beta, gamma=gamma, unpopular_only=False)
+                                                    beta=beta, gamma=gamma, unpopular_only=True)
         
         inverse_propensities = []
         labels = []
