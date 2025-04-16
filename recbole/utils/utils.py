@@ -1163,39 +1163,40 @@ def plot_item_distribution(item_ids, title):
     plt.show()
 
 
-def get_extreme_correlations(file_name: str, n: int, unpopular_only: bool):
+def get_extreme_correlations(file_name: str, unpopular_only: bool):
     """
-    Retrieves the highest and lowest correlation indexes and their values.
-    
+    Retrieves all positive and all negative correlation indexes and their values.
+
     Parameters:
     file_name (str): CSV file name containing correlation values.
-    n (int): Number of extreme values to retrieve.
-    unpopular_only (bool): Whether to return only the lowest values.
-    
+    n (int): Ignored.
+    unpopular_only (bool): If True, returns an empty positive list and the full negative list.
+
     Returns:
-    list or tuple: If unpopular_only is True, returns a list of lowest indexes and their values.
-                   Otherwise, returns a tuple of (highest_indexes, highest_values, lowest_indexes, lowest_values).
+    tuple:
+      - pos_list: list of (index, value) for all positives (empty if unpopular_only=True)
+      - neg_list: list of (index, value) for all negatives
     """
-    file_path = r"./dataset/ml-1m/" + file_name
+    file_path = "./dataset/ml-1m/" + file_name
     df = pd.read_csv(file_path)
-    
-    # Assuming the column name is unknown, take the first column
-    column_name = df.columns[0]
-    values = df[column_name]
-    
-    # Get indexes and values of highest and lowest n/2 values
-    highest = values.nlargest(n)
-    lowest = values.nsmallest(n)
 
-    highest_indexes = highest.index.tolist()
-    highest_values = highest.tolist()
-    lowest_indexes = lowest.index.tolist()
-    lowest_values = lowest.tolist()
-    
+    # grab the first (and only) column of correlation scores
+    col = df.columns[0]
+    vals = df[col]
+
+    # mask positives and negatives
+    pos = vals[vals > 0]
+    neg = vals[vals < 0]
+
+    # build lists of (index, value)
+    pos_list = list(zip(pos.index.tolist(), pos.tolist()))
+    neg_list = list(zip(neg.index.tolist(), neg.tolist()))
+
+    # if only unpopular, empty out the positives
     if unpopular_only:
-        return list(zip(lowest_indexes, lowest_values))
-    return (list(zip(highest_indexes, highest_values)), list(zip(lowest_indexes, lowest_values)))
+        pos_list = []
 
+    return pos_list, neg_list
     
 import torch
 import math

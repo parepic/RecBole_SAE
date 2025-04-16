@@ -168,15 +168,14 @@ class SAE(nn.Module):
 		if self.N is None:
 			return pre_acts
 
-		# Retrieve neurons from the correlations file.
-		unpop_neurons = utils.get_extreme_correlations(self.corr_file, int(self.N), self.unpopular_only)
-
+		pop_neurons, unpop_neurons = utils.get_extreme_correlations(self.corr_file, self.unpopular_only)
   
 		# Combine both groups into one list while labeling the group type.
 		# 'unpop' neurons are those with higher activations for unpopular inputs (to be reinforced),
 		# while 'pop' neurons are those with lower activations (to be dampened).
-		combined_neurons = [(idx, cohen, 'unpop') for idx, cohen in unpop_neurons]
-
+		combined_neurons = [(idx, cohen, 'unpop') for idx, cohen in unpop_neurons] + \
+                        [(idx, cohen, 'pop') for idx, cohen in pop_neurons]
+                        
 		# Now sort by the absolute Cohen's d value (in descending order) and pick the overall top N neurons.
 		combined_sorted = sorted(combined_neurons, key=lambda x: abs(x[1]), reverse=True)
 		top_neurons = combined_sorted[:int(self.N)]
@@ -187,7 +186,6 @@ class SAE(nn.Module):
 
 		# Create tensors of the absolute Cohen's d values for the selected neurons.
 		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
-		print("ukuku ", abs_cohens.shape)
 
 		# Define a helper normalization function.
 		def normalize_to_range(x, new_min, new_max):
@@ -198,12 +196,13 @@ class SAE(nn.Module):
 			return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
 		# Normalize the Cohen's d values to [0, 2.5]
-		norm_cohen = normalize_to_range(abs_cohens, new_min=self.beta[0], new_max=self.beta[1])
-		effective_weights = norm_cohen 
+		weights_unpop = normalize_to_range(abs_cohens, new_min=self.beta[0], new_max=self.beta[1])
+		weights_pop = normalize_to_range(abs_cohens, new_min=self.gamma[0], new_max=self.gamma[1])
 
 		# Now update the neuron activations based on group.
 		for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
-			weight = effective_weights[i]			
+			weight_unpop = weights_unpop[i]		
+			weight_pop = weights_pop[i]
 			if group == 'unpop':
 				# For neurons to be reinforced, fetch stats from the unpopular file.
 				row = stats_unpop.iloc[neuron_idx]
@@ -214,7 +213,22 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals > mean_val + std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
-				pre_acts[condition, neuron_idx] += weight * std_val
+				pre_acts[condition, neuron_idx] += weight_unpop * std_val
+			else:  # group == 'pop'
+				# For neurons to be dampened, use the popular statistics for impact.
+				pop_mean = stats_pop.iloc[neuron_idx]["mean"]
+				# Still fetch the comparison stats from the unpopular stats file
+				# (this is from your original logic; adjust if needed).
+				row = stats_unpop.iloc[neuron_idx]
+				mean_val = row["mean"]
+				std_val = row["std"]
+
+				# Identify positions where the neuron's activation is below its mean.
+				vals = pre_acts[:, neuron_idx]
+				condition = vals < mean_val - std_val
+				# Decrease activations proportionally.
+				pre_acts[condition, neuron_idx] -= weight_pop * std_val
+    
 		return pre_acts
 		
 		
