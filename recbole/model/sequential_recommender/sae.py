@@ -217,6 +217,8 @@ class SAE(nn.Module):
 			else:  # group == 'pop'
 				# For neurons to be dampened, use the popular statistics for impact.
 				pop_mean = stats_pop.iloc[neuron_idx]["mean"]
+				pop_sd = stats_pop.iloc[neuron_idx]["mean"]
+
 				# Still fetch the comparison stats from the unpopular stats file
 				# (this is from your original logic; adjust if needed).
 				row = stats_unpop.iloc[neuron_idx]
@@ -225,9 +227,9 @@ class SAE(nn.Module):
 
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < mean_val - std_val
+				condition = vals < pop_mean - pop_sd
 				# Decrease activations proportionally.
-				pre_acts[condition, neuron_idx] -= weight_pop * std_val
+				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
 		return pre_acts
 		
