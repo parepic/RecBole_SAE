@@ -169,7 +169,7 @@ class SAE(nn.Module):
 			return pre_acts
 
 		# Retrieve neurons from the correlations file.
-		unpop_neurons = utils.get_extreme_correlations(self.corr_file, self.N, self.unpopular_only)
+		unpop_neurons = utils.get_extreme_correlations(self.corr_file, int(self.N), self.unpopular_only)
 
 		# Combine both groups into one list while labeling the group type.
 		# 'unpop' neurons are those with higher activations for unpopular inputs (to be reinforced),
