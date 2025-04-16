@@ -468,7 +468,7 @@ def get_item_titles(tensor, df):
     tensor_as_list = tensor.tolist()
 
     # Create a dictionary for quick lookup of item titles
-    id_to_title = dict(zip(df['item_id:token'], df['movie_title:token']))
+    id_to_title = dict(zip(df['item_id:token'], df['movie_title:token_seq']))
 
     # Replace IDs with movie titles, preserving the shape
     result = []
@@ -627,7 +627,7 @@ def save_batch_activations(bulk_data, neuron_count):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)
-    file_path = r"./dataset/ml-1m/neuron_activations_popular_sasrec.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_unpop.h5"
     with h5py.File(file_path, "a") as f:
         if "dataset" not in f:
             # If the dataset doesn't exist, create it with unlimited columns
@@ -636,7 +636,7 @@ def save_batch_activations(bulk_data, neuron_count):
                 "dataset",
                 data=bulk_data,
                 maxshape=max_shape,
-                chunks=(neuron_count, 2048),  # Optimize chunk size for appending
+                chunks=(neuron_count, 4096),  # Optimize chunk size for appending
                 dtype="float32",
             )
         else:
@@ -1015,7 +1015,7 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/ml-1m/neuron_activations_popular_sasrec.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_unpop.h5"
     dataset_name = 'dataset'  # Replace with the actual dataset name inside the h5 file
 
     with h5py.File(file_path, 'r') as f:
@@ -1035,7 +1035,7 @@ def save_mean_SD():
     })
 
     # Save to CSV
-    output_csv_path = r"./dataset/ml-1m/row_stats_popular.csv"
+    output_csv_path = r"./dataset/ml-1m/row_stats_unpopular.csv"
     df.to_csv(output_csv_path, index=False)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
@@ -1058,7 +1058,7 @@ def save_cohens_d():
     # Save to CSV
     df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv", index=False)
 
-    print("Cohen's d values saved to cohen_d_results.csv")
+    print("Cohen's d values saved to cohen_d.csv")
     
 from scipy.stats import pearsonr
 

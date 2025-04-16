@@ -26,7 +26,9 @@ class SASRec_SAE(SASRec):
 
         for param in self.sae_module.parameters():
             param.requires_grad = True  # Unfreeze SAE parameters
-
+            
+    def set_dampen_hyperparam(self, corr_file=None, N=None, beta=None, gamma=None, unpopular_only=False):
+        self.sae_module.set_dampen_hyperparam(corr_file=corr_file, N=N, beta=beta, gamma=gamma)
 
     def set_sae_mode(self, mode):
         if mode in ['train', 'test', 'dampened']:
@@ -42,6 +44,9 @@ class SASRec_SAE(SASRec):
 
 
         return sae_output
+
+
+
 
     def calculate_loss(self, interaction, scores=None, show_res=False):
         # Compute SASRec loss first
@@ -65,7 +70,7 @@ class SASRec_SAE(SASRec):
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        # item_seq = make_items_popular(item_seq).to(self.device)
+        # item_seq = make_items_unpopular(item_seq).to(self.device)
         seq_output = self.forward(item_seq, item_seq_len, mode='eval')
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
@@ -73,8 +78,7 @@ class SASRec_SAE(SASRec):
         # if(self.mode == "test"):
         #     # user_ids = interaction['user_id']
         #     save_batch_activations(self.sae_module.last_activations, 4096) 
-
-            # self.sae_module.update_highest_activations(item_seq, top_recs, user_ids)
+        # self.sae_module.update_highest_activations(item_seq, top_recs, None)
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
         return scores
