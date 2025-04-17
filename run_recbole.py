@@ -93,7 +93,7 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
         'LT Coverage@10': calculate_percentage_change(lt_coverages, lt_coverages[0]),
         'Deep LT Coverage@10': calculate_percentage_change(deep_lt_coverages, deep_lt_coverages[0]),
         # 'Gini coefficient@10': calculate_percentage_change(ginis, ginis[0]),
-        'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
+        # 'IPS NDCG@10': calculate_percentage_change(ips_ndcgs, ips_ndcgs[0]),
         'ARP@10': calculate_percentage_change(arps, arps[0])
         
     }
@@ -188,22 +188,24 @@ def tune_hyperparam():
     
 
 def create_visualizations_neurons():
+
+    
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = []
-    ndcgs = []
-    hits = []
-    coverages = []
-    lt_coverages = []
-    deep_lt_coverages = []
-    dampen_percs = []
-    ginis = []
-    ips_ndcgs = []
-    ndcg_heads = []
-    ndcg_mids = []
-    ndcg_tails = []
+    arps = [0.0003295620569691932]
+    ndcgs = [0.1593]
+    hits = [0.2925]
+    coverages = [0.8732435597189696]
+    lt_coverages = [0.8687083080654943]
+    deep_lt_coverages = [0.8061178587494376]
+    dampen_percs = [0.0]
+    ginis = [0.7509115939928803]
+    ips_ndcgs = [0.08802518591375912]
+    ndcg_heads = [0.2186]
+    ndcg_mids = [0.1678]
+    ndcg_tails = [0.0774]
     dampen_perc = 0
     neuron_count = 0
     
@@ -369,8 +371,8 @@ if __name__ == "__main__":
         )  
         
         trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-        # trainer.save_neuron_activations3(model_file=args.path)
-        # exit()
+        trainer.save_neuron_activations3(model_file=args.path)
+        exit()
         # trainer.fit_gate( 
         #     train_data,
         #     valid_data=test_data,
