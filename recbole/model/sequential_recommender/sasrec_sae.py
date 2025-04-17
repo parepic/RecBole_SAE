@@ -48,6 +48,22 @@ class SASRec_SAE(SASRec):
 
 
 
+    def save_item_activations(self):
+        output = self.sae_module(self.item_embedding.weight, train_mode=False, epoch=None)
+        test_items_emb = self.item_embedding.weight
+        scores = torch.matmul(output, test_items_emb.transpose(0, 1))  # [B n_items]
+        top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        # if(self.mode == "test"):
+        #     # user_ids = interaction['user_id']
+        #     save_batch_activations(self.sae_module.last_activations, 4096) 
+        self.sae_module.update_highest_activations2(self.item_embedding.weight, top_recs)
+        # for key in top_recs.flatten():
+        #     self.recommendation_count[key.item()] += 1
+        return scores
+
+
+
+
     def calculate_loss(self, interaction, scores=None, show_res=False):
         # Compute SASRec loss first
         # sasrec_loss = super().calculate_loss(interaction)

@@ -47,13 +47,16 @@ class SAE(nn.Module):
 		self.epoch_activations = {"indices": None, "values": None} 
 		self.last_activations = torch.empty(0, dtype=torch.float32, device=self.device)
 		self.epoch_idx=0
+		self.item_activations = np.zeros(self.hidden_dim)
 
         # 2) highest_activations dict, each neuron j -> dict of GPU tensors
         #    (values, sequences, recommendations)
 		self.highest_activations = {
             j: {
-                "values": torch.empty(0, dtype=torch.float32, device=self.device),      # [<=10]
-                "sequences": torch.empty((0, 50), dtype=torch.long, device=self.device),
+                "values": torch.empty(0, dtype=torch.float32, device=self.device),
+                "low_values": torch.empty(0, dtype=torch.float32, device=self.device),
+                "items": torch.empty(0, dtype=torch.long, device=self.device),
+                "low_items": torch.empty(0, dtype=torch.long, device=self.device),
                 "recommendations": torch.empty((0, 10), dtype=torch.long, device=self.device)
             }
             for j in range(self.hidden_dim)
@@ -95,6 +98,7 @@ class SAE(nn.Module):
 		# Reset activate_latents for the next period
 		self.activate_latents = set()
 		return ans
+
 
 	def set_decoder_norm_to_unit_norm(self):
 		assert self.W_dec is not None, "Decoder weight was not initialized."
@@ -211,7 +215,7 @@ class SAE(nn.Module):
     
 				# Identify positions where the neuron's activation is above its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals > mean_val
+				condition = vals > mean_val + std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
 				pre_acts[condition, neuron_idx] += weight_unpop * std_val
 			else:  # group == 'pop'
@@ -227,17 +231,14 @@ class SAE(nn.Module):
 
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < pop_mean
+				condition = vals < pop_mean - std_val
 				# Decrease activations proportionally.
 				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
 		return pre_acts
 		
 		
-     
-     
-     
-     
+    
      
      
      
@@ -291,10 +292,12 @@ class SAE(nn.Module):
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
-		self.last_activations = pre_acts
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
+		# self.last_activations = pre_acts
 		pre_acts = nn.functional.relu(pre_acts)
+		self.last_activations = pre_acts
+
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
@@ -359,6 +362,97 @@ class SAE(nn.Module):
 		return x_reconstructed
 
 
+
+
+	def update_highest_activations2(self, item_ids, recommendations):
+
+			"""
+			1) Find top-10 and bottom-10 activations per neuron for this new batch on GPU.
+			2) Merge them with the existing top-10 and bottom-10 stored in self.highest_activations.
+			3) Keep only the top-10 and bottom-10 overall (no .cpu() or .tolist() here).
+			
+			:param item_ids:       [batch_size, seq_len] GPU tensor (sequences)
+			:param recommendations: [batch_size, num_items] GPU tensor
+									We'll extract top-10 recommended items per sample.
+			"""
+			# Save batch activations (optional)
+			utils.save_batch_activations(self.last_activations, self.hidden_dim) 
+
+			# ------------------------
+			# A) Get top-10 and bottom-10 per neuron (column)
+			# ------------------------
+			# self.last_activations has shape [batch_size, hidden_dim]
+			batch_top_vals, batch_top_idxs = torch.topk(self.last_activations, k=15, dim=0)
+			rand_k   = 10                                     # how many random rows you want
+			num_rows = self.last_activations.size(0)          # rows = neurons / tokens / etc.
+			num_cols = self.last_activations.size(1)          # usually = batch size
+
+			batch_rand_idxs = []
+
+			for col in range(num_cols):
+				all_rows = torch.arange(num_rows, device=self.last_activations.device)
+				# remove the forbidden indices for this column
+				valid    = all_rows[~torch.isin(all_rows, batch_top_idxs[:, col])]
+				# shuffle and grab the first `rand_k`
+				rand_sel = valid[torch.randperm(valid.size(0))[:rand_k]]
+				batch_rand_idxs.append(rand_sel)
+
+			batch_rand_idxs = torch.stack(batch_rand_idxs, dim=1)   # shape: (rand_k, num_cols)
+
+			# optional: grab the actual activation values for those random rows
+			batch_rand_vals = self.last_activations.gather(0, batch_rand_idxs)			# shapes: [10, hidden_dim] for both top and bottom
+
+			# ------------------------
+			# C) Merge each neuron's top-10 and bottom-10
+			# ------------------------
+			for j in range(self.hidden_dim):
+				# --- Handle top-10 ---
+				# 1) Gather new data for neuron j (top-10)
+				new_top_indices = batch_top_idxs[:, j]         # [10] - indices in this batch
+				new_top_vals = batch_top_vals[:, j]           # [10]
+				new_top_seqs = item_ids[new_top_indices]      # [10, seq_len]
+				new_top_recs = recommendations[new_top_indices] # [10, num_items]
+        
+				# 2) Retrieve old top-10 from self.highest_activations[j]
+				old_top_vals = self.highest_activations[j].get("values", torch.tensor([]).to(self.last_activations.device))
+				old_top_seqs = self.highest_activations[j].get("items", torch.tensor([], dtype=torch.long).to(self.last_activations.device))
+				old_top_recs = self.highest_activations[j].get("recommendations", torch.tensor([], dtype=torch.long).to(self.last_activations.device))
+
+				# 3) Concatenate old + new (-> up to 20)
+				all_top_vals = torch.cat([old_top_vals, new_top_vals], dim=0)    # [<=20]
+				all_top_seqs = torch.cat([old_top_seqs, new_top_seqs], dim=0)    # [<=20, seq_len]
+				all_top_recs = torch.cat([old_top_recs, new_top_recs], dim=0)    # [<=20, num_items]
+
+				# 4) Take top-10 again
+				if all_top_vals.numel() > 0:
+					topvals, topidxs = torch.topk(all_top_vals, k=min(15, all_top_vals.size(0)), dim=0)
+					# 5) Update with new top-10 data
+					self.highest_activations[j]["values"] = topvals
+					self.highest_activations[j]["items"] = new_top_indices  # Store sequences, not indices
+					self.highest_activations[j]["recommendations"] = all_top_recs[topidxs]
+				
+				# --- Handle bottom-10 ---
+				# 1) Gather new data for neuron j (bottom-10)
+				new_bottom_indices = batch_rand_idxs[:, j]         # [10] - indices in this batch
+				new_bottom_vals = batch_rand_vals[:, j]           # [10]
+				new_bottom_seqs = new_top_indices     # [10, seq_len]
+				new_bottom_recs = recommendations[new_bottom_indices] # [10, num_items]
+
+				# 2) Retrieve old bottom-10 from self.highest_activations[j]
+				old_bottom_vals = self.highest_activations[j].get("low_values", torch.tensor([]).to(self.last_activations.device))
+				old_bottom_seqs = self.highest_activations[j].get("low_items", torch.tensor([], dtype=torch.long).to(self.last_activations.device))
+
+				# 3) Concatenate old + new (-> up to 20)
+				all_bottom_vals = torch.cat([old_bottom_vals, new_bottom_vals], dim=0)    # [<=20]
+				all_bottom_seqs = torch.cat([old_bottom_seqs, new_bottom_seqs], dim=0)    # [<=20, seq_len]
+
+				# 4) Take bottom-10 again
+				if all_bottom_vals.numel() > 0:
+					# 5) Update with new bottom-10 data
+					self.highest_activations[j]["low_values"] = new_bottom_vals
+					self.highest_activations[j]["low_items"] = new_bottom_indices  # Store sequences, not indices
+
+
 	def update_highest_activations(self, sequences, recommendations, user_ids):
 		"""
 		1) Find top-10 activations per neuron for this new batch on GPU.
@@ -419,7 +513,7 @@ class SAE(nn.Module):
 			self.highest_activations[j]["recommendations"] = new_recommendations
 
     
-	def save_highest_activations(self, filename=r"./dataset/ml-1m/neuron_activations_unpopular.csv"):		
+	def save_highest_activations(self, filename=r"./dataset/ml-1m/neuron_activations_items.csv"):		
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
@@ -432,20 +526,76 @@ class SAE(nn.Module):
 		df.to_csv(filename, index=False)
   
   
-		# # corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
-		# # corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
-		# file_path = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
-		# data_item = pd.read_csv(file_path)  # Try 'latin1', change to 'cp1252' if needed
-		# with open(filename, "w") as f:
-		# 	for neuron, data in self.highest_activations.items():
-		# 		f.write(f"Neuron {neuron}:\n")
-		# 		# f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
-		# 		# f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
-		# 		for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
-		# 			f.write(f"  Activation: {value}\n")
-		# 			f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
-		# 			f.write(f"  Sequence ids: {sequence_ids}\n")
-		# 			f.write(f"  top recommendation ids: {recommendations_ids}\n")
-		# 			f.write(f"  top recommendations: {recommendations}\n")
-		# 		f.write("\n")
+		# corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
+		# corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
+		file_path = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
+
+		data_item = pd.read_csv(file_path)  # Try 'latin1', change to 'cp1252' if needed
+		with open(filename, "w", encoding="utf-8") as f:
+			for neuron, data in self.highest_activations.items():
+				f.write(f"Neuron {neuron}:\n\n\n")
+				# f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
+				# f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
+				for value, item_id, item, recommendations_ids, recommendations in zip(data["values"], data["items"], utils.get_item_titles(data["items"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
+					if item_id.item() != 0:
+						dataa = utils.get_movie_info((item_id.item()))
+						f.write(f"  Activation: {value}\n")
+						f.write(f"  Item id: {str(item_id.item())}\n")
+						f.write(f"  Item: {item}\n")
+						if data is not None:
+							release_year, adult, genre_ids, original_language, overview = dataa
+							f.write(f"  Release Year: {release_year}\n")
+							f.write(f"  Adult: {adult}\n")
+							f.write(f"  Genre IDs: {genre_ids}\n")
+							f.write(f"  Original Language: {original_language}\n")
+							f.write(f"  Overview: {overview}\n")
+						else:
+							f.write(f"  Movie Info: Not found for item_id {item_id}\n")
+						f.write("\n")
+				for value, item_id, item in zip(data["low_values"], data["low_items"], utils.get_item_titles(data["low_items"], data_item)):
+					if item_id.item() != 0:
+						dataa = utils.get_movie_info((item_id.item()))
+						f.write(f"  Activation: {value}\n\n")
+						f.write(f"  Item id: {str(item_id.item())}\n")
+						f.write(f"  Item : {item}\n")
+						if data is not None:
+							release_year, adult, genre_ids, original_language, overview = dataa
+							f.write(f"  Release Year: {release_year}\n")
+							f.write(f"  Adult: {adult}\n")
+							f.write(f"  Genre IDs: {genre_ids}\n")
+							f.write(f"  Original Language: {original_language}\n")
+							f.write(f"  Overview: {overview}\n")
+						else:
+							f.write(f"  Movie Info: Not found for item_id {item_id}\n")
+					f.write("\n")
+
+	def save_highest_activations2(self, filename=r"./dataset/ml-1m/neuron_activations_unpopular.csv"):		
+			"""
+			Save the top 5 highest activations and their corresponding sequences to a file.
+			"""
+			df = pd.DataFrame({
+				'index': np.arange(len(self.activation_count)),
+				'count': self.activation_count.cpu().numpy()
+			})
+
+			# Save to CSV
+			df.to_csv(filename, index=False)
+	
+	
+			# # corr_pop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_pop.h5", r"./dataset/ml-1m/correlations_pop.csv")
+			# # corr_unpop = utils.calculate_pearson_correlation(r"./dataset/ml-1m/user_scores_unpop.h5", r"./dataset/ml-1m/correlations_unpop.csv")
+			# file_path = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
+			# data_item = pd.read_csv(file_path)  # Try 'latin1', change to 'cp1252' if needed
+			# with open(filename, "w") as f:
+			# 	for neuron, data in self.highest_activations.items():
+			# 		f.write(f"Neuron {neuron}:\n")
+			# 		# f.write(f"Popularity Correlation:{corr_pop[neuron]}\n")
+			# 		# f.write(f"Unpopularity Correlation:{corr_unpop[neuron]}\n")
+			# 		for value, sequence_ids, sequence, recommendations_ids, recommendations in zip(data["values"],  data["sequences"], utils.get_item_titles(data["sequences"], data_item), data["recommendations"], utils.get_item_titles(data["recommendations"], data_item)):
+			# 			f.write(f"  Activation: {value}\n")
+			# 			f.write(f"  Last 10 Sequence titles: {sequence[-10:]}\n")
+			# 			f.write(f"  Sequence ids: {sequence_ids}\n")
+			# 			f.write(f"  top recommendation ids: {recommendations_ids}\n")
+			# 			f.write(f"  top recommendations: {recommendations}\n")
+			# 		f.write("\n")
 

@@ -40,7 +40,10 @@ from recbole.utils.utils import (
     compute_and_save_correlations,
     remove_sparse_users_items,
     create_unbiased_set,
-    create_item_popularity_csv
+    create_item_popularity_csv,
+    search_movies,
+    process_and_save_movies,
+    get_movie_info
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -101,5 +104,8 @@ __all__ = [
     "compute_and_save_correlations",
     "remove_sparse_users_items",
     "create_unbiased_set",
-    "create_item_popularity_csv"
+    "create_item_popularity_csv",
+    "search_movies",
+    "process_and_save_movies",
+    "get_movie_info"
 ]
