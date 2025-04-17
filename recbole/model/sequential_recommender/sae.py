@@ -46,6 +46,8 @@ class SAE(nn.Module):
 		self.previous_activate_latents = None
 		self.epoch_activations = {"indices": None, "values": None} 
 		self.last_activations = torch.empty(0, dtype=torch.float32, device=self.device)
+		self.last_activations_relu = torch.empty(0, dtype=torch.float32, device=self.device)
+  
 		self.epoch_idx=0
 		self.item_activations = np.zeros(self.hidden_dim)
 
@@ -294,7 +296,7 @@ class SAE(nn.Module):
 		pre_acts = self.encoder(sae_in)
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
-		# self.last_activations = pre_acts
+		self.last_activations_relu = pre_acts
 		pre_acts = nn.functional.relu(pre_acts)
 		self.last_activations = pre_acts
 
@@ -362,8 +364,6 @@ class SAE(nn.Module):
 		return x_reconstructed
 
 
-
-
 	def update_highest_activations2(self, item_ids, recommendations):
 
 			"""
@@ -376,13 +376,13 @@ class SAE(nn.Module):
 									We'll extract top-10 recommended items per sample.
 			"""
 			# Save batch activations (optional)
-			utils.save_batch_activations(self.last_activations, self.hidden_dim) 
+			# utils.save_batch_activations(self.last_activations, self.hidden_dim) 
 
 			# ------------------------
 			# A) Get top-10 and bottom-10 per neuron (column)
 			# ------------------------
 			# self.last_activations has shape [batch_size, hidden_dim]
-			batch_top_vals, batch_top_idxs = torch.topk(self.last_activations, k=15, dim=0)
+			batch_top_vals, batch_top_idxs = torch.topk(self.last_activations, k=10, dim=0)
 			rand_k   = 10                                     # how many random rows you want
 			num_rows = self.last_activations.size(0)          # rows = neurons / tokens / etc.
 			num_cols = self.last_activations.size(1)          # usually = batch size
@@ -400,7 +400,7 @@ class SAE(nn.Module):
 			batch_rand_idxs = torch.stack(batch_rand_idxs, dim=1)   # shape: (rand_k, num_cols)
 
 			# optional: grab the actual activation values for those random rows
-			batch_rand_vals = self.last_activations.gather(0, batch_rand_idxs)			# shapes: [10, hidden_dim] for both top and bottom
+			batch_rand_vals = self.last_activations_relu.gather(0, batch_rand_idxs)			# shapes: [10, hidden_dim] for both top and bottom
 
 			# ------------------------
 			# C) Merge each neuron's top-10 and bottom-10
