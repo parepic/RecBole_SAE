@@ -383,24 +383,25 @@ class SAE(nn.Module):
 			# ------------------------
 			# self.last_activations has shape [batch_size, hidden_dim]
 			batch_top_vals, batch_top_idxs = torch.topk(self.last_activations, k=10, dim=0)
-			rand_k   = 10                                     # how many random rows you want
-			num_rows = self.last_activations.size(0)          # rows = neurons / tokens / etc.
-			num_cols = self.last_activations.size(1)          # usually = batch size
+			# rand_k   = 10                                     # how many random rows you want
+			# num_rows = self.last_activations.size(0)          # rows = neurons / tokens / etc.
+			# num_cols = self.last_activations.size(1)          # usually = batch size
 
-			batch_rand_idxs = []
+			# batch_rand_idxs = []
 
-			for col in range(num_cols):
-				all_rows = torch.arange(num_rows, device=self.last_activations.device)
-				# remove the forbidden indices for this column
-				valid    = all_rows[~torch.isin(all_rows, batch_top_idxs[:, col])]
-				# shuffle and grab the first `rand_k`
-				rand_sel = valid[torch.randperm(valid.size(0))[:rand_k]]
-				batch_rand_idxs.append(rand_sel)
+			# for col in range(num_cols):
+			# 	all_rows = torch.arange(num_rows, device=self.last_activations.device)
+			# 	# remove the forbidden indices for this column
+			# 	valid    = all_rows[~torch.isin(all_rows, batch_top_idxs[:, col])]
+			# 	# shuffle and grab the first `rand_k`
+			# 	rand_sel = valid[torch.randperm(valid.size(0))[:rand_k]]
+			# 	batch_rand_idxs.append(rand_sel)
 
-			batch_rand_idxs = torch.stack(batch_rand_idxs, dim=1)   # shape: (rand_k, num_cols)
+			# batch_rand_idxs = torch.stack(batch_rand_idxs, dim=1)   # shape: (rand_k, num_cols)
 
-			# optional: grab the actual activation values for those random rows
-			batch_rand_vals = self.last_activations_relu.gather(0, batch_rand_idxs)			# shapes: [10, hidden_dim] for both top and bottom
+			# # optional: grab the actual activation values for those random rows
+			# batch_rand_vals = self.last_activations_relu.gather(0, batch_rand_idxs)			# shapes: [10, hidden_dim] for both top and bottom
+			batch_rand_vals, batch_rand_idxs = torch.topk(self.last_activations, k=10, dim=0, largest=False)
 
 			# ------------------------
 			# C) Merge each neuron's top-10 and bottom-10

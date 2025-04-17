@@ -371,8 +371,8 @@ if __name__ == "__main__":
         )  
         
         trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-        # trainer.save_neuron_activations3(model_file=args.path)
-        # exit()
+        trainer.save_neuron_activations3(model_file=args.path)
+        exit()
         # trainer.fit_gate( 
         #     train_data,
         #     valid_data=test_data,
