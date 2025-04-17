@@ -115,6 +115,7 @@ class SASRec(SequentialRecommender):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
+        
     def forward(self, item_seq, item_seq_len):
         position_ids = torch.arange(
             item_seq.size(1), dtype=torch.long, device=item_seq.device

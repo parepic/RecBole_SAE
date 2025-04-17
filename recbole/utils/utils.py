@@ -466,17 +466,20 @@ def get_item_titles(tensor, df):
     """
     # Convert tensor to list of lists to preserve shape
     tensor_as_list = tensor.tolist()
-
     # Create a dictionary for quick lookup of item titles
     id_to_title = dict(zip(df['item_id:token'], df['movie_title:token_seq']))
 
     # Replace IDs with movie titles, preserving the shape
     result = []
-    for row in tensor_as_list:
-        # Use `.get(item_id, "undefined")` to handle missing IDs
-        titles_row = [id_to_title.get(item_id, "undefined") for item_id in row if item_id != 0]
-        result.append(titles_row)
-    
+    if tensor.dim() == 1:
+        for id in tensor_as_list:
+            result.append(id_to_title.get(id, "undefined"))
+    else:
+        for row in tensor_as_list:
+            # Use `.get(item_id, "undefined")` to handle missing IDs
+            titles_row = [id_to_title.get(item_id, "undefined") for item_id in row if item_id != 0]
+            result.append(titles_row)
+        
     return result
 
 
@@ -619,38 +622,31 @@ def fetch_user_popularity_score(user_ids, sequences):
 
 def save_batch_activations(bulk_data, neuron_count):
     """
-    Saves a bulk of data (shape 4096 x 4096) to the HDF5 file, appending it to each row.
+    Saves a bulk of data (shape 4096 x 4096) to the HDF5 file, overwriting the file if it exists.
 
     Args:
-        file_path (str): Path to the HDF5 file.
-        bulk_data (numpy.ndarray): A 2D NumPy array of shape (4096, 4096) to append.
+        bulk_data (torch.Tensor): A 2D tensor of shape (4096, 4096) to save.
+        neuron_count (int): Number of neurons (rows in the dataset).
     """
     print(bulk_data.shape)
-    bulk_data = bulk_data.permute(1, 0)
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_unpop.h5"
-    with h5py.File(file_path, "a") as f:
-        if "dataset" not in f:
-            # If the dataset doesn't exist, create it with unlimited columns
-            max_shape = (neuron_count, 1100000)  # Unlimited columns
-            f.create_dataset(
-                "dataset",
-                data=bulk_data,
-                maxshape=max_shape,
-                chunks=(neuron_count, 4096),  # Optimize chunk size for appending
-                dtype="float32",
-            )
-        else:
-            # Resize the dataset to accommodate the new data
-            dataset = f["dataset"]
-            current_cols = dataset.shape[1]
-            print(current_cols)
-            new_cols = current_cols + bulk_data.shape[1]
-            dataset.resize((neuron_count, new_cols))
-            
-            # Write the new data at the end
-            dataset[:, current_cols:new_cols] = bulk_data
-            
-
+    bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_items.h5"
+    
+    # Check if file exists and delete it if it does
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    
+    # Create and write to a new HDF5 file
+    with h5py.File(file_path, "w") as f:
+        # Create a new dataset with unlimited columns
+        max_shape = (neuron_count, 1100000)  # Unlimited columns
+        f.create_dataset(
+            "dataset",
+            data=bulk_data,
+            maxshape=max_shape,
+            chunks=(neuron_count, 4096),  # Optimize chunk size for appending
+            dtype="float32",
+        )
 
 def save_batch_user_popularities(bulk_data_pop, bulk_data_unpop):
     """
@@ -2044,3 +2040,136 @@ def create_item_popularity_csv():
     output_csv =  r"./dataset/ml-1m/item_popularity_labels_with_titles2.csv"
     df_final.to_csv(output_csv, index=False)
     print(f"CSV file '{output_csv}' created successfully.")
+    
+
+import requests
+    
+    
+    
+    
+def search_movies(token, query, year=None, **kwargs):
+    """
+    Search for movies using the TMDB API with a Bearer Token.
+    
+    :param token: Your API Read Access Token.
+    :param query: The search query (e.g., movie title).
+    :param year: The release year of the movie (optional).
+    :param kwargs: Optional parameters like language, page, etc.
+    :return: JSON response from the API or an error message.
+    """
+    BASE_URL = "https://api.themoviedb.org/3"
+    SEARCH_ENDPOINT = "/search/movie"
+    
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    params = {
+        "query": query
+    }
+    if year is not None:
+        params["year"] = year
+    params.update(kwargs)
+    
+    response = requests.get(BASE_URL + SEARCH_ENDPOINT, headers=headers, params=params)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": f"Request failed with status {response.status_code}", "details": response.text}
+
+
+
+import json
+import time
+def process_and_save_movies(token, input_file=r"./dataset/ml-1m/items_remapped.csv", output_file=r"./dataset/ml-1m/processed_movies.csv", failed_file=r"./dataset/ml-1m/failed_movies.csv", num_rows=50):
+    """
+    Process a CSV file to fetch additional movie details from TMDB API and save results.
+    
+    :param token: Your API Read Access Token.
+    :param input_file: Path to the input CSV file.
+    :param output_file: Path to save the processed DataFrame.
+    :param failed_file: Path to save the failed rows.
+    :param num_rows: Number of rows to process (default is 50).
+    """
+    # Load genre mappings from JSON file
+    with open(r"./dataset/ml-1m/genres.json", 'r') as f:
+        genre_data = json.load(f)
+        genre_map = {genre['id']: genre['name'] for genre in genre_data['genres']}
+
+        # Load and preprocess the data
+        df = pd.read_csv(input_file)
+        df = df.rename(columns={
+            'item_id:token': 'item_id',
+            'movie_title:token_seq': 'movie_title',
+            'release_year:token': 'release_year'
+        })
+        df['release_year'] = df['release_year'].astype(int)
+
+        # Define new columns from the API response
+        new_columns = [
+            'adult', 'backdrop_path', 'genre_ids', 'id', 'original_language',
+            'original_title', 'overview', 'popularity', 'poster_path',
+            'release_date', 'title', 'video', 'vote_average', 'vote_count'
+        ]
+        for col in new_columns:
+            df[col] = pd.NA
+
+        # Process API requests with delay
+        failed_indices = []
+        request_count = 0
+        for row in df.itertuples():
+            query = row.movie_title
+            year = row.release_year
+            response = search_movies(token, query, year)
+            request_count += 1
+
+            # Add delay after every 50 requests
+            if request_count % 50 == 0:
+                print(f"Processed {request_count} requests, waiting for 1.1 seconds...")
+                time.sleep(1.1)
+
+            if "error" in response or len(response.get("results", [])) == 0:
+                failed_indices.append(row.Index)
+            else:
+                result = response["results"][0]
+                for col in new_columns:
+                    value = result.get(col, pd.NA)
+                    # Convert genre_ids to a comma-separated string of genre names
+                    if col == 'genre_ids' and isinstance(value, list):
+                        genre_names = [genre_map.get(genre_id, "Unknown") for genre_id in value]
+                        value = ','.join(genre_names)
+                    df.loc[row.Index, col] = value
+
+    # Save results
+    df.to_csv(output_file, index=False)
+    if failed_indices:
+        df_failed = df.loc[failed_indices]
+        df_failed.to_csv(failed_file, index=False)
+
+
+def get_movie_info(item_id):
+    """
+    Retrieve specific movie information for a given item_id from a CSV file.
+    
+    Args:
+        item_id (int): The ID of the movie to look up.
+        csv_file_path (str): Path to the CSV file containing movie data.
+    
+    Returns:
+        list: A list containing [release_year, adult, genre_ids, original_language, overview].
+              Returns None if item_id is not found.
+    """
+    
+    csv_file_path = r"./dataset/ml-1m/processed_movies.csv"
+    
+    # Read only the required columns from the CSV
+    df = pd.read_csv(csv_file_path, usecols=['item_id', 'release_year', 'adult', 'genre_ids', 'original_language', 'overview'])
+    
+    # Filter for the given item_id
+    result = df[df['item_id'] == (item_id)]
+    
+    # If item_id is found, return the values as a list
+    if not result.empty:
+        return result[['release_year', 'adult', 'genre_ids', 'original_language', 'overview']].iloc[0].tolist()
+    print("yoxduda blet ", item_id)
+    # Return None if item_id is not found
+    return None

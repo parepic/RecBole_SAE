@@ -34,7 +34,9 @@ from recbole.utils import (
     plot_h5_columns,
     compute_and_save_correlations,
     create_unbiased_set,
-    create_item_popularity_csv
+    create_item_popularity_csv,
+    search_movies,
+    process_and_save_movies
 )
 
 
@@ -218,7 +220,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[1.0, 2.0], gamma=[1.0, 2.0]
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=[1.0, 2.0], gamma=[0.0, 1.0]
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -285,7 +287,12 @@ if __name__ == "__main__":
     # exit()
     # save_cohens_d()
     # exit()
+    
+    # process_and_save_movies("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkYTA5ZTdmZmQ0YjI5NWU4ODIwZDMzNDhkZTkwMmFmMyIsIm5iZiI6MTc0NDg2MDcwNy45NjMsInN1YiI6IjY4MDA3NjIzZGU1ZTRkZWM2MmFlZThjYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sk588WSG5LO2s3jkIatnJFtQN5ZwAh9z7mTkhGmPLLA")
+    # exit()
+    
     parser = argparse.ArgumentParser()
+    
     
     parser.add_argument("--model", "-m", type=str, default="BPR", help="name of models")
     parser.add_argument(
@@ -357,11 +364,13 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
         
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer.save_neuron_activations3(model_file=args.path)
+        # exit()
         # trainer.fit_gate( 
         #     train_data,
         #     valid_data=test_data,
@@ -388,7 +397,6 @@ if __name__ == "__main__":
             # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            print("eval data blya ", data)
             trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
         elif(args.model == "SASRec" and args.save_neurons):
             data = test_data if args.eval_data else train_data
