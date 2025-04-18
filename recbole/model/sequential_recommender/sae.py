@@ -95,8 +95,8 @@ class SAE(nn.Module):
 			# Update previous_activate_latents to the current active latents
 			self.previous_activate_latents = current_active
 		
-		# Reset activate_latents for the next period
-		self.activate_latents = set()
+			# Reset activate_latents for the next period
+			self.activate_latents = set()
 		return ans
 
 
@@ -306,11 +306,12 @@ class SAE(nn.Module):
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
+			dead = self.get_dead_latent_ratio(need_update=0)
+			print("dead percentage: ", dead)
 			if self.epoch_idx != epoch:
 				self.epoch_idx = epoch
 				if self.epoch_idx % 5 == 0:
 					dead = self.get_dead_latent_ratio(need_update=1)
-					print("dead percentage: ", dead)
 					# Resampling dead latents if any exist
 					# if dead > 0.02:  # Threshold can be adjusted, e.g., dead > 0.1
 					# 	# Compute mean residual over the batch
