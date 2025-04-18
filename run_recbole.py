@@ -399,10 +399,10 @@ if __name__ == "__main__":
             print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
+            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
         elif(args.model == "SASRec" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
+            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
         elif(args.model == "SASRec_SAE" and args.train):
             trainer.fit_SAE(config, 
                 args.path,
