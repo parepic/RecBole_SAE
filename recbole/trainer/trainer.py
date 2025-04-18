@@ -604,105 +604,7 @@ class Trainer(AbstractTrainer):
                 if sae:
                     self.model.set_sae_mode("test")
                 self.model.full_sort_predict(interaction)
-        
-        ending = '_eval' if eval_data else ''
         self.model.sae_module.save_highest_activations()
-    
-
-
-
-    @torch.no_grad()
-    def save_neuron_activations3(
-        self, model_file=None
-    ):
-        r"""Evaluate the model based on the eval data.
-
-        Args:
-            eval_data (DataLoader): the eval data
-            load_best_model (bool, optional): whether load the best model in the training process, default: True.
-                                              It should be set True, if users want to test the model after training.
-            model_file (str, optional): the saved model file, default: None. If users want to test the previously
-                                        trained model file, they can set this parameter.
-            show_progress (bool): Show the progress of evaluate epoch. Defaults to ``False``.
-
-        Returns:
-            collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
-        """
-        
-        checkpoint_file = model_file
-        checkpoint = torch.load(checkpoint_file, map_location=self.device)
-        self.model.load_state_dict(checkpoint["state_dict"])
-        self.model.load_other_parameter(checkpoint.get("other_parameter"))
-        self.device = torch.device(self.device)
-
-        message_output = "Loading model structure and parameters from {}".format(
-            checkpoint_file
-        )
-        self.logger.info(message_output)
-        self.model.eval()
-        # Update the maximum value
-        self.optimizer.zero_grad()
-        with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-            self.model.set_sae_mode("test")
-            self.model.save_item_activations()
-    
-        self.model.sae_module.save_highest_activations()
-    
-    
-
-
-
-    # @torch.no_grad()
-    # def dampen_neurons(
-    #     self, data, model_file=None, show_progress=True, eval_data=True, corr_file=None,
-    #     neuron_count=z20, damp_percent=0.1, unpopular_only=False 
-    # ):
-    #     r"""Evaluate the model based on the eval data.
-
-    #     Args:
-    #         eval_data (DataLoader): the eval data
-    #         load_best_model (bool, optional): whether load the best model in the training process, default: True.
-    #                                           It should be set True, if users want to test the model after training.
-    #         model_file (str, optional): the saved model file, default: None. If users want to test the previously
-    #                                     trained model file, they can set this parameter.
-    #         show_progress (bool): Show the progress of evaluate epoch. Defaults to ``False``.
-
-    #     Returns:
-    #         collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
-    #     """
-        
-    #     checkpoint_file = model_file
-    #     checkpoint = torch.load(checkpoint_file, map_location=self.device)
-    #     self.model.load_state_dict(checkpoint["state_dict"])
-    #     self.model.load_other_parameter(checkpoint.get("other_parameter"))
-    #     self.device = torch.device(self.device)
-
-    #     message_output = "Loading model structure and parameters from {}".format(
-    #         checkpoint_file
-    #     )
-    #     self.logger.info(message_output)
-    #     self.model.eval()
-    #     iter_data = (
-    #         tqdm(
-    #             data,
-    #             total=len(data),
-    #             ncols=100,
-    #         )
-    #         if show_progress
-    #         else data
-    #     )
-    #     for batch_idx, batched_data in enumerate(iter_data):
-    #         if eval_data:
-    #             interaction, history_index, positive_u, positive_i = batched_data
-    #         else:
-    #             interaction = batched_data
-    #         interaction = interaction.to(self.device)
-    #         # Update the maximum value
-    #         self.optimizer.zero_grad()
-    #         with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
-    #             # self.model.sae_module.set_dampen_hyperparam(corr_file=corr_file, neuron_count=neuron_count, 
-    #             #                                             damp_percent=damp_percent, unpopular_only=False)
-    #             scores = self.model.full_sort_predict(interaction)
 
 
     @torch.no_grad()
@@ -762,6 +664,45 @@ class Trainer(AbstractTrainer):
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
+        self.model.sae_module.save_highest_activations()
+
+
+
+    @torch.no_grad()
+    def save_neuron_activations3(
+        self, model_file=None
+    ):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+            show_progress (bool): Show the progress of evaluate epoch. Defaults to ``False``.
+
+        Returns:
+            collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
+        """
+        
+        checkpoint_file = model_file
+        checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        self.model.load_state_dict(checkpoint["state_dict"])
+        self.model.load_other_parameter(checkpoint.get("other_parameter"))
+        self.device = torch.device(self.device)
+
+        message_output = "Loading model structure and parameters from {}".format(
+            checkpoint_file
+        )
+        self.logger.info(message_output)
+        self.model.eval()
+        # Update the maximum value
+        self.optimizer.zero_grad()
+        with torch.autocast(device_type=self.device.type, enabled=self.enable_amp):
+            self.model.set_sae_mode("test")
+            self.model.save_item_activations()
+    
         self.model.sae_module.save_highest_activations()
     
         
