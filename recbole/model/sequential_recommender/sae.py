@@ -63,8 +63,6 @@ class SAE(nn.Module):
             }
             for j in range(self.hidden_dim)
         }
-
-
 		return
 
 

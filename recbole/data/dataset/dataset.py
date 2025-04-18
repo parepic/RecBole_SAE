@@ -1815,7 +1815,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def sort(self, by, ascending=True):
         """Sort the interaction records inplace.
-
+        
         Args:
             by (str or list of str): Field that as the key in the sorting process.
             ascending (bool or list of bool, optional): Results are ascending if ``True``, otherwise descending.
