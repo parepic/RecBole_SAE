@@ -390,13 +390,13 @@ if __name__ == "__main__":
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
             # tune_hyperparam()
-            create_visualizations_neurons()
             # create_visualizations_neurons()
-            # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"]
-            # )
+            # create_visualizations_neurons()
+            test_result = trainer.evaluate(
+                test_data, model_file=args.path, show_progress=config["show_progress"]
+            )
             
-            # print(test_result)
+            print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
             trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
