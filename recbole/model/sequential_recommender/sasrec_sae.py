@@ -97,8 +97,6 @@ class SASRec_SAE(SASRec):
         # self.sae_module.update_highest_activations(item_seq, top_recs, None)
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
-        print("nonzeros ", self.sae_module.activation_count.count_nonzero())
-        self.sae_module.activation_count.zero_()
         return scores
 
 
