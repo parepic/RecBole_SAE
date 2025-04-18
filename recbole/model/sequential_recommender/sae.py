@@ -79,7 +79,7 @@ class SAE(nn.Module):
 		ans = 1 - len(self.activate_latents) / self.hidden_dim
 		# Calculate the current number of dead latents
 		current_dead = self.hidden_dim - len(self.activate_latents)
-		
+		print("Dead percentage: ", ans)
 		if need_update:
 			# Convert current active latents to a tensor
 			current_active = torch.tensor(list(self.activate_latents), device=self.device)
@@ -306,8 +306,6 @@ class SAE(nn.Module):
 		self.fvu = e.pow(2).sum() / total_variance
 
 		if train_mode:
-			dead = self.get_dead_latent_ratio(need_update=0)
-			print("dead percentage: ", dead)
 			if self.epoch_idx != epoch:
 				self.epoch_idx = epoch
 				if self.epoch_idx % 5 == 0:
