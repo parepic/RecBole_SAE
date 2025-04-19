@@ -630,7 +630,7 @@ def save_batch_activations(bulk_data, neuron_count, batch_size):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
     
     # Check if file exists and delete it if it does
     if os.path.exists(file_path):
