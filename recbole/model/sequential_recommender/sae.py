@@ -301,10 +301,9 @@ class SAE(nn.Module):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
-		pre_acts = nn.functional.relu(pre_acts)
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
-   
+		pre_acts = nn.functional.relu(pre_acts)   
 		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
