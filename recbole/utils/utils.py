@@ -1009,12 +1009,12 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
     dataset_name = 'dataset'  # Replace with actual dataset name inside the h5 file
 
     # Load the real indices from the filtered CSV
-    index_csv = r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv"
-    real_indices = pd.read_csv(index_csv, index_col=0).index.tolist()
+    # index_csv = r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv"
+    # real_indices = pd.read_csv(index_csv, index_col=0).index.tolist()
 
     with h5py.File(file_path, 'r') as f:
         data = f[dataset_name][()]  # Reads full dataset into memory
@@ -1025,16 +1025,14 @@ def save_mean_SD():
     # Compute mean and standard deviation for each row
     means = np.mean(data, axis=1)
     stds = np.std(data, axis=1)
-    print(real_indices)
     # Combine into a DataFrame with the correct index
     df = pd.DataFrame({
         'mean': means,
         'std': stds,
-        "index": real_indices
     })
 
     # Save to CSV with real indices
-    output_csv_path = r"./dataset/ml-1m/row_stats_popular.csv"
+    output_csv_path = r"./dataset/ml-1m/row_stats_unpopular.csv"
     df.to_csv(output_csv_path)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
@@ -1054,7 +1052,7 @@ def save_cohens_d():
     cohen_d = (df1['mean'] - df2['mean']) / s_pooled
 
     # Create result DataFrame with same index
-    df_result = pd.DataFrame({'cohen_d': cohen_d, "index": df1["index"]})
+    df_result = pd.DataFrame({'cohen_d': cohen_d})
 
     # Save to CSV with index column
     df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv")
