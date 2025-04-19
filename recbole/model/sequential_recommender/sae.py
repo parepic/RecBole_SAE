@@ -122,7 +122,7 @@ class SAE(nn.Module):
 		# map back into the original column space
 		topk_idx = y_idx[topk_in_sub]     
 		# topk_indices: shape (B, N)
-		flat_indices = topk_indices.view(-1)  # shape (B * N)
+		flat_indices = topk_idx.view(-1)  # shape (B * N)
 
 		# Count occurrences of each index
 		counts = torch.bincount(flat_indices, minlength=self.hidden_dim)
@@ -302,7 +302,7 @@ class SAE(nn.Module):
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
    
-		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
+		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
