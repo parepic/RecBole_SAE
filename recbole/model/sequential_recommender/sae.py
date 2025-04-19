@@ -146,7 +146,7 @@ class SAE(nn.Module):
 		# print("these are k values, ", topk_values[0])
 		# print("these are k indices, ", topk_indices[0])
 		sparse_x = torch.zeros_like(x)
-		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
+		sparse_x.scatter_(1, topk_idx, topk_vals.to(self.dtype))
 		return sparse_x
 
 		
