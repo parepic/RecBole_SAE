@@ -246,7 +246,7 @@ class SAE(nn.Module):
 
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < pop_mean - 3 * pop_sd
+				condition = vals < pop_mean - 4 * pop_sd
 				# Decrease activations proportionally.
 				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
