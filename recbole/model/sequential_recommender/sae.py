@@ -110,6 +110,16 @@ class SAE(nn.Module):
 
 	def topk_activation(self, x, sequences, save_result):
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
+		y_idx = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")["index"].tolist()
+
+		# slice out only the allowed columns
+		x_sub = x.index_select(1, y_idx)                             # shape (B, M)
+
+		# top‑k within that subset
+		topk_vals, topk_in_sub = x_sub.topk(self.k, dim=1)           # both are (B, k)
+
+		# map back into the original column space
+		topk_idx = y_idx[topk_in_sub]     
 		# topk_indices: shape (B, N)
 		flat_indices = topk_indices.view(-1)  # shape (B * N)
 
