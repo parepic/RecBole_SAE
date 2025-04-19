@@ -1170,7 +1170,6 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
 
     Parameters:
     file_name (str): CSV file name containing correlation values.
-    n (int): Ignored.
     unpopular_only (bool): If True, returns an empty positive list and the full negative list.
 
     Returns:
@@ -1178,29 +1177,48 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
       - pos_list: list of (index, value) for all positives (empty if unpopular_only=True)
       - neg_list: list of (index, value) for all negatives
     """
-    file_path = "./dataset/ml-1m/" + file_name
-    df = pd.read_csv(file_path)
+    
 
-    # grab the first (and only) column of correlation scores
-    col = df.columns[0]
-    vals = df[col]
+    # 1) load
+    df = pd.read_csv(f"./dataset/ml-1m/{file_name}")
+    indices = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
+    # 2) if they passed a subset of row positions, slice with .iloc
+    if indices is not None:
+        df = df.iloc[indices]
 
-    # mask positives and negatives
-    pos = vals[vals > 0]
-    neg = vals[vals < 0]
+    # 3) split out positives / negatives
+    pos_series = df.loc[df["cohen_d"] > 0, "cohen_d"]
+    neg_series = df.loc[df["cohen_d"] < 0, "cohen_d"]
 
-    # build lists of (index, value)
-    pos_list = list(zip(pos.index.tolist(), pos.tolist()))
-    neg_list = list(zip(neg.index.tolist(), neg.tolist()))
+    # 4) zip index-labels (which by default are 0,1,2… or the original row numbers)
+    pos_list = list(pos_series.items())  # each item is (index_label, value)
+    neg_list = list(neg_series.items())
 
-    # if only unpopular, empty out the positives
+    # 5) if they only want “unpopular” (negatives), empty the positives
     if unpopular_only:
         pos_list = []
 
     return pos_list, neg_list
+    # file_path = "./dataset/ml-1m/" + file_name
+    # df = pd.read_csv(file_path)  # 🟢 This is the fix
+
+
+    # # get the rows where cohen_d > 0
+    # pos_df = df.loc[df["cohen_d"] > 0, ["index", "cohen_d"]]
+    # neg_df = df.loc[df["cohen_d"] < 0, ["index", "cohen_d"]]
+
+    # # now zip the column values directly
+    # pos_list = list(zip(pos_df["index"].tolist(), pos_df["cohen_d"].tolist()))
+    # neg_list = list(zip(neg_df["index"].tolist(), neg_df["cohen_d"].tolist()))
+    # # grab the first (aintnd only) column of correlation scores
+    # vals = df["cohen_d"]
     
-    
-    
+    # # if only unpopular, empty out the positives
+    # if unpopular_only:
+    #     pos_list = []
+
+    # return pos_list, neg_list
+
 
 
 import torch

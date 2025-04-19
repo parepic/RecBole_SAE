@@ -109,18 +109,18 @@ class SAE(nn.Module):
 
 	def topk_activation(self, x, sequences, save_result):
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
-		# y_idx = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")["index"]
-		# y_idx = torch.tensor(y_idx, dtype=torch.long, device=x.device)  # now a LongTensor
+		y_idx = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")["index"]
+		y_idx = torch.tensor(y_idx, dtype=torch.long, device=x.device)  # now a LongTensor
 
-		# # slice out only the allowed columns
-		# x_sub = x.index_select(1, y_idx)                             # shape (B, M)
+		# slice out only the allowed columns
+		x_sub = x.index_select(1, y_idx)                             # shape (B, M)
 
-		# # top‑k within that subset
-		# topk_vals, topk_in_sub = x_sub.topk(self.k, dim=1)           # both are (B, k)
+		# top‑k within that subset
+		topk_vals, topk_in_sub = x_sub.topk(self.k, dim=1)           # both are (B, k)
 
-		# # map back into the original column space
-		# topk_idx = y_idx[topk_in_sub]     
-		# topk_indices: shape (B, N)
+		# map back into the original column space
+		topk_idx = y_idx[topk_in_sub]     
+
 		flat_indices = topk_indices.view(-1)  # shape (B * N)
 
 		# Count occurrences of each index
@@ -148,7 +148,7 @@ class SAE(nn.Module):
 		# (print("topk values", topk_vals[0]))
   
 		sparse_x = torch.zeros_like(x)
-		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
+		sparse_x.scatter_(1, topk_idx, topk_vals.to(self.dtype))
 		return sparse_x
 
 		
@@ -232,7 +232,7 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals > mean_val + std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
-				pre_acts[:, neuron_idx] += weight_unpop * std_val
+				pre_acts[:, neuron_idx] += weight_unpop
 			# else:  # group == 'pop'
 			# 	# For neurons to be dampened, use the popular statistics for impact.
 			# 	pop_mean = stats_pop.iloc[neuron_idx]["mean"]
