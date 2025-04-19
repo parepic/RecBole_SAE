@@ -604,7 +604,7 @@ class Trainer(AbstractTrainer):
                 if sae:
                     self.model.set_sae_mode("test")
                 self.model.full_sort_predict(interaction)
-        self.model.sae_module.save_highest_activations()
+        # self.model.sae_module.save_highest_activations()
 
 
     @torch.no_grad()
@@ -664,7 +664,7 @@ class Trainer(AbstractTrainer):
                 self.model.full_sort_predict(interaction)
         
         ending = '_eval' if eval_data else ''
-        self.model.sae_module.save_highest_activations()
+        # self.model.sae_module.save_highest_activations()
 
 
 

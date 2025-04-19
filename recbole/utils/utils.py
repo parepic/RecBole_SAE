@@ -620,7 +620,7 @@ def fetch_user_popularity_score(user_ids, sequences):
     return total_pop_scores, total_unpop_scores
 
 
-def save_batch_activations(bulk_data, neuron_count):
+def save_batch_activations(bulk_data, neuron_count, batch_size):
     """
     Saves a bulk of data (shape 4096 x 4096) to the HDF5 file, overwriting the file if it exists.
 
@@ -630,7 +630,7 @@ def save_batch_activations(bulk_data, neuron_count):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_items.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
     
     # Check if file exists and delete it if it does
     if os.path.exists(file_path):
@@ -644,7 +644,7 @@ def save_batch_activations(bulk_data, neuron_count):
             "dataset",
             data=bulk_data,
             maxshape=max_shape,
-            chunks=(neuron_count, 4096),  # Optimize chunk size for appending
+            chunks=(neuron_count, batch_size),  # Optimize chunk size for appending
             dtype="float32",
         )
 
@@ -1012,31 +1012,41 @@ def make_items_popular(item_seq_len):
 def save_mean_SD():
     # Load your .h5 file
     file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_unpop.h5"
-    dataset_name = 'dataset'  # Replace with the actual dataset name inside the h5 file
+    dataset_name = 'dataset'  # Replace with actual dataset name inside the h5 file
+
+    # Load the real indices from the filtered CSV
+    index_csv = r"./dataset/ml-1m/filtered_training_file.csv"
+    real_indices = pd.read_csv(index_csv, index_col=0).index.tolist()
 
     with h5py.File(file_path, 'r') as f:
-        data = f[dataset_name][()]  # This reads the full dataset into memory
+        data = f[dataset_name][()]  # Reads full dataset into memory
 
-    # Check shape
     print("Data shape:", data.shape)  # Should be (4096, X)
 
-    # Compute mean and standard deviation for each row
-    means = np.mean(data, axis=1)
-    stds = np.std(data, axis=1)
+    # Subset the data based on the real indices
+    data_subset = data[real_indices, :]
 
-    # Combine into a DataFrame
+    # Compute mean and standard deviation for each row
+    means = np.mean(data_subset, axis=1)
+    stds = np.std(data_subset, axis=1)
+
+    # Combine into a DataFrame with the correct index
     df = pd.DataFrame({
         'mean': means,
         'std': stds
-    })
+    }, index=real_indices)
 
-    # Save to CSV
+    # Save to CSV with real indices
     output_csv_path = r"./dataset/ml-1m/row_stats_unpopular.csv"
-    df.to_csv(output_csv_path, index=False)
+    df.to_csv(output_csv_path)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
     
     
+
+
+    
+
     
 def save_cohens_d():
     df1 = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")  # Replace with your actual file name

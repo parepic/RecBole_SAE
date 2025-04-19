@@ -294,7 +294,6 @@ class SAE(nn.Module):
 		pre_acts = self.encoder(sae_in)
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
-		self.last_activations_relu = pre_acts
 		pre_acts = nn.functional.relu(pre_acts)
 		self.last_activations = pre_acts
 
