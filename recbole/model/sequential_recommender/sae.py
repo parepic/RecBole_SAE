@@ -232,16 +232,16 @@ class SAE(nn.Module):
 				condition = vals > mean_val + std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
 				pre_acts[condition, neuron_idx] += weight_unpop * std_val
-			# else:  # group == 'pop'
-			# 	# For neurons to be dampened, use the popular statistics for impact.
-			# 	pop_mean = stats_pop.loc[neuron_idx, "mean"]
-			# 	pop_sd = stats_pop.loc[neuron_idx, "std"]
+			else:  # group == 'pop'
+				# For neurons to be dampened, use the popular statistics for impact.
+				pop_mean = stats_pop.loc[neuron_idx, "mean"]
+				pop_sd = stats_pop.loc[neuron_idx, "std"]
 
-			# 	# Identify positions where the neuron's activation is below its mean.
-			# 	vals = pre_acts[:, neuron_idx]
-			# 	condition = vals < pop_mean - pop_sd
-			# 	# Decrease activations proportionally.
-			# 	pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
+				# Identify positions where the neuron's activation is below its mean.
+				vals = pre_acts[:, neuron_idx]
+				condition = vals < pop_mean - pop_sd
+				# Decrease activations proportionally.
+				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
 		return pre_acts
 		
