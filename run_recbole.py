@@ -393,7 +393,7 @@ if __name__ == "__main__":
             create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
-            #     test_data, model_file=args.path, show_progress=config["show_progress"], N=10, beta=[0.0, 0.5], gamma=[1.0, 2.0]
+            #     test_data, model_file=args.path, show_progress=config["show_progress"], N=10, beta=[1.0, 2.0], gamma=[0.0, 0.5]
             # )
             
             # print(test_result)

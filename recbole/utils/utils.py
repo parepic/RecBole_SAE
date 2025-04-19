@@ -1180,20 +1180,19 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
       - neg_list: list of (index, value) for all negatives
     """
     file_path = "./dataset/ml-1m/" + file_name
-    df = pd.read_csv(file_path, index_col=0)  # 🟢 This is the fix
+    df = pd.read_csv(file_path)  # 🟢 This is the fix
 
-    # grab the first (and only) column of correlation scores
-    col = df.columns[0]
+
+    # get the rows where cohen_d > 0
+    pos_df = df.loc[df["cohen_d"] > 0, ["indexx", "cohen_d"]]
+    neg_df = df.loc[df["cohen_d"] < 0, ["indexx", "cohen_d"]]
+
+    # now zip the column values directly
+    pos_list = list(zip(pos_df["indexx"].tolist(), pos_df["cohen_d"].tolist()))
+    neg_list = list(zip(neg_df["indexx"].tolist(), neg_df["cohen_d"].tolist()))
+    # grab the first (aintnd only) column of correlation scores
     vals = df["cohen_d"]
-
-    # mask positives and negatives
-    pos = vals[vals > 0]
-    neg = vals[vals < 0]
-
-    # build lists of (index, value)
-    pos_list = list(zip(pos["index"].tolist(), pos.tolist()))
-    neg_list = list(zip(neg["index"].tolist(), neg.tolist()))
-
+    
     # if only unpopular, empty out the positives
     if unpopular_only:
         pos_list = []

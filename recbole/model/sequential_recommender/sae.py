@@ -187,6 +187,8 @@ class SAE(nn.Module):
 		# Load the corresponding statistics files.
 		stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
 		stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
+		stats_unpop = stats_unpop.set_index("index", drop=False)
+		stats_pop = stats_pop.set_index("index", drop=False)
 
 		# Create tensors of the absolute Cohen's d values for the selected neurons.
 		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
@@ -209,9 +211,9 @@ class SAE(nn.Module):
 			weight_pop = weights_pop[i]
 			if group == 'unpop':
 				# For neurons to be reinforced, fetch stats from the unpopular file.
-				row = stats_unpop.iloc[neuron_idx]
-				mean_val = row["mean"]
-				std_val = row["std"]
+				mean_val = stats_unpop.loc[neuron_idx, "mean"]
+				std_val = stats_unpop.loc[neuron_idx, "std"]
+
     
 				# Identify positions where the neuron's activation is above its mean.
 				vals = pre_acts[:, neuron_idx]
@@ -220,18 +222,17 @@ class SAE(nn.Module):
 				pre_acts[condition, neuron_idx] += weight_unpop * std_val
 			else:  # group == 'pop'
 				# For neurons to be dampened, use the popular statistics for impact.
-				pop_mean = stats_pop.iloc[neuron_idx]["mean"]
-				pop_sd = stats_pop.iloc[neuron_idx]["mean"]
+				pop_mean = stats_pop.loc[neuron_idx, "mean"]
+				pop_sd = stats_pop.loc[neuron_idx, "mean"]
 
 				# Still fetch the comparison stats from the unpopular stats file
 				# (this is from your original logic; adjust if needed).
-				row = stats_unpop.iloc[neuron_idx]
-				mean_val = row["mean"]
-				std_val = row["std"]
+				mean_val = stats_unpop.loc[neuron_idx, "mean"]
+				std_val = stats_unpop.loc[neuron_idx, "std"]
 
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < pop_mean - std_val
+				condition = vals < pop_mean - pop_sd
 				# Decrease activations proportionally.
 				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
