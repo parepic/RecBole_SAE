@@ -215,7 +215,7 @@ def create_visualizations_neurons():
     
     # tochange = np.linspace(0, 64, 17).tolist()
     for change in tochange:
-        if count == 0:
+        if count==0:
             test_result = trainer.evaluate(
                 test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
