@@ -631,10 +631,7 @@ def save_batch_activations(bulk_data, neuron_count, batch_size):
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
     file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
-    
-    # Check if file exists and delete it if it does
-    if os.path.exists(file_path):
-        os.remove(file_path)
+
     
     # Create and write to a new HDF5 file
     with h5py.File(file_path, "w") as f:
@@ -1011,7 +1008,7 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
     dataset_name = 'dataset'  # Replace with actual dataset name inside the h5 file
 
     # Load the real indices from the filtered CSV
@@ -1037,7 +1034,7 @@ def save_mean_SD():
     }, index=real_indices)
 
     # Save to CSV with real indices
-    output_csv_path = r"./dataset/ml-1m/row_stats_unpopular.csv"
+    output_csv_path = r"./dataset/ml-1m/row_stats_popular.csv"
     df.to_csv(output_csv_path)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
