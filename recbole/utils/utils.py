@@ -1020,18 +1020,17 @@ def save_mean_SD():
 
     print("Data shape:", data.shape)  # Should be (4096, X)
 
-    # Subset the data based on the real indices
-    data_subset = data[:, real_indices]
-
+    print(data[:, 0])
     # Compute mean and standard deviation for each row
-    means = np.mean(data_subset, axis=0)
-    stds = np.std(data_subset, axis=0)
-
+    means = np.mean(data, axis=1)
+    stds = np.std(data, axis=1)
+    print(real_indices)
     # Combine into a DataFrame with the correct index
     df = pd.DataFrame({
         'mean': means,
-        'std': stds
-    }, index=real_indices)
+        'std': stds,
+        "index": real_indices
+    })
 
     # Save to CSV with real indices
     output_csv_path = r"./dataset/ml-1m/row_stats_popular.csv"

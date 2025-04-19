@@ -94,8 +94,7 @@ class SASRec_SAE(SASRec):
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         # if(self.mode == "test"):
         #     # user_ids = interaction['user_id']
-        nonzero_idxs = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv").index.tolist()
-        
+        nonzero_idxs = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
         save_batch_activations(self.sae_module.last_activations[: , nonzero_idxs], len(nonzero_idxs), 4096) 
         # self.sae_module.update_highest_activations(item_seq, top_recs, None)
         for key in top_recs.flatten():
