@@ -620,30 +620,46 @@ def fetch_user_popularity_score(user_ids, sequences):
     return total_pop_scores, total_unpop_scores
 
 
+
 def save_batch_activations(bulk_data, neuron_count, batch_size):
     """
-    Saves a bulk of data (shape 4096 x 4096) to the HDF5 file, overwriting the file if it exists.
+    Appends a batch of activation data to an existing HDF5 dataset.
 
     Args:
-        bulk_data (torch.Tensor): A 2D tensor of shape (4096, 4096) to save.
+        bulk_data (torch.Tensor): A 2D tensor of shape (batch_size, neuron_count).
         neuron_count (int): Number of neurons (rows in the dataset).
+        batch_size (int): Number of sequences in the batch (columns to append).
     """
-    print(bulk_data.shape)
-    bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
     file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
 
-    
-    # Create and write to a new HDF5 file
-    with h5py.File(file_path, "w") as f:
-        # Create a new dataset with unlimited columns
-        max_shape = (neuron_count, 1100000)  # Unlimited columns
-        f.create_dataset(
-            "dataset",
-            data=bulk_data.detach().cpu().numpy(),
-            maxshape=max_shape,
-            chunks=(neuron_count, batch_size),  # Optimize chunk size for appending
-            dtype="float32",
-        )
+    # Transpose to [neuron_count, batch_size]
+    bulk_data = bulk_data.permute(1, 0).detach().cpu().numpy()
+
+    if not os.path.exists(file_path):
+        # File doesn't exist, create and write the first batch
+        with h5py.File(file_path, "w") as f:
+            max_shape = (neuron_count, None)  # Unlimited columns
+            f.create_dataset(
+                "dataset",
+                data=bulk_data,
+                maxshape=max_shape,
+                chunks=(neuron_count, batch_size),
+                dtype="float32",
+            )
+    else:
+        # Append to existing dataset
+        with h5py.File(file_path, "a") as f:
+            dset = f["dataset"]
+            current_cols = dset.shape[1]
+            new_cols = current_cols + batch_size
+
+            # Resize to make space
+            dset.resize((neuron_count, new_cols))
+
+            # Write the new data
+            dset[:, current_cols:new_cols] = bulk_data
+            
+            
 
 def save_batch_user_popularities(bulk_data_pop, bulk_data_unpop):
     """
