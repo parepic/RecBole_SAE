@@ -213,11 +213,9 @@ class SAE(nn.Module):
 				# For neurons to be reinforced, fetch stats from the unpopular file.
 				mean_val = stats_unpop.loc[neuron_idx, "mean"]
 				std_val = stats_unpop.loc[neuron_idx, "std"]
-
-    
 				# Identify positions where the neuron's activation is above its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals > mean_val
+				condition = vals > mean_val + std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
 				pre_acts[condition, neuron_idx] += weight_unpop * std_val
 			else:  # group == 'pop'
@@ -225,14 +223,9 @@ class SAE(nn.Module):
 				pop_mean = stats_pop.loc[neuron_idx, "mean"]
 				pop_sd = stats_pop.loc[neuron_idx, "std"]
 
-				# Still fetch the comparison stats from the unpopular stats file
-				# (this is from your original logic; adjust if needed).
-				mean_val = stats_unpop.loc[neuron_idx, "mean"]
-				std_val = stats_unpop.loc[neuron_idx, "std"]
-
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < pop_mean
+				condition = vals < pop_mean - pop_sd
 				# Decrease activations proportionally.
 				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
