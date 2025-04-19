@@ -1455,8 +1455,8 @@ def plot_h5_columns(row_x=None, row_y=None, row_z=None, num_rows=100000):
       - "./dataset/ml-1m/sasrec_pop_activations.h5"
     """
     # Define file paths.
-    file1 = r"./dataset/ml-1m/sasrec_unpop_activations.h5"
-    file2 = r"./dataset/ml-1m/sasrec_pop_activations.h5"
+    file1 = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
+    file2 = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
     
     # Load the first num_rows columns from the 'dataset' in both files.
     with h5py.File(file1, 'r') as f1:
