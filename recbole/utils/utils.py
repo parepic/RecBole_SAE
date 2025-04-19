@@ -630,7 +630,7 @@ def save_batch_activations(bulk_data, neuron_count, batch_size):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
     
     # Check if file exists and delete it if it does
     if os.path.exists(file_path):
@@ -642,7 +642,7 @@ def save_batch_activations(bulk_data, neuron_count, batch_size):
         max_shape = (neuron_count, 1100000)  # Unlimited columns
         f.create_dataset(
             "dataset",
-            data=bulk_data,
+            data=bulk_data.detach().cpu().numpy(),
             maxshape=max_shape,
             chunks=(neuron_count, batch_size),  # Optimize chunk size for appending
             dtype="float32",
@@ -1011,11 +1011,11 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_unpop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
     dataset_name = 'dataset'  # Replace with actual dataset name inside the h5 file
 
     # Load the real indices from the filtered CSV
-    index_csv = r"./dataset/ml-1m/filtered_training_file.csv"
+    index_csv = r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv"
     real_indices = pd.read_csv(index_csv, index_col=0).index.tolist()
 
     with h5py.File(file_path, 'r') as f:
@@ -1024,11 +1024,11 @@ def save_mean_SD():
     print("Data shape:", data.shape)  # Should be (4096, X)
 
     # Subset the data based on the real indices
-    data_subset = data[real_indices, :]
+    data_subset = data[:, real_indices]
 
     # Compute mean and standard deviation for each row
-    means = np.mean(data_subset, axis=1)
-    stds = np.std(data_subset, axis=1)
+    means = np.mean(data_subset, axis=0)
+    stds = np.std(data_subset, axis=0)
 
     # Combine into a DataFrame with the correct index
     df = pd.DataFrame({
