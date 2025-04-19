@@ -209,13 +209,13 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 24, 13).tolist()
+    tochange = np.linspace(2, 24, 12).tolist()
     # tochange = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
     # tochange = np.linspace(0, 64, 17).tolist()
     for change in tochange:
-        if count == 0:
+        if False:
             test_result = trainer.evaluate(
                 test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
@@ -364,11 +364,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
         
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 
@@ -397,10 +397,10 @@ if __name__ == "__main__":
             # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
+            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
         elif(args.model == "SASRec" and args.save_neurons):
             data = test_data if args.eval_data else train_data
-            trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
+            trainer.save_neuron_activations2(data,  model_file=args.path, eval_data=args.eval_data, sae=False)
         elif(args.model == "SASRec_SAE" and args.train):
             trainer.fit_SAE(config, 
                 args.path,
