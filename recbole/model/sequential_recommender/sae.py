@@ -109,7 +109,7 @@ class SAE(nn.Module):
 
 	def topk_activation(self, x, sequences, save_result):
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
-		y_idx = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")["index"]
+		y_idx = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
 		y_idx = torch.tensor(y_idx, dtype=torch.long, device=x.device)  # now a LongTensor
 
 		# slice out only the allowed columns
