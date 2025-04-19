@@ -630,7 +630,7 @@ def save_batch_activations(bulk_data, neuron_count, batch_size):
     """
     print(bulk_data.shape)
     bulk_data = bulk_data.permute(1, 0)  # Transpose to [neuron_count, batch_size]
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
     
     # Check if file exists and delete it if it does
     if os.path.exists(file_path):
@@ -1045,12 +1045,10 @@ def save_mean_SD():
     
 
 
-    
 
-    
 def save_cohens_d():
-    df1 = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")  # Replace with your actual file name
-    df2 = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")  # Replace with your actual file name
+    df1 = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv", index_col=0)
+    df2 = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv", index_col=0)
 
     # Compute pooled standard deviation
     s_pooled = np.sqrt((df1['std']**2 + df2['std']**2) / 2)
@@ -1058,13 +1056,15 @@ def save_cohens_d():
     # Compute Cohen's d
     cohen_d = (df1['mean'] - df2['mean']) / s_pooled
 
-    # Create result DataFrame
-    df_result = pd.DataFrame({'cohen_d': cohen_d})
+    # Create result DataFrame with same index
+    df_result = pd.DataFrame({'cohen_d': cohen_d}, index=df1.index)
 
-    # Save to CSV
-    df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv", index=False)
+    # Save to CSV with index column
+    df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv")
 
-    print("Cohen's d values saved to cohen_d.csv")
+    print("Cohen's d values saved to cohens_d.csv")
+    
+    
     
 from scipy.stats import pearsonr
 
@@ -1175,7 +1175,6 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
 
     Parameters:
     file_name (str): CSV file name containing correlation values.
-    n (int): Ignored.
     unpopular_only (bool): If True, returns an empty positive list and the full negative list.
 
     Returns:
@@ -1184,7 +1183,7 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
       - neg_list: list of (index, value) for all negatives
     """
     file_path = "./dataset/ml-1m/" + file_name
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, index_col=0)  # 🟢 This is the fix
 
     # grab the first (and only) column of correlation scores
     col = df.columns[0]
@@ -1203,7 +1202,9 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
         pos_list = []
 
     return pos_list, neg_list
-    
+
+
+
 import torch
 import math
 from collections import Counter
