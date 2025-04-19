@@ -286,11 +286,11 @@ class SAE(nn.Module):
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
-		if self.corr_file:
-			pre_acts = self.dampen_neurons(pre_acts)
 		self.last_activations = pre_acts
 		pre_acts = nn.functional.relu(pre_acts)
-
+		if self.corr_file:
+			pre_acts = self.dampen_neurons(pre_acts)
+   
 		z = self.topk_activation(pre_acts, sequences, save_result=save_result)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
