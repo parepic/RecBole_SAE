@@ -622,7 +622,7 @@ def fetch_user_popularity_score(user_ids, sequences):
 
 
 def save_batch_activations(bulk_data, neuron_count, batch_size):
-    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_pop.h5"
+    file_path = r"./dataset/ml-1m/neuron_activations_sasrec_SAE_final_unpop.h5"
     bulk_data = bulk_data.permute(1, 0).detach().cpu().numpy()  # [neuron_count, batch_size]
     real_batch_size = bulk_data.shape[1]  # Might be < batch_size in final step
 
