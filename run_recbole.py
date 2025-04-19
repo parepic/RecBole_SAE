@@ -292,7 +292,8 @@ if __name__ == "__main__":
     
     # process_and_save_movies("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkYTA5ZTdmZmQ0YjI5NWU4ODIwZDMzNDhkZTkwMmFmMyIsIm5iZiI6MTc0NDg2MDcwNy45NjMsInN1YiI6IjY4MDA3NjIzZGU1ZTRkZWM2MmFlZThjYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sk588WSG5LO2s3jkIatnJFtQN5ZwAh9z7mTkhGmPLLA")
     # exit()
-    
+    # save_mean_SD()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
