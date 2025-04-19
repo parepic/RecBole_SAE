@@ -1184,12 +1184,12 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
 
 
     # get the rows where cohen_d > 0
-    pos_df = df.loc[df["cohen_d"] > 0, ["indexx", "cohen_d"]]
-    neg_df = df.loc[df["cohen_d"] < 0, ["indexx", "cohen_d"]]
+    pos_df = df.loc[df["cohen_d"] > 0, ["index", "cohen_d"]]
+    neg_df = df.loc[df["cohen_d"] < 0, ["index", "cohen_d"]]
 
     # now zip the column values directly
-    pos_list = list(zip(pos_df["indexx"].tolist(), pos_df["cohen_d"].tolist()))
-    neg_list = list(zip(neg_df["indexx"].tolist(), neg_df["cohen_d"].tolist()))
+    pos_list = list(zip(pos_df["index"].tolist(), pos_df["cohen_d"].tolist()))
+    neg_list = list(zip(neg_df["index"].tolist(), neg_df["cohen_d"].tolist()))
     # grab the first (aintnd only) column of correlation scores
     vals = df["cohen_d"]
     
