@@ -223,7 +223,7 @@ class SAE(nn.Module):
 			else:  # group == 'pop'
 				# For neurons to be dampened, use the popular statistics for impact.
 				pop_mean = stats_pop.loc[neuron_idx, "mean"]
-				pop_sd = stats_pop.loc[neuron_idx, "mean"]
+				pop_sd = stats_pop.loc[neuron_idx, "std"]
 
 				# Still fetch the comparison stats from the unpopular stats file
 				# (this is from your original logic; adjust if needed).
