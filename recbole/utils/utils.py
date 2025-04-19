@@ -1054,7 +1054,7 @@ def save_cohens_d():
     cohen_d = (df1['mean'] - df2['mean']) / s_pooled
 
     # Create result DataFrame with same index
-    df_result = pd.DataFrame({'cohen_d': cohen_d}, index=df1.index)
+    df_result = pd.DataFrame({'cohen_d': cohen_d, "index": df1["index"]})
 
     # Save to CSV with index column
     df_result.to_csv(r"./dataset/ml-1m/cohens_d.csv")
@@ -1184,15 +1184,15 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
 
     # grab the first (and only) column of correlation scores
     col = df.columns[0]
-    vals = df[col]
+    vals = df["cohen_d"]
 
     # mask positives and negatives
     pos = vals[vals > 0]
     neg = vals[vals < 0]
 
     # build lists of (index, value)
-    pos_list = list(zip(pos.index.tolist(), pos.tolist()))
-    neg_list = list(zip(neg.index.tolist(), neg.tolist()))
+    pos_list = list(zip(pos["index"].tolist(), pos.tolist()))
+    neg_list = list(zip(neg["index"].tolist(), neg.tolist()))
 
     # if only unpopular, empty out the positives
     if unpopular_only:

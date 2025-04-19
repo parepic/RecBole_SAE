@@ -188,7 +188,6 @@ def tune_hyperparam():
     
 
 def create_visualizations_neurons():
-
     
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
@@ -210,7 +209,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(400, 2000, 17).tolist()
+    tochange = np.linspace(0, 124, 10).tolist()
     # tochange = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     lists_gamma = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
@@ -292,7 +291,7 @@ if __name__ == "__main__":
     
     # process_and_save_movies("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkYTA5ZTdmZmQ0YjI5NWU4ODIwZDMzNDhkZTkwMmFmMyIsIm5iZiI6MTc0NDg2MDcwNy45NjMsInN1YiI6IjY4MDA3NjIzZGU1ZTRkZWM2MmFlZThjYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sk588WSG5LO2s3jkIatnJFtQN5ZwAh9z7mTkhGmPLLA")
     # exit()
-    # save_mean_SD()
+    # save_cohens_d()
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -391,13 +390,13 @@ if __name__ == "__main__":
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
             # tune_hyperparam()
+            create_visualizations_neurons()
             # create_visualizations_neurons()
-            # create_visualizations_neurons()
-            test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"]
-            )
+            # test_result = trainer.evaluate(
+            #     test_data, model_file=args.path, show_progress=config["show_progress"], N=10, beta=[0.0, 0.5], gamma=[1.0, 2.0]
+            # )
             
-            print(test_result)
+            # print(test_result)
         elif(args.model == "SASRec_SAE" and args.save_neurons):
             data = test_data if args.eval_data else train_data
             trainer.save_neuron_activations(data,  model_file=args.path, eval_data=args.eval_data, sae=True)
