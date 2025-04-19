@@ -46,7 +46,6 @@ class SAE(nn.Module):
 		self.previous_activate_latents = None
 		self.epoch_activations = {"indices": None, "values": None} 
 		self.last_activations = torch.empty(0, dtype=torch.float32, device=self.device)
-		self.last_activations_relu = torch.empty(0, dtype=torch.float32, device=self.device)
   
 		self.epoch_idx=0
 		self.item_activations = np.zeros(self.hidden_dim)
@@ -221,6 +220,7 @@ class SAE(nn.Module):
 
 		# Now update the neuron activations based on group.
 		for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
+			
 			weight_unpop = weights_unpop[i]		
 			weight_pop = weights_pop[i]
 			if group == 'unpop':
@@ -301,8 +301,8 @@ class SAE(nn.Module):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
-		if self.corr_file:
-			pre_acts = self.dampen_neurons(pre_acts)
+		# if self.corr_file:
+		# 	pre_acts = self.dampen_neurons(pre_acts)
 		pre_acts = nn.functional.relu(pre_acts)   
 		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
