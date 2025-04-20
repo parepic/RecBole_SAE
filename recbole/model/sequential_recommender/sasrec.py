@@ -312,8 +312,8 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        # scores = self.FAIR(scores).to(self.device)
+        # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
+        scores = self.FAIR(scores).to(self.device)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
