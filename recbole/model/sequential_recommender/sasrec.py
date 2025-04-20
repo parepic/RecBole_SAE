@@ -179,7 +179,7 @@ class SASRec(SequentialRecommender):
         pop_scores = df['pop_score'].values
         
         # Adjust scores using the formula: score * (1 / (pop_score + 1))
-        adjusted_scores = scores.detach().cpu().numpy() * (1 / (75 * pop_scores + 1))
+        adjusted_scores = scores.detach().cpu().numpy() * (1 / (pop_scores * (1/max(pop_scores)) + 1))
         
         return adjusted_scores
                 
