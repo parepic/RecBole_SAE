@@ -957,7 +957,6 @@ class Trainer(AbstractTrainer):
         
         inverse_propensities = []
         labels = []
-        self.model.sae_module.activation_count.zero_()
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
@@ -971,7 +970,6 @@ class Trainer(AbstractTrainer):
             self.eval_collector.eval_batch_collect(
                 scores, interaction, positive_u, positive_i
             )
-        print("nonzeros ", self.model.sae_module.activation_count.count_nonzero())
         time = 0 if len(self.epoch_time)==0 else sum(self.epoch_time)/len(self.epoch_time)
         print("Train time for epoch: ", time)
         self.eval_collector.model_collect(self.model)
