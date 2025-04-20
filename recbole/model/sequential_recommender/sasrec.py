@@ -138,7 +138,52 @@ class SASRec(SequentialRecommender):
         output = self.gather_indexes(output, item_seq_len - 1)
         
         return output  # [B H]
-
+    
+    
+    def simple_reranker(self, scores):
+        """
+        Adjust the scores based on item popularity.
+        
+        Parameters:
+        scores (np.ndarray): Shape [B, n_items], where B is batch size, n_items is number of items.
+        csv_file (str): Path to CSV file with columns 'item_id:token' and 'pop_score'.
+        
+        Returns:
+        adjusted_scores (np.ndarray): Adjusted scores with same shape as input.
+        """
+        csv_file = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+        # Load the CSV file
+        df = pd.read_csv(csv_file)
+        
+        # Sort by 'item_id:token' to ensure item IDs are in order (0 to n_items-1)
+        df['item_id:token'] = pd.to_numeric(df['item_id:token'], errors='coerce')
+        if df['item_id:token'].isna().any():
+            raise ValueError("Some 'item_id:token' values could not be converted to numbers")
+        
+        n_items = scores.shape[1]
+        expected_ids = set(range(n_items))
+        present_ids = set(df['item_id:token'].astype(int))
+        
+        # If ID 0 is missing, add a dummy row at the start
+        if 0 not in present_ids:
+            df = pd.concat([pd.DataFrame({'item_id:token': [0], 'pop_score': [0.0]}), df], ignore_index=True)
+        
+        # Sort by 'item_id:token' to align with item indices
+        df = df.sort_values('item_id:token')
+        
+        # Verify all expected IDs are present
+        if set(df['item_id:token'].astype(int)) != expected_ids:
+            raise ValueError("Item IDs in CSV do not match expected range after adding dummy")
+        
+        # Extract popularity scores
+        pop_scores = df['pop_score'].values
+        
+        # Adjust scores using the formula: score * (1 / (pop_score + 1))
+        adjusted_scores = scores * (1 / (pop_scores + 1))
+        
+        return adjusted_scores
+                
+    
     def calculate_loss(self, interaction, scores=None):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
@@ -148,10 +193,11 @@ class SASRec(SequentialRecommender):
         seq_output = self.forward(item_seq, item_seq_len)  # shape: (batch_size, hidden_dim)
         test_item_emb = self.item_embedding.weight          # shape: (num_items, hidden_dim)
         logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))  # (batch_size, num_items)
-        
+        logits = self.simple_reranker(logits)
         # Cross-entropy loss per sample (no reduction!)
         loss_fn = nn.CrossEntropyLoss(reduction='none')
         ce_loss = loss_fn(logits, pos_items)  # shape: (batch_size,)
+
 
         # if scores is not None:
         #     # Clamp scores to avoid exploding weights
@@ -164,6 +210,7 @@ class SASRec(SequentialRecommender):
         # print("ISP-weighed loss", weighted_loss)
         return ce_loss.mean()
     
+
     def predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
@@ -183,6 +230,7 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
+        
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
