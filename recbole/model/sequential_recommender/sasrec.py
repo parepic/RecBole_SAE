@@ -185,104 +185,85 @@ class SASRec(SequentialRecommender):
         return adjusted_scores
                    
     def FAIR(self, scores):
-        L=500
-        scores = scores.detach().cpu().numpy()
-        # 1) Load the CSV; adjust path as needed
-        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
-        ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
-        labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
-        scores[:, 0] =  float("-inf")
-        # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
+        # scores: tensor → we immediately convert to NumPy
+        scores = scores.detach().cpu()    # now a (B, N) ndarray
+
+        # 1) Load the CSV once
+        df = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        ids  = df["item_id:token"].astype(int).values
+        labs = df["popularity_label"].astype(int).values
+
+        # 2) Build a NumPy boolean mask of length max_id+1
         max_id = ids.max()
-        popularity_label = torch.zeros(max_id+1, dtype=torch.bool)
+        popularity_label = np.zeros(max_id+1, dtype=bool)
+        popularity_label[ids] = (labs == 1)   # True=popular
 
-        # 3) Fill it: True where label == 1 (popular)
-        #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
-        popularity_label[ids] = torch.from_numpy((labs == 1))
+        # 3) Block out column 0
+        scores[:, 0] = -np.inf
 
-        B, N = scores.size()
-        L = 500
-        K = 10
-        p = 0.65          # require ≥96% unpopular (“protected”)
-            
-        # 1) build your truncated candidate set and labels
-        top500_idx    = torch.argsort(scores, dim=1, descending=True)[:, :L]  # (B,500)
-        labels500     = popularity_label[top500_idx]                           # (B,500) bool
-        protected500  = ~labels500                                             # True=unpopular
+        # 4) Dimensions
+        B, N = scores.shape
+        L, K = 500, 10
+        p = 0.65   # fraction protected
 
-        # 2) for each batch‐row, run fair_topk
-        fair_pos = []
+        # 5) Truncate to top-L
+        #    np.argsort sorts ascending, so -scores for descending
+        top500_idx = np.argsort(-scores, axis=1)[:, :L]   # (B,500) ints
+
+        # 6) Lookup labels and invert to get “protected” = unpopular
+        labels500    = popularity_label[top500_idx]       # (B,500) bool
+        protected500 = ~labels500                         # True = “unpopular”
+
+        # 7) Run fair_topk row by row
         for b in range(B):
-            row_scores     = scores[b, top500_idx[b]]      # (500,)
-            row_protected  = protected500[b]               # (500,)
-            sel_in_500      = self.fair_topk(row_scores, row_protected, K, p)
-            # 1) map back to the *original* N‑dimensional positions
-            orig_pos = top500_idx[b, sel_in_500]  # shape (K,)
+            row_scores    = scores[b, top500_idx[b]]      # (500,)
+            row_prot      = protected500[b]               # (500,)
+            sel_in_500    = self.fair_topk(row_scores, row_prot, K, p)  # returns np.ndarray of shape (K,)
 
-            # 2) compute a “base” just above the current max score
-            base = scores[b].max().item() + 1.0   # e.g. if max was 37.2, base = 38.2
+            # Map back to original N columns
+            orig_pos = top500_idx[b, sel_in_500]           # (K,)
 
-            # 3) assign descending offsets so they keep FA*IR’s order
-            #    [38.2 + K-1, 38.2 + K-2, …, 38.2 + 0]
-            offsets = torch.arange(K-1, -1, -1, device=scores.device, dtype=scores.dtype)
-            new_vals = base + offsets               # shape (K,)
+            # Bump those K positions above the rest
+            base    = np.nanmax(scores[b]) + 1.0
+            offsets = np.arange(K-1, -1, -1)               # [K-1, …, 0]
+            scores[b, orig_pos] = base + offsets
 
-            # 4) write them back into `scores[b]`
-            scores[b, orig_pos] = new_vals
-            fair_pos.append(sel_in_500)    
-        return scores
-            
+        return scores  # still a NumPy array
+
     def fair_topk(self, scores1d, protected1d, K, p):
-        """
-        scores1d: 1D tensor of length L
-        protected1d: 1D bool tensor of length L (True=protected group, here "unpopular")
-        K: int, desired top‐K
-        p: float in [0,1], minimum fraction of protected at each prefix
-        returns: LongTensor of length K, indices into [0..L)
-        """
-        L = scores1d.size(0)
-        # 1) sort by score
-        idx_sorted = torch.argsort(scores1d, descending=True)
-        # 2) split into two lists
-        prot_list    = [i.item() for i in idx_sorted if protected1d[i]]
-        nonprot_list = [i.item() for i in idx_sorted if not protected1d[i]]
+        idx_sorted  = np.argsort(-scores1d)   # descending
+        prot_list   = [i for i in idx_sorted if protected1d[i]]
+        nonprot_list= [i for i in idx_sorted if not protected1d[i]]
 
         sel = []
-        cp, cn = 0, 0   # counts of prot & non‐prot chosen so far
-        pp, np = 0, 0   # pointers into prot_list / nonprot_list
+        cp = cn = pp = np_ptr = 0
 
         for t in range(1, K+1):
-            # how many protected we *must* have by position t
             needed = math.ceil(p * t)
-
             if cp < needed:
-                # forced pick a protected
                 if pp < len(prot_list):
                     choose = prot_list[pp]; pp += 1; cp += 1
                 else:
-                    # fallback
-                    choose = nonprot_list[np]; np += 1; cn += 1
+                    choose = nonprot_list[np_ptr]; np_ptr += 1; cn += 1
             else:
-                # free pick: take whichever next has higher score
-                next_p = prot_list[pp]    if pp < len(prot_list)    else None
-                next_np= nonprot_list[np] if np < len(nonprot_list) else None
+                next_p  = prot_list[pp]    if pp < len(prot_list)    else None
+                next_np = nonprot_list[np_ptr] if np_ptr < len(nonprot_list) else None
 
                 if next_p is None and next_np is None:
                     break
                 elif next_p is None:
-                    choose = next_np; np += 1; cn += 1
+                    choose = next_np; np_ptr += 1; cn += 1
                 elif next_np is None:
                     choose = next_p; pp += 1; cp += 1
                 else:
-                    # compare their scores
                     if scores1d[next_p] >= scores1d[next_np]:
                         choose = next_p; pp += 1; cp += 1
                     else:
-                        choose = next_np; np += 1; cn += 1
+                        choose = next_np; np_ptr += 1; cn += 1
 
             sel.append(choose)
 
-        return torch.LongTensor(sel)
+        return np.array(sel, dtype=int)
 
     
     def calculate_loss(self, interaction, scores=None):
