@@ -202,7 +202,7 @@ class SASRec(SequentialRecommender):
         B, N = scores.size()
         L = 500
         K = 10
-        p = 0.05          # require ≥96% unpopular (“protected”)
+        p = 0.1       # require ≥96% unpopular (“protected”)
             
         # 1) build your truncated candidate set and labels
         top500_idx    = torch.argsort(scores, dim=1, descending=True)[:, :L]  # (B,500)
