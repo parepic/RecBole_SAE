@@ -14,7 +14,7 @@ Reference:
     https://github.com/kang205/SASRec
 
 """
-
+import math
 import torch
 from torch import nn
 import numpy as np
@@ -151,6 +151,7 @@ class SASRec(SequentialRecommender):
         Returns:
         adjusted_scores (np.ndarray): Adjusted scores with same shape as input.
         """
+        scores = scores.detach().cpu().numpy()
         csv_file = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
         # Load the CSV file
         df = pd.read_csv(csv_file)
@@ -182,7 +183,109 @@ class SASRec(SequentialRecommender):
         adjusted_scores = scores.detach().cpu().numpy() * (1 / (pop_scores * (0.15/max(pop_scores)) + 1))
         
         return adjusted_scores
-                
+                   
+    def FAIR(self, scores):
+        L=500
+
+        # 1) Load the CSV; adjust path as needed
+        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
+        labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
+        scores[:, 0] =  float("-inf")
+        # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
+        max_id = ids.max()
+        popularity_label = torch.zeros(max_id+1, dtype=torch.bool)
+
+        # 3) Fill it: True where label == 1 (popular)
+        #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
+        popularity_label[ids] = torch.from_numpy((labs == 1))
+
+        labels500     = popularity_label[top500_idx]                           # (B,500) bool
+        protected500  = ~labels500                                           
+        B, N = scores.size()
+        L = 500
+        K = 10
+        p = 0.65          # require ≥96% unpopular (“protected”)
+            
+        # 1) build your truncated candidate set and labels
+        top500_idx    = torch.argsort(scores, dim=1, descending=True)[:, :L]  # (B,500)
+        labels500     = popularity_label[top500_idx]                           # (B,500) bool
+        protected500  = ~labels500                                             # True=unpopular
+
+        # 2) for each batch‐row, run fair_topk
+        fair_pos = []
+        for b in range(B):
+            row_scores     = scores[b, top500_idx[b]]      # (500,)
+            row_protected  = protected500[b]               # (500,)
+            sel_in_500      = self.fair_topk(row_scores, row_protected, K, p)
+            # 1) map back to the *original* N‑dimensional positions
+            orig_pos = top500_idx[b, sel_in_500]  # shape (K,)
+
+            # 2) compute a “base” just above the current max score
+            base = scores[b].max().item() + 1.0   # e.g. if max was 37.2, base = 38.2
+
+            # 3) assign descending offsets so they keep FA*IR’s order
+            #    [38.2 + K-1, 38.2 + K-2, …, 38.2 + 0]
+            offsets = torch.arange(K-1, -1, -1, device=scores.device, dtype=scores.dtype)
+            new_vals = base + offsets               # shape (K,)
+
+            # 4) write them back into `scores[b]`
+            scores[b, orig_pos] = new_vals
+            fair_pos.append(sel_in_500)    
+        return scores
+            
+    def fair_topk(self, scores1d, protected1d, K, p):
+        """
+        scores1d: 1D tensor of length L
+        protected1d: 1D bool tensor of length L (True=protected group, here "unpopular")
+        K: int, desired top‐K
+        p: float in [0,1], minimum fraction of protected at each prefix
+        returns: LongTensor of length K, indices into [0..L)
+        """
+        L = scores1d.size(0)
+        # 1) sort by score
+        idx_sorted = torch.argsort(scores1d, descending=True)
+        # 2) split into two lists
+        prot_list    = [i.item() for i in idx_sorted if protected1d[i]]
+        nonprot_list = [i.item() for i in idx_sorted if not protected1d[i]]
+
+        sel = []
+        cp, cn = 0, 0   # counts of prot & non‐prot chosen so far
+        pp, np = 0, 0   # pointers into prot_list / nonprot_list
+
+        for t in range(1, K+1):
+            # how many protected we *must* have by position t
+            needed = math.ceil(p * t)
+
+            if cp < needed:
+                # forced pick a protected
+                if pp < len(prot_list):
+                    choose = prot_list[pp]; pp += 1; cp += 1
+                else:
+                    # fallback
+                    choose = nonprot_list[np]; np += 1; cn += 1
+            else:
+                # free pick: take whichever next has higher score
+                next_p = prot_list[pp]    if pp < len(prot_list)    else None
+                next_np= nonprot_list[np] if np < len(nonprot_list) else None
+
+                if next_p is None and next_np is None:
+                    break
+                elif next_p is None:
+                    choose = next_np; np += 1; cn += 1
+                elif next_np is None:
+                    choose = next_p; pp += 1; cp += 1
+                else:
+                    # compare their scores
+                    if scores1d[next_p] >= scores1d[next_np]:
+                        choose = next_p; pp += 1; cp += 1
+                    else:
+                        choose = next_np; np += 1; cn += 1
+
+            sel.append(choose)
+
+        return torch.LongTensor(sel)
+
     
     def calculate_loss(self, interaction, scores=None):
         item_seq = interaction[self.ITEM_SEQ]
@@ -229,8 +332,8 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        print("wtfffff")
+        # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
+        scores = self.FAIR(scores).to(self.device)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
