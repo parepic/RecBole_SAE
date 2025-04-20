@@ -186,7 +186,7 @@ class SASRec(SequentialRecommender):
                    
     def FAIR(self, scores):
         L=500
-
+        scores = scores.detach().cpu().numpy()
         # 1) Load the CSV; adjust path as needed
         df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
