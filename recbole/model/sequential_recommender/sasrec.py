@@ -200,8 +200,6 @@ class SASRec(SequentialRecommender):
         #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
         popularity_label[ids] = torch.from_numpy((labs == 1))
 
-        labels500     = popularity_label[top500_idx]                           # (B,500) bool
-        protected500  = ~labels500                                           
         B, N = scores.size()
         L = 500
         K = 10
