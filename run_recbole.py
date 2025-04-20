@@ -192,21 +192,20 @@ def create_visualizations_neurons():
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
+    
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [0.00033553939925527087]
-    ndcgs = [0.161]
-    hits = [0.2954]
-    coverages = [0.8559718969555035]
-    lt_coverages = [0.8508186779866586]
-    deep_lt_coverages = [0.7786774628879892]
-    dampen_percs = [0.0]  # No new value provided, kept the same
-    ginis = [0.7852511025770044]
-    ips_ndcgs = [0.0779225622371117]
-    ndcg_heads = [0.2468]
-    ndcg_mids = [0.1569]
-    ndcg_tails = [0.0592]
-
-
+    arps = [0.0003295620569691932]
+    ndcgs = [0.1593]
+    hits = [0.2925]
+    coverages = [0.8732435597189696]
+    lt_coverages = [0.8687083080654943]
+    deep_lt_coverages = [0.8061178587494376]
+    dampen_percs = [0.0]
+    ginis = [0.7509115939928803]
+    ips_ndcgs = [0.08802518591375912]
+    ndcg_heads = [0.2186]
+    ndcg_mids = [0.1678]
+    ndcg_tails = [0.0774]
 
     dampen_perc = 0
     neuron_count = 0
@@ -221,11 +220,11 @@ def create_visualizations_neurons():
     for change in tochange:
         if count==0:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"]
+                test_data, model_file=args.path, show_progress=config["show_progress"]
             )      
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4.0, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4.0, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
