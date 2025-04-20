@@ -185,51 +185,53 @@ class SASRec(SequentialRecommender):
         return adjusted_scores
                    
     def FAIR(self, scores):
-        # scores: tensor → we immediately convert to NumPy
-        scores = scores.detach().cpu()    # now a (B, N) ndarray
-
-        # 1) Load the CSV once
-        df = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
-        ids  = df["item_id:token"].astype(int).values
-        labs = df["popularity_label"].astype(int).values
-
-        # 2) Build a NumPy boolean mask of length max_id+1
+        L=500
+        scores = scores.detach().cpu()
+        # 1) Load the CSV; adjust path as needed
+        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
+        labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
+        scores[:, 0] =  float("-inf")
+        # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
         max_id = ids.max()
-        popularity_label = np.zeros(max_id+1, dtype=bool)
-        popularity_label[ids] = (labs == 1)   # True=popular
+        popularity_label = torch.zeros(max_id+1, dtype=torch.bool)
 
-        # 3) Block out column 0
-        scores[:, 0] = -np.inf
+        # 3) Fill it: True where label == 1 (popular)
+        #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
+        popularity_label[ids] = torch.from_numpy((labs == 1))
 
-        # 4) Dimensions
-        B, N = scores.shape
-        L, K = 500, 10
-        p = 0.65   # fraction protected
+        B, N = scores.size()
+        L = 500
+        K = 10
+        p = 0.65          # require ≥96% unpopular (“protected”)
+            
+        # 1) build your truncated candidate set and labels
+        top500_idx    = torch.argsort(scores, dim=1, descending=True)[:, :L]  # (B,500)
+        labels500     = popularity_label[top500_idx]                           # (B,500) bool
+        protected500  = ~labels500                                             # True=unpopular
 
-        # 5) Truncate to top-L
-        #    np.argsort sorts ascending, so -scores for descending
-        top500_idx = np.argsort(-scores, axis=1)[:, :L]   # (B,500) ints
-
-        # 6) Lookup labels and invert to get “protected” = unpopular
-        labels500    = popularity_label[top500_idx]       # (B,500) bool
-        protected500 = ~labels500                         # True = “unpopular”
-
-        # 7) Run fair_topk row by row
+        # 2) for each batch‐row, run fair_topk
+        fair_pos = []
         for b in range(B):
-            row_scores    = scores[b, top500_idx[b]]      # (500,)
-            row_prot      = protected500[b]               # (500,)
-            sel_in_500    = self.fair_topk(row_scores, row_prot, K, p)  # returns np.ndarray of shape (K,)
+            row_scores     = scores[b, top500_idx[b]]      # (500,)
+            row_protected  = protected500[b]               # (500,)
+            sel_in_500      = self.fair_topk(row_scores, row_protected, K, p)
+            # 1) map back to the *original* N‑dimensional positions
+            orig_pos = top500_idx[b, sel_in_500]  # shape (K,)
 
-            # Map back to original N columns
-            orig_pos = top500_idx[b, sel_in_500]           # (K,)
+            # 2) compute a “base” just above the current max score
+            base = scores[b].max().item() + 1.0   # e.g. if max was 37.2, base = 38.2
 
-            # Bump those K positions above the rest
-            base    = np.nanmax(scores[b]) + 1.0
-            offsets = np.arange(K-1, -1, -1)               # [K-1, …, 0]
-            scores[b, orig_pos] = base + offsets
+            # 3) assign descending offsets so they keep FA*IR’s order
+            #    [38.2 + K-1, 38.2 + K-2, …, 38.2 + 0]
+            offsets = torch.arange(K-1, -1, -1, device=scores.device, dtype=scores.dtype)
+            new_vals = base + offsets               # shape (K,)
 
-        return scores  # still a NumPy array
-
+            # 4) write them back into `scores[b]`
+            scores[b, orig_pos] = new_vals
+            fair_pos.append(sel_in_500)    
+        return scores
+            
     def fair_topk(self, scores1d, protected1d, K, p):
         idx_sorted  = np.argsort(-scores1d)   # descending
         prot_list   = [i for i in idx_sorted if protected1d[i]]
