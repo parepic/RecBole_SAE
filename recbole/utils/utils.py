@@ -1181,10 +1181,10 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
 
     # 1) load
     df = pd.read_csv(f"./dataset/ml-1m/{file_name}")
-    indices = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
-    # 2) if they passed a subset of row positions, slice with .iloc
-    if indices is not None:
-        df = df.iloc[indices]
+    # indices = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
+    # # 2) if they passed a subset of row positions, slice with .iloc
+    # if indices is not None:
+    #     df = df.iloc[indices]
 
     # 3) split out positives / negatives
     pos_series = df.loc[df["cohen_d"] > 0, "cohen_d"]
