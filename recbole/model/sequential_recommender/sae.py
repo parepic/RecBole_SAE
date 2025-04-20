@@ -215,8 +215,8 @@ class SAE(nn.Module):
 			return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
 		# Normalize the Cohen's d values to [0, 2.5]
-		weights_unpop = normalize_to_range(abs_cohens, new_min=self.beta[0], new_max=self.beta[1])
-		weights_pop = normalize_to_range(abs_cohens, new_min=self.gamma[0], new_max=self.gamma[1])
+		weights_unpop = normalize_to_range(abs_cohens, new_min=1, new_max=2)
+		weights_pop = normalize_to_range(abs_cohens, new_min=1, new_max=2)
 
 		# Now update the neuron activations based on group.
 		for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
@@ -230,7 +230,7 @@ class SAE(nn.Module):
     
 				# Identify positions where the neuron's activation is above its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals > mean_val - std_val
+				condition = vals > mean_val + self.beta * std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
 				pre_acts[condition, neuron_idx] += weight_unpop * std_val
 			else:  # group == 'pop'
@@ -246,7 +246,7 @@ class SAE(nn.Module):
 
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < pop_mean - 4 * pop_sd
+				condition = vals < pop_mean + self.gamma * pop_sd
 				# Decrease activations proportionally.
 				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     

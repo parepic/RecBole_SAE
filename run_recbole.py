@@ -193,24 +193,25 @@ def create_visualizations_neurons():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [0.0003295620569691932]
-    ndcgs = [0.1593]
-    hits = [0.2925]
-    coverages = [0.8732435597189696]
-    lt_coverages = [0.8687083080654943]
-    deep_lt_coverages = [0.8061178587494376]
-    dampen_percs = [0.0]
-    ginis = [0.7509115939928803]
-    ips_ndcgs = [0.08802518591375912]
-    ndcg_heads = [0.2186]
-    ndcg_mids = [0.1678]
-    ndcg_tails = [0.0774]
+    arps = [0.00033553939925527087]
+    ndcgs = [0.161]
+    hits = [0.2954]
+    coverages = [0.8559718969555035]
+    lt_coverages = [0.8508186779866586]
+    deep_lt_coverages = [0.7786774628879892]
+    dampen_percs = [0.0]  # No new value provided, kept the same
+    ginis = [0.7852511025770044]
+    ips_ndcgs = [0.0779225622371117]
+    ndcg_heads = [0.2468]
+    ndcg_mids = [0.1569]
+    ndcg_tails = [0.0592]
     dampen_perc = 0
     neuron_count = 0
     
     count = 0
     # tochange = np.linspace(0, 124, 8).tolist()
-    tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
+    tochange = np.linspace(-5, 5, 11)
+    # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
     # tochange = np.linspace(0, 64, 17).tolist()
@@ -221,7 +222,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=64, beta=[0.0, 2.0], gamma=change
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=64, beta=-1, gamma=change
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
