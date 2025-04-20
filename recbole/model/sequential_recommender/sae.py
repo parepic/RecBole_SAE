@@ -109,17 +109,17 @@ class SAE(nn.Module):
 
 	def topk_activation(self, x, sequences, save_result):
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
-		y_idx = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
-		y_idx = torch.tensor(y_idx, dtype=torch.long, device=x.device)  # now a LongTensor
+		# y_idx = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
+		# y_idx = torch.tensor(y_idx, dtype=torch.long, device=x.device)  # now a LongTensor
 
-		# slice out only the allowed columns
-		x_sub = x.index_select(1, y_idx)                             # shape (B, M)
+		# # slice out only the allowed columns
+		# x_sub = x.index_select(1, y_idx)                             # shape (B, M)
 
-		# top‑k within that subset
-		topk_vals, topk_in_sub = x_sub.topk(self.k, dim=1)           # both are (B, k)
+		# # top‑k within that subset
+		# topk_vals, topk_in_sub = x_sub.topk(self.k, dim=1)           # both are (B, k)
 
-		# map back into the original column space
-		topk_idx = y_idx[topk_in_sub]     
+		# # map back into the original column space
+		# topk_idx = y_idx[topk_in_sub]     
 
 		flat_indices = topk_indices.view(-1)  # shape (B * N)
 
@@ -148,7 +148,7 @@ class SAE(nn.Module):
 		# (print("topk values", topk_vals[0]))
   
 		sparse_x = torch.zeros_like(x)
-		sparse_x.scatter_(1, topk_idx, topk_vals.to(self.dtype))
+		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
 		return sparse_x
 
 		
@@ -578,6 +578,7 @@ class SAE(nn.Module):
 		# 				else:
 		# 					f.write(f"  Movie Info: Not found for item_id {item_id}\n")
 		# 			f.write("\n")
+
 
 	def save_highest_activations2(self, filename=r"./dataset/ml-1m/neuron_activations_unpopular.csv"):		
 			"""
