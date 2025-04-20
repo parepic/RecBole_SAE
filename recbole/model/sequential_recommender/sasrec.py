@@ -193,7 +193,6 @@ class SASRec(SequentialRecommender):
         seq_output = self.forward(item_seq, item_seq_len)  # shape: (batch_size, hidden_dim)
         test_item_emb = self.item_embedding.weight          # shape: (num_items, hidden_dim)
         logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))  # (batch_size, num_items)
-        logits = self.simple_reranker(logits)
         # Cross-entropy loss per sample (no reduction!)
         loss_fn = nn.CrossEntropyLoss(reduction='none')
         ce_loss = loss_fn(logits, pos_items)  # shape: (batch_size,)
@@ -230,7 +229,8 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        
+        scores = self.simple_reranker(scores)
+
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
