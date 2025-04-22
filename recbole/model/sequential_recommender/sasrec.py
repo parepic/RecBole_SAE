@@ -561,7 +561,8 @@ class SASRec(SequentialRecommender):
             end = min(solved + chunk, B)
             A_eq = A_eq_full[:, solved:end]
             # account for already‑solved part
-            b_eq = b_eq_full - (A_eq_full[:, :solved] @ gamma[:solved : solved]).ravel()
+            # subtract contribution of already‑solved users (only when solved>0)
+            b_eq = b_eq_full - (A_eq_full[:, :solved] @ gamma[:solved]).ravel() if solved else b_eq_full.copy()
             bounds = [(0, lim[i]) for i in range(solved, end)]
             res = linprog(c=np.ones(end - solved), A_eq=A_eq, b_eq=b_eq, bounds=bounds, method="highs")
             gamma[solved:end] = res.x
