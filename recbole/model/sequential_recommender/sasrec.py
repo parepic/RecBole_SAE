@@ -315,7 +315,7 @@ class SASRec(SequentialRecommender):
             for pos, item in enumerate(final_slates[u]):
                 boosted[u, item] = row[item] + C*(K-pos)
 
-        return torch.from_numpy(boosted).to(device=self.device, dtype=scores.dtype)
+        return torch.from_numpy(boosted).to(device=self.device, dtype=torch.float32)
               
                    
      
