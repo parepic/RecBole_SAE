@@ -202,7 +202,7 @@ class SASRec(SequentialRecommender):
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
         scores[:, 0] =  float("-inf")
-        scores = scores.numpy()
+        scores = scores.detach().cpu().numpy()
 
         # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
         max_id = ids.max()
