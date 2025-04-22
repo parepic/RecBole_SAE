@@ -578,7 +578,7 @@ class SASRec(SequentialRecommender):
         policy: Literal["Equal", "AvgEqual"] = "AvgEqual",
         personal: bool = True,
         user_interest: Optional[Array] = None,
-        lambda_: float = 0.5,
+        lambda_: float = 0.1,
     ) -> Array:
         """Post‑process *scores* so the Top‑k per user is PCT‑calibrated.
 
