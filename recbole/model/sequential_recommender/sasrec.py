@@ -541,13 +541,11 @@ class SASRec(SequentialRecommender):
     
     def _solve_personal_targets(self, p_u: np.ndarray, q_hat: np.ndarray, chunk: int = 5000) -> np.ndarray:
         B = p_u.shape[0]
-        print(B, " blya ")
         gradient = p_u.mean(0) - q_hat
         if np.allclose(gradient, 0):
             return p_u.copy()
         g = gradient / np.linalg.norm(gradient)
-        print(g.size)
-        tile_g = np.tile(g[:, None], (1, B))
+        tile_g = np.tile(g[:, None], (B, 1))
         lim = np.where(tile_g > 0, p_u / (tile_g + 1e-10), (p_u - 1) / (tile_g + 1e-10)).min(0)
         A_eq_full = tile_g[:1]
         b_eq_full = (p_u - q_hat).sum(1)[:1]
