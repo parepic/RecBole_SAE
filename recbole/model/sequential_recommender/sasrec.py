@@ -638,7 +638,10 @@ class SASRec(SequentialRecommender):
                 frac = ui.astype(float)
             else:
                 raise ValueError("user_interest must be 1‑D or 2‑D tensor/array")
+            
             p_u = np.column_stack([1.0 - frac, frac])
+            print(p_u.size, " sikim 5")
+
             q_hat_u = self._solve_personal_targets(p_u, target_ratio) * exp_budget
         else:
             q_hat_u = np.tile(target_ratio * exp_budget, (B, 1))
