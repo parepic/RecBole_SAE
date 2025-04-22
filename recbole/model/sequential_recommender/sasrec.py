@@ -206,7 +206,7 @@ class SASRec(SequentialRecommender):
 
         # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
         max_id = ids.max()
-        niche_labels = torch.zeros(max_id+1, dtype=torch.bool)
+        niche_labels = np.zeros(max_id+1, dtype=bool)
 
         # 3) Fill it: True where label == 1 (popular)
         #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
