@@ -19,7 +19,14 @@ import torch
 from torch import nn
 import numpy as np
 from collections import defaultdict
-                   
+
+
+from __future__ import annotations
+import numpy as np
+import torch
+from typing import Literal, Union
+Array = Union[np.ndarray, torch.Tensor]
+
                    
 import numpy as np
 from scipy.optimize import linprog
@@ -368,6 +375,7 @@ class SASRec(SequentialRecommender):
             fair_pos.append(sel_in_500)    
         return scores
             
+            
     def fair_topk(self, scores1d, protected1d, K, p):
         idx_sorted  = np.argsort(-scores1d)   # descending
         prot_list   = [i for i in idx_sorted if protected1d[i]]
@@ -452,7 +460,7 @@ class SASRec(SequentialRecommender):
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores).to(self.device)
-        scores = self.two_sided_calibrate_and_boost(scores, 0.2, 0.9)
+        scores = self.pct_rerank(scores)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
@@ -529,3 +537,138 @@ class SASRec(SequentialRecommender):
             
 
         return pre_acts
+    
+    
+    
+    def pct_rerank(
+        scores: Array,
+        *,
+        top_k: int = 10,
+        policy: Literal["Equal", "AvgEqual"] = "AvgEqual",
+        lambda_: float = 0.5,
+    ) -> Array:
+        """Calibrate the *top‑k* part of each user’s ranking.
+
+        Parameters
+        ----------
+        scores : (B, N) array / tensor
+            Raw relevance scores (the higher, the better).
+        niche_labels : (N,) bool array / tensor
+            `True` marks niche / minority‑group items.
+        top_k : int, default=10
+            Length of the recommendation list to calibrate.
+        policy : {"Equal", "AvgEqual"}, default="Equal"
+            * Equal    – target exposure 50 / 50 between niche & non‑niche.
+            * AvgEqual – exposure proportional to the group ratios in *all
+            candidates*.
+        lambda_ : float in (0, 1), default=0.5
+            Trade‑off between relevance (λ) and calibration (1‑λ).
+
+        Returns
+        -------
+        reranked_scores : same type & shape as *scores*
+            Copy of *scores* where the selected Top‑k items are boosted so
+            that `argsort(desc)` now yields the calibrated ranking.
+        """
+        # ------------------------------------------------------------------
+        # 1) Normalise inputs to NumPy for fast ops
+        # ------------------------------------------------------------------
+        
+        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
+        labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
+        scores[:, 0] =  float("-inf")
+
+
+        # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
+        max_id = ids.max()
+        niche_labels = np.zeros(max_id+1, dtype=bool)
+
+        # 3) Fill it: True where label == 1 (popular)
+        #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
+        niche_labels[ids] = (labs == -1)
+        
+        scores_np = (
+            scores.detach().cpu().numpy() if isinstance(scores, torch.Tensor)
+            else np.asarray(scores)
+        )
+        niche_np = (
+            niche_labels.detach().cpu().numpy().astype(bool)
+            if isinstance(niche_labels, torch.Tensor)
+            else np.asarray(niche_labels, dtype=bool)
+        )
+
+        B, N = scores_np.shape
+        if niche_np.shape != (N,):
+            raise ValueError("niche_labels must have shape (N,)")
+
+        # ------------------------------------------------------------------
+        # 2) Static data used by every user
+        # ------------------------------------------------------------------
+        pos_weight = 1.0 / np.log2(np.arange(top_k) + 2)       # exposure @rank
+        exp_budget = pos_weight.sum()                          # total exposure
+
+        # target exposure for two groups (0: non‑niche, 1: niche)
+        if policy == "Equal":
+            target_ratio = np.array([0.5, 0.5])
+        elif policy == "AvgEqual":
+            niche_ratio = niche_np.mean()
+            target_ratio = np.array([1.0 - niche_ratio, niche_ratio])
+        else:
+            raise ValueError("policy must be 'Equal' or 'AvgEqual'")
+
+        target_exp = target_ratio * exp_budget                  # len‑2 vector
+        quality_sign = niche_np.astype(int)                     # item‑>0/1 map
+
+        # ------------------------------------------------------------------
+        # 3) Per‑user reranking
+        # ------------------------------------------------------------------
+        reranked_scores = scores_np.copy()
+        order_idx = (-scores_np).argsort(axis=1)                # relevance order
+
+        for u in range(B):
+            selected: set[int] = set()
+            cur_exp = np.zeros(2)          # exposure already spent on groups
+            chosen = np.full(top_k, -1, dtype=int)
+
+            # -------- First iteration: greedy keep‑as‑is where safe --------
+            for pos in range(top_k):
+                for j in order_idx[u]:
+                    if j in selected:
+                        continue
+                    q = quality_sign[j]
+                    if cur_exp[q] + pos_weight[pos] <= target_exp[q]:
+                        selected.add(j)
+                        chosen[pos] = j
+                        cur_exp[q] += pos_weight[pos]
+                        break
+
+            # -------- Second iteration: MMR‑style fill‑in ------------------
+            for pos in range(top_k):
+                if chosen[pos] != -1:
+                    continue  # already filled
+
+                best_score, best_j = -np.inf, None
+                for rank, j in enumerate(order_idx[u]):
+                    if j in selected:
+                        continue
+                    q = quality_sign[j]
+                    assume = cur_exp.copy(); assume[q] += pos_weight[pos]
+                    disparity = 0.5 * ((assume - target_exp) ** 2).sum()
+                    mmr_score = lambda_ * (1.0 / (rank + 1)) - (1.0 - lambda_) * disparity
+                    if mmr_score > best_score:
+                        best_score, best_j = mmr_score, j
+
+                selected.add(best_j)
+                chosen[pos] = best_j
+                cur_exp[quality_sign[best_j]] += pos_weight[pos]
+
+            # -------- 4) Boost scores so chosen items float to the top ------
+            bump = scores_np[u].max() + 1.0
+            for local_rank, j in enumerate(chosen[::-1]):  # keep internal order
+                reranked_scores[u, j] = bump + local_rank
+
+        # cast back to original type/device
+        if isinstance(scores, torch.Tensor):
+            return torch.as_tensor(reranked_scores, dtype=scores.dtype, device=scores.device)
+        return reranked_scores
