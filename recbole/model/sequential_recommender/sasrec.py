@@ -19,6 +19,11 @@ import torch
 from torch import nn
 import numpy as np
 from collections import defaultdict
+                   
+                   
+import numpy as np
+from scipy.optimize import linprog
+
 
 from recbole.model.abstract_recommender import SequentialRecommender
 from recbole.model.layers import TransformerEncoder
@@ -182,6 +187,138 @@ class SASRec(SequentialRecommender):
         adjusted_scores = scores.detach().cpu().numpy() * (1 / (pop_scores * (0.2/max(pop_scores)) + 1))
         
         return adjusted_scores
+    
+    
+    def two_sided_calibrate_and_boost(
+        self,
+        scores: torch.Tensor,        # shape [B, N]
+        p: float,                  # desired global niche exposure
+        lambd: float,              # 0≤λ≤1 trade‑off
+        K: int = 10                # size of final slate
+    ) -> np.ndarray:    
+
+
+        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
+        labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
+        scores[:, 0] =  float("-inf")
+        scores = scores.numpy()
+
+        # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
+        max_id = ids.max()
+        niche_labels = torch.zeros(max_id+1, dtype=torch.bool)
+
+        # 3) Fill it: True where label == 1 (popular)
+        #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
+        niche_labels[ids] = (labs == -1)
+
+        
+        B, N = scores.shape
+
+        # 1) Get *full* descending sort of every user’s N items
+        full_rank = np.argsort(-scores, axis=1)        # shape [B, N]
+
+        # 2) Estimate each user’s original p_u from their top‑K in that full list
+        is_niche = niche_labels.astype(int)
+        p_u = np.zeros((B, 2), dtype=float)
+        for u in range(B):
+            topK = full_rank[u, :K]
+            cnt = is_niche[topK].sum()
+            p_u[u,1] = cnt / K
+            p_u[u,0] = 1 - p_u[u,1]
+
+        # 3) global target
+        q_hat = np.array([1.0 - p, p], dtype=float)
+
+        # 4) compute normalized gradient g = (mean(p_u)-q_hat) / ||...||
+        g_raw = p_u.mean(axis=0) - q_hat
+        norm = np.linalg.norm(g_raw)
+        g = g_raw / (norm + 1e-12)
+
+        # 5) per-user max step l_u so p_u - γ_u g in [0,1]^2
+        l_u = np.zeros(B, dtype=float)
+        for u in range(B):
+            bounds_ = []
+            for i in (0,1):
+                if g[i] < 0:
+                    bounds_.append((p_u[u,i] - 1.0) / g[i])
+                else:
+                    bounds_.append(p_u[u,i] / (g[i] if g[i]>0 else 1e-12))
+            l_u[u] = max(0.0, min(bounds_))
+
+        # 6) solve LP:  min ∑γ_u  s.t.  ∑γ_u g = ∑(p_u - q_hat),  0≤γ_u≤l_u
+        c = np.ones(B, dtype=float)
+        A_eq = np.vstack([ np.full(B, g[0]), np.full(B, g[1]) ])  # 2×B
+        b_eq = (p_u - q_hat).sum(axis=0)                           # length‑2
+        bounds = [(0.0, lu) for lu in l_u]
+
+        sol = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+        γ = sol.x  # shape [B]
+
+        # 7) personalized targets q_u_hat = p_u - γ_u * g
+        q_u_hat = p_u - γ[:,None] * g[None,:]  # [B,2]
+
+        # 8) rank‑weights for final slate positions 1…K
+        r_k = 1.0 / np.log2(np.arange(K) + 2.0)
+
+        # 9) PCT‑Reranker over the *full* list
+        def pct_rerank(R_full, qhat):
+            resource = r_k.sum()
+            target   = qhat * resource
+            exp      = np.zeros(2, dtype=float)
+            selected = set()
+            slate    = [-1]*K
+
+            # Phase 1: pilot select any “safe” items among the full list
+            for pos in range(K):
+                for i in R_full:
+                    gi = int(niche_labels[i])
+                    if i not in selected and exp[gi] + r_k[pos] <= target[gi]:
+                        slate[pos] = i
+                        selected.add(i)
+                        exp[gi] += r_k[pos]
+                        break
+
+            # Phase 2: fill gaps via one‑step MMR over the full list
+            for pos in range(K):
+                if slate[pos] < 0:
+                    best_score = -1e9
+                    best_item  = None
+                    for gi in (0,1):
+                        exp2 = exp.copy()
+                        exp2[gi] += r_k[pos]
+                        disp = 0.5 * np.sum((exp2 - target)**2)
+                        # find highest‑ranked unselected of group gi
+                        for rank, i in enumerate(R_full):
+                            if i not in selected and int(niche_labels[i])==gi:
+                                score_mmr = lambd/(rank+1.0) - (1-lambd)*disp
+                                if score_mmr > best_score:
+                                    best_score = score_mmr
+                                    best_item = i
+                                break
+                    slate[pos] = best_item
+                    selected.add(best_item)
+                    exp[int(niche_labels[best_item])] += r_k[pos]
+
+            return slate
+
+        # 10) rerank each user’s entire N to pick final K
+        final_slates = np.zeros((B, K), dtype=int)
+        for u in range(B):
+            final_slates[u] = pct_rerank(full_rank[u], q_u_hat[u])
+
+        # 11) boost exactly those K so a plain top‑K on boosted reproduces them
+        boosted = scores.copy()
+        for u in range(B):
+            row = scores[u]
+            C = (row.max() - row.min()) + 1.0
+            for pos, item in enumerate(final_slates[u]):
+                boosted[u, item] = row[item] + C*(K-pos)
+
+        return torch.from_numpy(boosted).to(device=self.device, dtype=scores.dtype)
+              
+                   
+     
                    
     def FAIR(self, scores):
         L=500
@@ -208,7 +345,7 @@ class SASRec(SequentialRecommender):
         top500_idx    = torch.argsort(scores, dim=1, descending=True)[:, :L]  # (B,500)
         labels500     = popularity_label[top500_idx]                           # (B,500) bool
         protected500  = ~labels500                                             # True=unpopular
-
+        
         # 2) for each batch‐row, run fair_topk
         fair_pos = []
         for b in range(B):
@@ -302,6 +439,7 @@ class SASRec(SequentialRecommender):
         scores = torch.mul(seq_output, test_item_emb).sum(dim=1)  # [B]
         return scores
 
+
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         # item_seq = make_items_popular(item_seq)
@@ -313,7 +451,8 @@ class SASRec(SequentialRecommender):
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        scores = self.FAIR(scores).to(self.device)
+        # scores = self.FAIR(scores).to(self.device)
+        scores = self.two_sided_calibrate_and_boost(scores, 0.65, 0.5)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
