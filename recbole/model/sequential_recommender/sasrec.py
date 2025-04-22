@@ -546,6 +546,7 @@ class SASRec(SequentialRecommender):
         if np.allclose(gradient, 0):
             return p_u.copy()
         g = gradient / np.linalg.norm(gradient)
+        print(g.size)
         tile_g = np.tile(g[:, None], (1, B))
         lim = np.where(tile_g > 0, p_u / (tile_g + 1e-10), (p_u - 1) / (tile_g + 1e-10)).min(0)
         A_eq_full = tile_g[:1]
