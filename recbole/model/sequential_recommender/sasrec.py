@@ -14,6 +14,9 @@ Reference:
     https://github.com/kang205/SASRec
 
 """
+
+from __future__ import annotations
+
 import math
 import torch
 from torch import nn
@@ -21,7 +24,7 @@ import numpy as np
 from collections import defaultdict
 
 
-from __future__ import annotations
+
 import numpy as np
 import torch
 from typing import Literal, Union
