@@ -105,6 +105,58 @@ class SASRec(SequentialRecommender):
         self.apply(self._init_weights)
 
 
+    def random_reranker(
+        self,
+        scores: torch.Tensor,
+        top_k: int = 50,
+        sample_k: int = 10,
+        boost_margin: float = 1.0,
+        seed: int = None
+    ):
+        """
+        Args:
+            scores:      Tensor of shape [B, N]
+            top_k:       How many of the highest‐scoring indices to consider (default 50)
+            sample_k:    How many to randomly sample from those top_k (default 10)
+            boost_margin:Base increment unit for boosting (default 1.0)
+            seed:        Optional random seed for reproducibility
+        Returns:
+            boosted_scores: Tensor of shape [B, N] with the selected indices boosted
+            selected_idx:   LongTensor of shape [B, sample_k] giving the boosted indices per row
+        """
+        if seed is not None:
+            torch.manual_seed(seed)
+
+        B, N = scores.shape
+
+        # 1) Get top_k indices per row
+        topk_vals, topk_idx = torch.topk(scores, top_k, dim=1)  # shapes: [B, top_k]
+
+        # 2) Randomly sample sample_k of those top_k **without** replacement
+        #    This gives positions in the topk array (0..top_k-1), shape [B, sample_k]
+        rand_vals = torch.ones(B, top_k)
+        samp_pos = torch.multinomial(rand_vals, sample_k, replacement=False)
+
+        # 3) Map back to the original indices in [0..N)
+        batch_idx = torch.arange(B).unsqueeze(1).expand(-1, sample_k)  # [B, sample_k]
+        selected_idx = topk_idx[batch_idx, samp_pos]                  # [B, sample_k]
+
+        # 4) Compute per‐row max scores so we know where to boost from
+        row_max, _ = torch.max(scores, dim=1, keepdim=True)           # [B, 1]
+
+        # 5) Build boost values so that
+        #      - the first sampled index gets row_max + sample_k*boost_margin
+        #      - the next gets row_max + (sample_k-1)*boost_margin
+        #      - … down to row_max + 1*boost_margin
+        boost_steps = torch.arange(sample_k, 0, -1, device=scores.device).float()  # [sample_k]
+        boost_vals = row_max + boost_steps.unsqueeze(0) * boost_margin            # [B, sample_k]
+
+        # 6) Clone and scatter the boosts into a copy of the original scores
+        boosted_scores = scores.clone()
+        boosted_scores[batch_idx, selected_idx] = boost_vals
+
+        return boosted_scores
+
     def set_dampen_hyperparam(self, corr_file=None, N=None, beta=None, gamma=None, unpopular_only=False):
         self.corr_file = corr_file
         # self.neuron_count = neuron_count
@@ -460,7 +512,8 @@ class SASRec(SequentialRecommender):
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores).to(self.device)
-        scores = self.pct_rerank(scores=scores, user_interest=item_seq)
+        # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
+        scores = self.random_reranker(scores=scores)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
