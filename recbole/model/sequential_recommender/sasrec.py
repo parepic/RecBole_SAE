@@ -20,7 +20,6 @@ from __future__ import annotations
 import math
 import torch
 from torch import nn
-import numpy as np
 from collections import defaultdict
 
 
@@ -30,8 +29,6 @@ import torch
 from typing import Literal, Union
 Array = Union[np.ndarray, torch.Tensor]
 
-                   
-import numpy as np
 from scipy.optimize import linprog
 
 
@@ -272,7 +269,7 @@ class SASRec(SequentialRecommender):
         r_k = 1.0 / np.log2(np.arange(K) + 2.0)
 
         # 9) PCT‑Reranker over the *full* list
-        def pct_rerank(R_full, qhat):
+        def pct_rerankk(R_full, qhat):
             resource = r_k.sum()
             target   = qhat * resource
             exp      = np.zeros(2, dtype=float)
@@ -315,7 +312,7 @@ class SASRec(SequentialRecommender):
         # 10) rerank each user’s entire N to pick final K
         final_slates = np.zeros((B, K), dtype=int)
         for u in range(B):
-            final_slates[u] = pct_rerank(full_rank[u], q_u_hat[u])
+            final_slates[u] = pct_rerankk(full_rank[u], q_u_hat[u])
 
         # 11) boost exactly those K so a plain top‑K on boosted reproduces them
         boosted = scores.copy()
