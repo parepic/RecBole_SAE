@@ -541,6 +541,7 @@ class SASRec(SequentialRecommender):
     
     
     def pct_rerank(
+        self,
         scores: Array,
         *,
         top_k: int = 10,
