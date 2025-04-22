@@ -540,26 +540,34 @@ class SASRec(SequentialRecommender):
     
     
     def _solve_personal_targets(self, p_u: np.ndarray, q_hat: np.ndarray, chunk: int = 5000) -> np.ndarray:
-        B = p_u.shape[0]
-        gradient = p_u.mean(0) - q_hat
+        """Linear‑programming solver for personalised targets (2 groups)."""
+        B = p_u.shape[0]                 # users
+        gradient = p_u.mean(0) - q_hat   # len‑2
         if np.allclose(gradient, 0):
             return p_u.copy()
-        g = gradient / np.linalg.norm(gradient)
-        tile_g = np.tile(g[:, None], (1, B)).transpose()
-        lim = np.where(tile_g > 0, p_u / (tile_g + 1e-10), (p_u - 1) / (tile_g + 1e-10)).min(0)
-        A_eq_full = tile_g[:1]
-        b_eq_full = (p_u - q_hat).sum(1)[:1]
+        g = gradient / np.linalg.norm(gradient)  # len‑2, g0 + g1 = 0
+
+        tile_g = np.tile(g, (B, 1))      # (B,2) – per‑user grad direction
+        # per‑user upper limits ensuring q_hat_u stays in [0,1]
+        lim = np.where(tile_g > 0, p_u / (tile_g + 1e-10), (p_u - 1) / (tile_g + 1e-10)).min(1)
+
+        # equality constraint  sum_u gamma_u * g0 = sum_u (p_u0 - q_hat0)
+        A_eq_full = tile_g[:, 0].reshape(1, B)          # (1,B)
+        b_eq_full = np.array([(p_u[:, 0] - q_hat[0]).sum()])  # shape (1,)
+
         gamma = np.empty(B)
-        for s in range(0, B, chunk):
-            e = min(s + chunk, B)
-            A_eq = A_eq_full[:, s:e]
-            b_eq = b_eq_full - (tile_g[:1, :s] * gamma[:s]).sum(1)
-            bounds = [(0, lim[i]) for i in range(s, e)]
-            res = linprog(c=np.ones(e - s), A_eq=A_eq, b_eq=b_eq, bounds=bounds, method="highs")
-            gamma[s:e] = res.x
-        return p_u - (gamma * g).T
+        solved = 0
+        while solved < B:
+            end = min(solved + chunk, B)
+            A_eq = A_eq_full[:, solved:end]
+            # account for already‑solved part
+            b_eq = b_eq_full - (A_eq_full[:, :solved] @ gamma[:solved : solved]).ravel()
+            bounds = [(0, lim[i]) for i in range(solved, end)]
+            res = linprog(c=np.ones(end - solved), A_eq=A_eq, b_eq=b_eq, bounds=bounds, method="highs")
+            gamma[solved:end] = res.x
+            solved = end
 
-
+        return p_u - gamma[:, None] * g   # (B,2)
 
     def pct_rerank(
         self,
@@ -642,7 +650,7 @@ class SASRec(SequentialRecommender):
             p_u = np.column_stack([1.0 - frac, frac])
             print(p_u.size, " sikim 5")
 
-            q_hat_u = self._solve_personal_targets(p_u, target_ratio) * exp_budget
+            q_hat_u = self._solve_personal_targets(p_u.transpose(0, 1), target_ratio) * exp_budget
         else:
             q_hat_u = np.tile(target_ratio * exp_budget, (B, 1))
 
