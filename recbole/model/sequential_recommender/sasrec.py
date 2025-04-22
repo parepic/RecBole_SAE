@@ -623,6 +623,7 @@ class SASRec(SequentialRecommender):
                 for u in range(B):
                     ids = ui[u][ui[u] != 0]
                     if ids.size == 0:
+                        print("suka blya")
                         frac[u] = target_ratio[1]  # fallback to global ratio
                     else:
                         valid = ids[ids < N]  # ignore out‑of‑range
