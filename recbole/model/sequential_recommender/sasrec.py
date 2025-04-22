@@ -541,6 +541,7 @@ class SASRec(SequentialRecommender):
     
     def _solve_personal_targets(self, p_u: np.ndarray, q_hat: np.ndarray, chunk: int = 5000) -> np.ndarray:
         B = p_u.shape[0]
+        print(B, " blya ")
         gradient = p_u.mean(0) - q_hat
         if np.allclose(gradient, 0):
             return p_u.copy()
