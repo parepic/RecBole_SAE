@@ -622,12 +622,16 @@ class SASRec(SequentialRecommender):
                 frac = np.zeros(B)
                 for u in range(B):
                     ids = ui[u][ui[u] != 0]
+                    print(ids[5], " sikim?")
                     if ids.size == 0:
                         print("suka blya")
                         frac[u] = target_ratio[1]  # fallback to global ratio
                     else:
                         valid = ids[ids < N]  # ignore out‑of‑range
+                        print(valid[5], "sikim 2")
                         frac[u] = niche_np[valid].mean() if valid.size else target_ratio[1]
+                        print(frac[5], "sikim 3")
+                print(frac, " sikim 4")
             elif ui.ndim == 1:
                 if ui.shape != (B,):
                     raise ValueError("user_interest must be shape (B,) or (B,C)")
