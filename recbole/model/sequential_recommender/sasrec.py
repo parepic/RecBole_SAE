@@ -511,6 +511,7 @@ class SASRec(SequentialRecommender):
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         scores[:, 0] =  float("-inf")
+        print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
