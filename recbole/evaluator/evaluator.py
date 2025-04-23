@@ -46,7 +46,7 @@ class Evaluator(object):
     def evaluate_fairness(self, recommendation_count, pop_scores):
         """
         Evaluate Long Tail Coverage, Coverage, Gini Coefficient, and Average Recommendation Popularity (ARP),
-        excluding item ID 0 (unused index).
+        excluding item ID 0 (unused index)."/da
         
         Args:
             recommendation_count (list): Array where index `i` represents the count for item with ID `i`.
@@ -56,7 +56,7 @@ class Evaluator(object):
         """
         import pandas as pd
         import numpy as np
-        file = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
+        file = r'./dataset/steam/item_popularity_labels_with_titles.csv'
         # Load item metadata
         item_data = pd.read_csv(file)
 
