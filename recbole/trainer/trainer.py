@@ -965,6 +965,8 @@ class Trainer(AbstractTrainer):
             )
         time = 0 if len(self.epoch_time)==0 else sum(self.epoch_time)/len(self.epoch_time)
         print("Train time for epoch: ", time)
+        print("Number of alive latents ", torch.count_nonzero(self.model.sae_module.activation_count))
+        self.model.sae_module.activation_count.zero_()
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct, chunks=labels)

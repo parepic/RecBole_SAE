@@ -253,7 +253,7 @@ def load_data_and_model(model_file, device='cuda', sae=True):
     config = checkpoint["config"]
     config["sae_lr"] = 1e-4
     config["sae_k"] = 48
-    config["sae_scale_size"] = 32
+    config["sae_scale_size"] = 64
 
     config["valid_metric"] = 'NDCG@10'
     # config["eval_batch_size"] = 2048
