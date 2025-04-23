@@ -1168,10 +1168,10 @@ class Dataset(torch.utils.data.Dataset):
         for alias in self.alias.values():
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
-            if(alias == 'item_id'):
-                self.remap_item_data( r'./dataset/gowalla/gowalla.item', r'./dataset/gowalla/items_remapped.csv',
-                                      r'./dataset/gowalla/gowalla.inter', r'./dataset/gowalla/interactions_remapped.csv'
-                                     )
+            # if(alias == 'item_id'):
+            #     self.remap_item_data( r'./dataset/gowalla/gowalla.item', r'./dataset/gowalla/items_remapped.csv',
+            #                           r'./dataset/gowalla/gowalla.inter', r'./dataset/gowalla/interactions_remapped.csv'
+            #                          )
 
         for field in self._rest_fields:
             remap_list = self._get_remap_list(np.array([field]))
@@ -1811,6 +1811,7 @@ class Dataset(torch.utils.data.Dataset):
             features=next_df[0]["item_id_list"],
             labels=next_df[0]["item_id"]
         )
+        
         next_ds = [self.copy(_) for _ in next_df]
         return next_ds
 
