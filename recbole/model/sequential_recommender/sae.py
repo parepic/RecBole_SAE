@@ -318,26 +318,25 @@ class SAE(nn.Module):
 		if train_mode:
 			if self.epoch_idx != epoch:
 				self.epoch_idx = epoch
-				if self.epoch_idx % 5 == 0:
-					dead = self.get_dead_latent_ratio(need_update=1)
-					# Resampling dead latents if any exist
-					# if dead > 0.02:  # Threshold can be adjusted, e.g., dead > 0.1
-					# 	# Compute mean residual over the batch
-					# 	mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
-					# 	norm_e = torch.norm(mean_e)
-					# 	if norm_e > 1e-6:  # Avoid division by zero or insignificant updates
-					# 		mean_e = mean_e / norm_e  # Normalize to unit vector
-					# 		# Identify dead latents
-					# 		all_latents = torch.arange(self.hidden_dim, device=self.device)
-					# 		dead_mask = ~torch.isin(all_latents, self.previous_activate_latents)
-					# 		dead_latents = all_latents[dead_mask]
-					# 		# Update weights for each dead latent
-					# 		for i in dead_latents:
-					# 			self.W_dec.data[i, :] = mean_e
-					# 			self.encoder.weight.data[i, :] = mean_e
-					# 	else:
-					# 		print("Norm of mean residual is too small, skipping resampling")
-					self.death_patience = 0
+				dead = self.get_dead_latent_ratio(need_update=1)
+				# Resampling dead latents if any exist
+				# if dead > 0.02:  # Threshold can be adjusted, e.g., dead > 0.1
+				# 	# Compute mean residual over the batch
+				# 	mean_e = (x - x_reconstructed).mean(dim=0)  # Shape: (d,)
+				# 	norm_e = torch.norm(mean_e)
+				# 	if norm_e > 1e-6:  # Avoid division by zero or insignificant updates
+				# 		mean_e = mean_e / norm_e  # Normalize to unit vector
+				# 		# Identify dead latents
+				# 		all_latents = torch.arange(self.hidden_dim, device=self.device)
+				# 		dead_mask = ~torch.isin(all_latents, self.previous_activate_latents)
+				# 		dead_latents = all_latents[dead_mask]
+				# 		# Update weights for each dead latent
+				# 		for i in dead_latents:
+				# 			self.W_dec.data[i, :] = mean_e
+				# 			self.encoder.weight.data[i, :] = mean_e
+				# 	else:
+				# 		print("Norm of mean residual is too small, skipping resampling")
+				self.death_patience = 0
 
 			self.death_patience += pre_acts.shape[0]
 			# First epoch, do not have dead latent info
