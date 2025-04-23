@@ -296,6 +296,56 @@ if __name__ == "__main__":
     # exit()
     # save_cohens_d()
     # exit()
+    # remove_sparse_users_items()
+    # exit()
+    
+    
+    # import csv
+
+    # input_file  = r'./dataset/gowalla/gowalla.inter'
+    # output_file = r'./dataset/gowalla/gowalla.item'
+
+    # # Collect unique item tokens
+    # unique_items = set()
+
+    # with open(input_file, 'r', newline='') as infile:
+    #     # If your file uses a different delimiter (e.g. space), change delimiter='\t' accordingly
+    #     reader = csv.DictReader(infile, delimiter='\t')
+    #     for row in reader:
+    #         unique_items.add(row['item_id:token'])
+
+    # # Write them out, one per line (with header)
+    # with open(output_file, 'w', newline='') as outfile:
+    #     writer = csv.writer(outfile, delimiter='\t')
+    #     writer.writerow(['item_id:token'])
+    #     for item in sorted(unique_items):
+    #         writer.writerow([item])
+
+    # print(f"Extracted {len(unique_items)} unique items into '{output_file}'.")
+    # remove_sparse_users_items()
+    # exit()
+    
+    # cols_to_keep = ['item_id:token', 'title:token']  # <-- adjust as needed
+
+    # # load only those columns
+    # df = pd.read_csv(r"./dataset/steam/steam.item", sep='\t')
+
+    # # or, if you already have a full df:
+    # # df = df[cols_to_keep]
+
+    # # write back out
+    # df.to_csv(r"./dataset/steam/steam-new.item", sep='\t', index=False)
+    # print(f"Kept {len(cols_to_keep)} columns and wrote {len(df)} rows to file.")
+    # exit()
+    
+    # df['item_id:token'] = df['item_id:token'].astype(int)
+
+
+    # df.to_csv(r"./dataset/steam/steam-new.item", sep='\t', index=False)
+    
+    # exit()
+    # create_item_popularity_csv()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
@@ -359,7 +409,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'ml-1m',
+            'steam',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,

@@ -260,7 +260,6 @@ class SASRec(SequentialRecommender):
         df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
-        scores[:, 0] =  float("-inf")
         scores = scores.detach().cpu().numpy()
 
         # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
@@ -386,7 +385,6 @@ class SASRec(SequentialRecommender):
         df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
-        scores[:, 0] =  float("-inf")
         # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
         max_id = ids.max()
         popularity_label = torch.zeros(max_id+1, dtype=torch.bool)
@@ -464,7 +462,7 @@ class SASRec(SequentialRecommender):
         return np.array(sel, dtype=int)
 
     
-    def calculate_loss(self, interaction, scores=None):
+    def calculate_loss(self, interaction, scores=None, show_res=None):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         pos_items = interaction[self.POS_ITEM_ID]  # shape: (batch_size,)
@@ -510,14 +508,13 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        # scores[:, 0] =  float("-inf")
-        print(scores[:, 0:20])
+        scores[:, 0] =  float("-inf")
+        # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
-        print(top_recs)
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
         return scores
@@ -647,7 +644,6 @@ class SASRec(SequentialRecommender):
         df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
-        scores[:, 0] =  float("-inf")
 
         # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
         max_id = ids.max()
