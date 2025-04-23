@@ -410,7 +410,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'Amazon_Beauty',
+            'steam',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
