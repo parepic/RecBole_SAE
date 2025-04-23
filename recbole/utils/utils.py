@@ -1742,8 +1742,8 @@ def compute_and_save_correlations(row1, row2, min_corr, num_rows=500000, output_
 def remove_sparse_users_items():
     # --- Step 1: Load the Data ---
     # The files use tab as the delimiter and have headers that include type annotations.
-    items = pd.read_csv(r"./dataset/gowalla/gowalla.item", sep="\t", header=0)
-    interactions = pd.read_csv(r"./dataset/gowalla/gowalla.inter", sep="\t", header=0)
+    items = pd.read_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.item", sep="\t", header=0)
+    interactions = pd.read_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.inter", sep="\t", header=0)
     # --- Step 2: Iterative Filtering ---
     # We use a threshold of at least 5 interactions for both users and items.
     iteration = 0
@@ -1773,8 +1773,8 @@ def remove_sparse_users_items():
 
     # --- Step 4: Save the Filtered Files ---
     # Files are saved with the header intact (including the type annotations).
-    items.to_csv(r"./dataset/gowalla/gowalla.item.filtered", sep="\t", index=False, header=True)
-    interactions.to_csv(r"./dataset/gowalla/gowalla.inter.filtered", sep="\t", index=False, header=True)
+    items.to_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.item.filtered", sep="\t", index=False, header=True)
+    interactions.to_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.inter.filtered", sep="\t", index=False, header=True)
 
     print("Filtering complete. Files saved as 'ml-1m.item.filtered', 'ml-1m.inter.filtered', and 'ml-1m.user.filtered'.")
 

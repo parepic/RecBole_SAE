@@ -350,6 +350,8 @@ if __name__ == "__main__":
     # exit()
     # create_item_popularity_csv()
     # exit()
+    remove_sparse_users_items()
+    exit()
     parser = argparse.ArgumentParser()
     
     
