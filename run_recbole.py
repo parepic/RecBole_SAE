@@ -325,16 +325,16 @@ if __name__ == "__main__":
     # remove_sparse_users_items()
     # exit()
     
-    cols_to_keep = ['item_id:token', 'interaction_count' ,'pop_score' , 'popularity_label']  # <-- adjust as needed
+    # cols_to_keep = ['item_id:token', 'interaction_count' ,'pop_score' , 'popularity_label']  # <-- adjust as needed
 
-    # # # load only those columns
-    df = pd.read_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
+    # # # # load only those columns
+    # df = pd.read_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
 
-    # # # or, if you already have a full df:
-    df = df[cols_to_keep]
+    # # # # or, if you already have a full df:
+    # df = df[cols_to_keep]
 
-    # # # write back out
-    df.to_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles2.csv", index=False)
+    # # # # write back out
+    # df.to_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles2.csv", index=False)
     # # print(f"Kept {len(cols_to_keep)} columns and wrote {len(df)} rows to file.")
     # exit()
     
@@ -345,7 +345,6 @@ if __name__ == "__main__":
     
     # exit()
     # create_item_popularity_csv()
-    exit()
     # remove_sparse_users_items()
     # exit()
     parser = argparse.ArgumentParser()
