@@ -53,7 +53,7 @@ class Hit(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
+    def calculate_metric(self, dataobject, chunks=None):
         pos_index, _ = self.used_info(dataobject)
         result = self.metric_info(pos_index)
         metric_dict = self.topk_result("hit", result)
@@ -79,7 +79,7 @@ class MRR(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
+    def calculate_metric(self, dataobject, chunks=None):
         pos_index, _ = self.used_info(dataobject)
         result = self.metric_info(pos_index)
         metric_dict = self.topk_result("mrr", result)
@@ -178,7 +178,7 @@ class NDCG(TopkMetric):
         super().__init__(config)
 
 
-    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
+    def calculate_metric(self, dataobject, chunks=None):
         """
         Calculate evaluation metrics (e.g., NDCG scores) for different popularity groups.
         
@@ -241,15 +241,7 @@ class NDCG(TopkMetric):
         total =  len(pos_index)
         result = self.metric_info(pos_index, pos_len)
         metric_dict = self.topk_result("ndcg", result, metric_dict)
-        
-        # If ips_scores is provided, compute the IPS-adjusted NDCG@10.
-        if ips_scores is not None:
-            ndcg_at_10 = result[:, -1]  # shape (N,)
-            ips_weights = np.array(ips_scores, dtype=np.float32)  # shape (N,)
-            weighted_sum = np.sum(ndcg_at_10 * ips_weights)
-            normalizer = np.sum(ips_weights)
-            ips_adjusted_ndcg = weighted_sum / normalizer
-            metric_dict["ips_ndcg@10"] = float(ips_adjusted_ndcg)
+             
         return metric_dict
     
     def metric_info(self, pos_index, pos_len):
@@ -286,7 +278,7 @@ class Precision(TopkMetric):
     def __init__(self, config):
         super().__init__(config)
 
-    def calculate_metric(self, dataobject, ips_scores=None, chunks=None):
+    def calculate_metric(self, dataobject, chunks=None):
         pos_index, _ = self.used_info(dataobject)
         result = self.metric_info(pos_index)
         metric_dict = self.topk_result("precision", result)

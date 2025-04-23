@@ -26,7 +26,7 @@ class Evaluator(object):
         for metric in self.metrics:
             self.metric_class[metric] = metrics_dict[metric](self.config)
 
-    def evaluate(self, dataobject: DataStruct, ips_scores=None, chunks=None):
+    def evaluate(self, dataobject: DataStruct, chunks=None):
         """calculate all the metrics. It is called at the end of each epoch
 
         Args:
@@ -38,12 +38,12 @@ class Evaluator(object):
         """
         result_dict = OrderedDict()
         for metric in self.metrics:
-            metric_val = self.metric_class[metric].calculate_metric(dataobject, ips_scores=ips_scores, chunks=chunks)
+            metric_val = self.metric_class[metric].calculate_metric(dataobject, chunks=chunks)
             result_dict.update(metric_val)
         return result_dict
     
     
-    def evaluate_fairness(self, recommendation_count, pop_scores):
+    def evaluate_fairness(self, recommendation_count):
         """
         Evaluate Long Tail Coverage, Coverage, Gini Coefficient, and Average Recommendation Popularity (ARP),
         excluding item ID 0 (unused index)."/da

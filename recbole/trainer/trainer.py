@@ -955,14 +955,11 @@ class Trainer(AbstractTrainer):
         # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
         #                                             beta=beta, gamma=gamma, unpopular_only=False)
         
-        inverse_propensities = []
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
             interaction, scores, positive_u, positive_i = eval_func(batched_data)
             labels.extend(get_popularity_label_indices(positive_i))
-            batch_ips = calculate_IPS(positive_i, reverse=True)
-            inverse_propensities.extend(batch_ips)
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
                     set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
@@ -974,8 +971,8 @@ class Trainer(AbstractTrainer):
         print("Train time for epoch: ", time)
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
-        result = self.evaluator.evaluate(struct, ips_scores=inverse_propensities, chunks=labels)
-        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count, inverse_propensities)
+        result = self.evaluator.evaluate(struct, chunks=labels)
+        fairness_dict = self.evaluator.evaluate_fairness(self.model.recommendation_count)
         self.model.recommendation_count = np.zeros(self.model.n_items)
         if not self.config["single_spec"]:
             result = self._map_reduce(result, num_sample)
