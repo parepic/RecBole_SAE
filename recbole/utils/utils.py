@@ -1742,8 +1742,8 @@ def compute_and_save_correlations(row1, row2, min_corr, num_rows=500000, output_
 def remove_sparse_users_items():
     # --- Step 1: Load the Data ---
     # The files use tab as the delimiter and have headers that include type annotations.
-    items = pd.read_csv(r"./dataset/steam/steam.item", sep="\t", header=0)
-    interactions = pd.read_csv(r"./dataset/steam/steam.inter", sep="\t", header=0)
+    items = pd.read_csv(r"./dataset/gowalla/gowalla.item", sep="\t", header=0)
+    interactions = pd.read_csv(r"./dataset/gowalla/gowalla.inter", sep="\t", header=0)
     # --- Step 2: Iterative Filtering ---
     # We use a threshold of at least 5 interactions for both users and items.
     iteration = 0
@@ -1773,8 +1773,8 @@ def remove_sparse_users_items():
 
     # --- Step 4: Save the Filtered Files ---
     # Files are saved with the header intact (including the type annotations).
-    items.to_csv(r"./dataset/steam/steam.item.filtered", sep="\t", index=False, header=True)
-    interactions.to_csv(r"./dataset/steam/steam.inter.filtered", sep="\t", index=False, header=True)
+    items.to_csv(r"./dataset/gowalla/gowalla.item.filtered", sep="\t", index=False, header=True)
+    interactions.to_csv(r"./dataset/gowalla/gowalla.inter.filtered", sep="\t", index=False, header=True)
 
     print("Filtering complete. Files saved as 'ml-1m.item.filtered', 'ml-1m.inter.filtered', and 'ml-1m.user.filtered'.")
 
@@ -1909,72 +1909,11 @@ def create_unbiased_set():
     plt.show()
 
 
-
-
 def create_item_popularity_csv():
     # -------------------------------
     # Step 1: Load the training NPZ file and compute item frequencies.
     # -------------------------------
-    train_npz_path = r"./dataset/ml-1m/biased_eval_train.npz"
-    data = np.load(train_npz_path)
-    labels = data["labels"]  # Assuming this array contains item IDs (item_id:token)
-    total_interactions = len(labels)
-    
-    # Compute frequency counts for each unique item.
-    unique_items, counts = np.unique(labels, return_counts=True)
-    
-    # Calculate the popularity score: interaction_count divided by the total interactions.
-    pop_scores = counts / total_interactions
-    
-    # Create a DataFrame from the counts.
-    df_counts = pd.DataFrame({
-        "item_id:token": unique_items,
-        "interaction_count": counts,
-        "pop_score": pop_scores
-    })
-    
-    # -------------------------------
-    # Step 2: Load the items_remapped CSV file.
-    # -------------------------------
-    items_csv_path = r"./dataset/ml-1m/items_remapped.csv"
-    df_titles = pd.read_csv(items_csv_path)
-    
-    # -------------------------------
-    # Step 3: Merge the NPZ counts with the items_remapped DataFrame.
-    # -------------------------------
-    df_merged = pd.merge(df_titles, df_counts, on="item_id:token", how="left")
-    
-    # Fill missing values with 0 for items not in the training NPZ.
-    df_merged["interaction_count"] = df_merged["interaction_count"].fillna(0).astype(int)
-    df_merged["pop_score"] = df_merged["pop_score"].fillna(0)
-    
-    # -------------------------------
-    # Step 4: Drop the unwanted columns.
-    # -------------------------------
-    # If these columns exist, drop them.
-    columns_to_drop = ["release_year:token", "genre:token_seq"]
-    df_merged = df_merged.drop(columns=columns_to_drop, errors="ignore")
-    
-    # Optionally, sort by item_id for consistent ordering.
-    df_merged = df_merged.sort_values("item_id:token")
-    
-    # -------------------------------
-    # Step 5: Save the final DataFrame to a CSV file.
-    # -------------------------------
-    output_csv = "item_popularity_labels_with_titles2.csv"
-    df_merged.to_csv(output_csv, index=False)
-    print(f"CSV file '{output_csv}' created successfully.")
-    
-    
-    
-
-
-
-def create_item_popularity_csv():
-    # -------------------------------
-    # Step 1: Load the training NPZ file and compute item frequencies.
-    # -------------------------------
-    train_npz_path = r"./dataset/steam/biased_eval_train.npz"
+    train_npz_path = r"./dataset/gowalla/biased_eval_train.npz"
     data = np.load(train_npz_path)
     labels = data["labels"]  # assuming this array contains item IDs (item_id:token)
     total_interactions = len(labels)
@@ -1994,7 +1933,7 @@ def create_item_popularity_csv():
     # -------------------------------
     # Step 2: Load the items_remapped CSV file.
     # -------------------------------
-    items_csv_path = r"./dataset/steam/items_remapped.csv"
+    items_csv_path = r"./dataset/gowalla/items_remapped.csv"
     df_titles = pd.read_csv(items_csv_path)
     
     # -------------------------------
@@ -2052,7 +1991,7 @@ def create_item_popularity_csv():
     # -------------------------------
     # Optionally, sort the final DataFrame by item_id for consistent ordering.
     df_final = df_merged.sort_values(by="interaction_count", ascending=False).reset_index(drop=True)
-    output_csv =  r"./dataset/steam/item_popularity_labels_with_titles.csv"
+    output_csv =  r"./dataset/gowalla/item_popularity_labels_with_titles.csv"
     df_final.to_csv(output_csv, index=False)
     print(f"CSV file '{output_csv}' created successfully.")
     

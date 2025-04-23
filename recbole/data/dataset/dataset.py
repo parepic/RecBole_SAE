@@ -1169,8 +1169,8 @@ class Dataset(torch.utils.data.Dataset):
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
             if(alias == 'item_id'):
-                self.remap_item_data( r'./dataset/steam/steam.item', r'./dataset/steam/items_remapped.csv',
-                                      r'./dataset/steam/steam.inter', r'./dataset/steam/interactions_remapped.csv'
+                self.remap_item_data( r'./dataset/gowalla/gowalla.item', r'./dataset/gowalla/items_remapped.csv',
+                                      r'./dataset/gowalla/gowalla.inter', r'./dataset/gowalla/interactions_remapped.csv'
                                      )
 
         for field in self._rest_fields:
@@ -1771,7 +1771,7 @@ class Dataset(torch.utils.data.Dataset):
         )
         if leave_one_mode == "valid_and_test":
             next_index = self._split_index_by_leave_n_out(
-                grouped_inter_feat_index, leave_one_num=2, n_each=2
+                grouped_inter_feat_index, leave_one_num=2, n_each=4
             )
         elif leave_one_mode == "valid_only":
             next_index = self._split_index_by_leave_one_out(
@@ -1806,7 +1806,11 @@ class Dataset(torch.utils.data.Dataset):
         # next_df[1]['item_id'] = torch.from_numpy(val_label)
         # next_df[1].length = val_label.shape[0]
     
-    
+        np.savez(
+            r'./dataset/gowalla/biased_eval_train.npz',
+            features=next_df[0]["item_id_list"],
+            labels=next_df[0]["item_id"]
+        )
         next_ds = [self.copy(_) for _ in next_df]
         return next_ds
 

@@ -46,10 +46,6 @@ from recbole.utils import (
     set_color,
     get_gpu_usage,
     WandbLogger,
-    save_user_popularity_score,
-    calculate_pearson_correlation,
-    calculate_IPS,
-    skew_sample,
     get_popularity_label_indices
     )
 from recbole.model.sequential_recommender import SASRec_SAE, SASRecWithGating

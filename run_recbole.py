@@ -328,7 +328,7 @@ if __name__ == "__main__":
     # cols_to_keep = ['item_id:token', 'title:token']  # <-- adjust as needed
 
     # # load only those columns
-    # df = pd.read_csv(r"./dataset/steam/steam.item", sep='\t')
+    # df = pd.read_csv(r"./dataset/gowalla/gowalla.item", sep='\t')
 
     # # or, if you already have a full df:
     # # df = df[cols_to_keep]
@@ -341,8 +341,12 @@ if __name__ == "__main__":
     # df['item_id:token'] = df['item_id:token'].astype(int)
 
 
-    # df.to_csv(r"./dataset/steam/steam-new.item", sep='\t', index=False)
+    # df.to_csv(r"./dataset/gowalla/gowalla-new.item", sep='\t', index=False)
     
+    # exit()
+    # create_item_popularity_csv()
+    # exit()
+    # remove_sparse_users_items()
     # exit()
     # create_item_popularity_csv()
     # exit()
@@ -409,7 +413,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'steam',
+            'gowalla',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
