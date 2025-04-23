@@ -1808,7 +1808,7 @@ class Dataset(torch.utils.data.Dataset):
         # next_df[1].length = val_label.shape[0]
     
         np.savez(
-            r'./dataset/Amazon_Beauty/biased_eval_train.npz',
+            r'./dataset/steam/biased_eval_train.npz',
             features=next_df[0]["item_id_list"],
             labels=next_df[0]["item_id"]
         )
