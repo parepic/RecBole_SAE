@@ -1169,8 +1169,8 @@ class Dataset(torch.utils.data.Dataset):
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
             # if(alias == 'item_id'):
-            #     self.remap_item_data( r'./dataset/gowalla/gowalla.item', r'./dataset/gowalla/items_remapped.csv',
-            #                           r'./dataset/gowalla/gowalla.inter', r'./dataset/gowalla/interactions_remapped.csv'
+            #     self.remap_item_data( r'./dataset/Amazon_Beauty/Amazon_Beauty.item', r'./dataset/Amazon_Beauty/items_remapped.csv',
+            #                           r'./dataset/Amazon_Beauty/Amazon_Beauty.inter', r'./dataset/Amazon_Beauty/interactions_remapped.csv'
             #                          )
 
         for field in self._rest_fields:
@@ -1188,6 +1188,7 @@ class Dataset(torch.utils.data.Dataset):
             - tokens after concatenation.
             - split points that can be used to restore the concatenated tokens.
         """
+        
         tokens = []
         for feat, field, ftype in remap_list:
             if ftype == FeatureType.TOKEN:
@@ -1771,7 +1772,7 @@ class Dataset(torch.utils.data.Dataset):
         )
         if leave_one_mode == "valid_and_test":
             next_index = self._split_index_by_leave_n_out(
-                grouped_inter_feat_index, leave_one_num=2, n_each=4
+                grouped_inter_feat_index, leave_one_num=2, n_each=1
             )
         elif leave_one_mode == "valid_only":
             next_index = self._split_index_by_leave_one_out(
@@ -1807,7 +1808,7 @@ class Dataset(torch.utils.data.Dataset):
         # next_df[1].length = val_label.shape[0]
     
         np.savez(
-            r'./dataset/gowalla/biased_eval_train.npz',
+            r'./dataset/Amazon_Beauty/biased_eval_train.npz',
             features=next_df[0]["item_id_list"],
             labels=next_df[0]["item_id"]
         )

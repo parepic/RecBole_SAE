@@ -325,17 +325,17 @@ if __name__ == "__main__":
     # remove_sparse_users_items()
     # exit()
     
-    # cols_to_keep = ['item_id:token', 'title:token']  # <-- adjust as needed
+    cols_to_keep = ['item_id:token', 'interaction_count' ,'pop_score' , 'popularity_label']  # <-- adjust as needed
 
-    # # load only those columns
-    # df = pd.read_csv(r"./dataset/gowalla/gowalla.item", sep='\t')
+    # # # load only those columns
+    df = pd.read_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
 
-    # # or, if you already have a full df:
-    # # df = df[cols_to_keep]
+    # # # or, if you already have a full df:
+    df = df[cols_to_keep]
 
-    # # write back out
-    # df.to_csv(r"./dataset/steam/steam-new.item", sep='\t', index=False)
-    # print(f"Kept {len(cols_to_keep)} columns and wrote {len(df)} rows to file.")
+    # # # write back out
+    df.to_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles2.csv", index=False)
+    # # print(f"Kept {len(cols_to_keep)} columns and wrote {len(df)} rows to file.")
     # exit()
     
     # df['item_id:token'] = df['item_id:token'].astype(int)
@@ -345,13 +345,9 @@ if __name__ == "__main__":
     
     # exit()
     # create_item_popularity_csv()
-    # exit()
+    exit()
     # remove_sparse_users_items()
     # exit()
-    # create_item_popularity_csv()
-    # exit()
-    remove_sparse_users_items()
-    exit()
     parser = argparse.ArgumentParser()
     
     
@@ -415,7 +411,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'gowalla',
+            'Amazon_Beauty',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
