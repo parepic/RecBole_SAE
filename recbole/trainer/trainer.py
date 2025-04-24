@@ -979,6 +979,9 @@ class Trainer(AbstractTrainer):
         result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
+        result['loss'] = self.model.total_loss
+        if isinstance(self.model, SASRec_SAE):
+            self.model.total_loss = 0
         self.unique_elements = set()
         return result
 

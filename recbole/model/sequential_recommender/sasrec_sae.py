@@ -21,6 +21,7 @@ class SASRec_SAE(SASRec):
         self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
+        self.total_loss = 0
         self.to(config["device"])
         for param in self.parameters():
             param.requires_grad = False  # Freeze all parameters
@@ -97,6 +98,9 @@ class SASRec_SAE(SASRec):
         # nonzero_idxs = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
         # save_batch_activations(self.sae_module.last_activations, self.sae_module.hidden_dim, 4096) 
         # self.sae_module.update_highest_activations(item_seq, top_recs, None)
+        
+        self.total_loss += (self.sae_module.fvu + self.sae_module.auxk_loss / 32)
+        
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
         return scores

@@ -252,8 +252,8 @@ def load_data_and_model(model_file, device='cuda', sae=True):
     checkpoint = torch.load(model_file, map_location=torch.device(device))
     config = checkpoint["config"]
     config["sae_lr"] = 1e-4
-    config["sae_k"] = 64
-    config["sae_scale_size"] = 32
+    config["sae_k"] = 48
+    config["sae_scale_size"] = 64
 
     config["valid_metric"] = 'NDCG@10'
     # config["eval_batch_size"] = 2048
@@ -264,8 +264,9 @@ def load_data_and_model(model_file, device='cuda', sae=True):
         config.final_config_dict['gpu_id'] = '-1'
         config['device'] = 'cpu'
     if sae:
+        config['valid_metric'] = 'loss'
         config['model'] = 'SASRec_SAE'
-        config['stopping_step'] = 25
+        config['stopping_step'] = 20
         # config['learning_rate'] = 0.0001
 
     init_seed(config["seed"], config["reproducibility"])
