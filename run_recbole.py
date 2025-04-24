@@ -345,8 +345,8 @@ if __name__ == "__main__":
     # df.to_csv(r"./dataset/gowalla/gowalla-new.item", sep='\t', index=False)
     
     # exit()
-    create_item_popularity_csv()
-    exit()
+    # create_item_popularity_csv()
+    # exit()
     # remove_sparse_users_items()
     # remove_sparse_users_items()
     # exit()
