@@ -374,22 +374,22 @@ if __name__ == "__main__":
     # sample_users_interactions(500000)
     # exit()
 
-    df = pd.read_csv(r"./dataset/yoochoose-clicks/yoochoose-clicks.inter", sep='\t')
+    # df = pd.read_csv(r"./dataset/yoochoose-clicks/yoochoose-clicks.inter", sep='\t')
 
-    # 2. Extract unique item IDs
-    unique_items = df['item_id:token'].drop_duplicates()
+    # # 2. Extract unique item IDs
+    # unique_items = df['item_id:token'].drop_duplicates()
 
-    # 3. Write them out to the new file with the correct header
-    unique_items.to_frame().to_csv(
-        r"./dataset/yoochoose-clicks/yoochoose-clicks.item",     # output filename
-        sep='\t',                     # same separator
-        index=False,                  # no index column
-        header=['item_id:token']      # ensure the column name is exactly this
-    )
+    # # 3. Write them out to the new file with the correct header
+    # unique_items.to_frame().to_csv(
+    #     r"./dataset/yoochoose-clicks/yoochoose-clicks.item",     # output filename
+    #     sep='\t',                     # same separator
+    #     index=False,                  # no index column
+    #     header=['item_id:token']      # ensure the column name is exactly this
+    # )
 
 
     
-    exit()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
