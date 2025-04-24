@@ -505,5 +505,5 @@ if __name__ == "__main__":
                 dataset,
                 valid_data=valid_data,
                 show_progress=True,
-                sasrec_sae_file = r"./dataset/ml-1m/SASRec_SAE-Apr-24-k64-32-gowalla.pth"
+                sasrec_sae_file = r"./recbole/saved/SASRec_SAE-Apr-24-k64-32-gowalla.pth"
                 )
