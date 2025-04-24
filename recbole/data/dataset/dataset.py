@@ -1169,9 +1169,9 @@ class Dataset(torch.utils.data.Dataset):
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
             # if(alias == 'item_id'):
-            #     self.remap_item_data( r'./dataset/lfm1b-artists/lfm1b-artists.item', r'./dataset/lfm1b-artists/items_remapped.csv',
-            #                           r'./dataset/lfm1b-artists/lfm1b-artists.inter', r'./dataset/lfm1b-artists/interactions_remapped.csv'
-            #                          )
+            #     self.remap_item_data( r'./dataset/gowalla/gowalla.item', r'./dataset/gowalla/items_remapped.csv',
+            #                             r'./dataset/gowalla/gowalla.inter', r'./dataset/gowalla/interactions_remapped.csv'
+            #                             )
 
         for field in self._rest_fields:
             remap_list = self._get_remap_list(np.array([field]))
@@ -1808,7 +1808,7 @@ class Dataset(torch.utils.data.Dataset):
         # next_df[1].length = val_label.shape[0]
     
         # np.savez(
-        #     r'./dataset/lfm1b-artists/biased_eval_train.npz',
+        #     r'./dataset/gowalla/biased_eval_train.npz',
         #     features=next_df[0]["item_id_list"],
         #     labels=next_df[0]["item_id"]
         # )
@@ -2264,6 +2264,7 @@ class Dataset(torch.utils.data.Dataset):
         
         # Remap item_id using the provided mapping
         if 'item_id:token' in df.columns:
+            print(self.field2token_id.keys())
             df['item_id:token'] = df['item_id:token'].astype(str).map(self.field2token_id['item_id'])
             int_df['item_id:token'] = int_df['item_id:token'].astype(str).map(self.field2token_id['item_id'])
             int_df['user_id:token'] = int_df['user_id:token'].astype(str).map(self.field2token_id['user_id'])
