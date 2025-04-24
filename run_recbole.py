@@ -36,7 +36,8 @@ from recbole.utils import (
     create_unbiased_set,
     create_item_popularity_csv,
     search_movies,
-    process_and_save_movies
+    process_and_save_movies,
+    sample_users_interactions
 )
 
 
@@ -347,6 +348,48 @@ if __name__ == "__main__":
     # create_item_popularity_csv()
     # remove_sparse_users_items()
     # exit()
+    # remove_sparse_users_items()
+    # exit()
+    # sample_users_interactions(10000)
+    # exit()
+    
+    # with open(r"./dataset/Amazon_Electronics/Amazon_Electronics.inter", 'r', encoding='utf-8') as f:
+    #     for i, line in enumerate(f):
+    #         if i >= 10000000:
+    #             break
+    #         # Strip newline and split
+    #         parts = line.rstrip('\n').split('\t')
+    #         if len(parts) != 4:
+    #             raise ValueError(
+    #                 f"Line {i+1} in hu has {len(parts)} columns (expected {4}): {parts!r}"
+    #             )
+    #     print(
+    #         f"Validation passed: first {min(1000, i+1)} lines ofgg each have {4} columns."
+    #     )
+
+
+    # exit()
+    # df = pd.read_csv(r"./dataset/Amazon_Electronics/Amazon_Electronicsss.inter", sep='\t', nrows=5)
+    # print(df.columns.tolist())
+    # sample_users_interactions(500000)
+    # exit()
+
+    df = pd.read_csv(r"./dataset/yoochoose-clicks/yoochoose-clicks.inter", sep='\t')
+
+    # 2. Extract unique item IDs
+    unique_items = df['item_id:token'].drop_duplicates()
+
+    # 3. Write them out to the new file with the correct header
+    unique_items.to_frame().to_csv(
+        r"./dataset/yoochoose-clicks/yoochoose-clicks.item",     # output filename
+        sep='\t',                     # same separator
+        index=False,                  # no index column
+        header=['item_id:token']      # ensure the column name is exactly this
+    )
+
+
+    
+    exit()
     parser = argparse.ArgumentParser()
     
     
@@ -410,7 +453,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'steam',
+            'gowalla',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,

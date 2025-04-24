@@ -842,8 +842,8 @@ def get_difference_values(indexes, csv_file="output_averages.csv"):
 
 
 def remove_sparse_users_items():
-    interactions_file = r"./dataset/lfm1b-artists/lfm1b-artists-filtered.inter"
-    items_file = r"./dataset/lfm1b-artists/lfm1b-artists-filtered.item"
+    interactions_file = r"./dataset/Amazon_Electronics/Amazon_Electronics-filtered.inter"
+    items_file = r"./dataset/Amazon_Electronics/Amazon_Electronics-filtered.item"
     
     # Load interactions and items data
     df_inter = pd.read_csv(interactions_file, sep='\t')
@@ -894,8 +894,8 @@ def remove_sparse_users_items():
     # -------------------------------
     # 4. (Optional) Save the Filtered Data
     # -------------------------------
-    df_inter.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists.inter', index=False, sep='\t')
-    df_item.to_csv(r'./dataset/lfm1b-artists/lfm1b-artists.item', index=False, sep='\t')
+    df_inter.to_csv(r'./dataset/Amazon_Electronics/Amazon_Electronics.inter', index=False, sep='\t')
+    df_item.to_csv(r'./dataset/Amazon_Electronics/Amazon_Electronics.item', index=False, sep='\t')
 
     print("Filtering complete:")
     print(f" - Interactions: {df_inter.shape[0]} records")
@@ -1342,7 +1342,7 @@ def get_popularity_label_indices(id_tensor):
                       each item in id_tensor.
     """
     # Read the CSV that maps item IDs to popularity labels.
-    df = pd.read_csv(r"./dataset/steam/item_popularity_labels_with_titles.csv", encoding='latin1')
+    df = pd.read_csv(r"./dataset/gowalla/item_popularity_labels_with_titles.csv", encoding='latin1')
     
     # Create a mapping from item ID to popularity label.
     id_to_label = dict(zip(df['item_id:token'], df['popularity_label']))
@@ -1742,8 +1742,8 @@ def compute_and_save_correlations(row1, row2, min_corr, num_rows=500000, output_
 def remove_sparse_users_items():
     # --- Step 1: Load the Data ---
     # The files use tab as the delimiter and have headers that include type annotations.
-    items = pd.read_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.item", sep="\t", header=0)
-    interactions = pd.read_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.inter", sep="\t", header=0)
+    items = pd.read_csv(r"./dataset/lfm1b-artists/lfm1b-artists.item", sep="\t", header=0)
+    interactions = pd.read_csv(r"./dataset/lfm1b-artists/lfm1b-artists.inter", sep="\t", header=0)
     # --- Step 2: Iterative Filtering ---
     # We use a threshold of at least 5 interactions for both users and items.
     iteration = 0
@@ -1766,15 +1766,14 @@ def remove_sparse_users_items():
         
         if new_shape == current_shape:
             break
-
     # --- Step 3: Synchronize Items With Interactions ---
     # Keep only those items that still appear in the filtered interactions.
     items = items[items["item_id:token"].isin(interactions["item_id:token"])]
 
     # --- Step 4: Save the Filtered Files ---
     # Files are saved with the header intact (including the type annotations).
-    items.to_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.item.filtered", sep="\t", index=False, header=True)
-    interactions.to_csv(r"./dataset/Amazon_Beauty/Amazon_Beauty.inter.filtered", sep="\t", index=False, header=True)
+    items.to_csv(r"./dataset/lfm1b-artists/lfm1b-artists.item.filtered", sep="\t", index=False, header=True)
+    interactions.to_csv(r"./dataset/lfm1b-artists/lfm1b-artists.inter.filtered", sep="\t", index=False, header=True)
 
     print("Filtering complete. Files saved as 'ml-1m.item.filtered', 'ml-1m.inter.filtered', and 'ml-1m.user.filtered'.")
 
@@ -1913,7 +1912,7 @@ def create_item_popularity_csv():
     # -------------------------------
     # Step 1: Load the training NPZ file and compute item frequencies.
     # -------------------------------
-    train_npz_path = r"./dataset/steam/biased_eval_train.npz"
+    train_npz_path = r"./dataset/lfm1b-artists/biased_eval_train.npz"
     data = np.load(train_npz_path)
     labels = data["labels"]  # assuming this array contains item IDs (item_id:token)
     total_interactions = len(labels)
@@ -1933,7 +1932,7 @@ def create_item_popularity_csv():
     # -------------------------------
     # Step 2: Load the items_remapped CSV file.
     # -------------------------------
-    items_csv_path = r"./dataset/steam/items_remapped.csv"
+    items_csv_path = r"./dataset/lfm1b-artists/items_remapped.csv"
     df_titles = pd.read_csv(items_csv_path)
     
     # -------------------------------
@@ -1991,7 +1990,7 @@ def create_item_popularity_csv():
     # -------------------------------
     # Optionally, sort the final DataFrame by item_id for consistent ordering.
     df_final = df_merged.sort_values(by="interaction_count", ascending=False).reset_index(drop=True)
-    output_csv =  r"./dataset/steam/item_popularity_labels_with_titles.csv"
+    output_csv =  r"./dataset/lfm1b-artists/item_popularity_labels_with_titles.csv"
     df_final.to_csv(output_csv, index=False)
     print(f"CSV file '{output_csv}' created successfully.")
     
@@ -2127,3 +2126,67 @@ def get_movie_info(item_id):
     print("yoxduda blet ", item_id)
     # Return None if item_id is not found
     return None
+
+
+
+def sample_users_interactions(
+    X,
+    inter_file=r"./dataset/yoochoose-clicks/yoochoose-clicks.inter",
+    item_file=r"./dataset/yoochoose-clicks/yoochoose-clicks.item",
+    sampled_inter_file=r"./dataset/yoochoose-clicks/yoochoose-clicks-sampled.inter",
+    sampled_item_file=r"./dataset/yoochoose-clicks/yoochoose-clicks-sampled.item",
+    sep='\t',
+    random_state=None
+):
+    """
+    Samples interactions of X random users from the interactions file and saves
+    the sampled interactions and corresponding items to new files.
+
+    Parameters
+    ----------
+    X : int
+        Number of random users to sample.
+    inter_file : str, optional
+        Path to the original interactions file.
+    item_file : str, optional
+        Path to the original items file.
+    sampled_inter_file : str, optional
+        Path where the sampled interactions will be saved.
+    sampled_item_file : str, optional
+        Path where the sampled items will be saved.
+    sep : str, optional
+        Field separator used in the files (default: '\t').
+    random_state : int or None, optional
+        Random seed for reproducibility.
+    """
+    # Load interactions
+    inter_df = pd.read_csv(inter_file, sep=sep)
+
+    # Ensure there are enough users
+    unique_users = inter_df['user_id:token'].unique()
+    if X > len(unique_users):
+        raise ValueError(
+            f"X={X} is greater than the number of unique users ({len(unique_users)})"
+        )
+
+    # Sample users
+    sampled_users = pd.Series(unique_users).sample(n=X, random_state=random_state).tolist()
+
+    # Filter interactions
+    sampled_inter_df = inter_df[inter_df['user_id:token'].isin(sampled_users)]
+
+    # Save sampled interactions
+    sampled_inter_df.to_csv(sampled_inter_file, sep=sep, index=False)
+
+    # Load items
+    item_df = pd.read_csv(item_file, sep=sep)
+
+    # Filter items to those in sampled interactions
+    sampled_item_ids = sampled_inter_df['item_id:token'].unique()
+    sampled_item_df = item_df[item_df['item_id:token'].isin(sampled_item_ids)]
+
+    # Save sampled items
+    sampled_item_df.to_csv(sampled_item_file, sep=sep, index=False)
+
+    print(f"Saved {len(sampled_inter_df)} interactions for {X} users to '{sampled_inter_file}'.")
+    print(f"Saved {len(sampled_item_df)} items to '{sampled_item_file}'.")

@@ -43,7 +43,8 @@ from recbole.utils.utils import (
     create_item_popularity_csv,
     search_movies,
     process_and_save_movies,
-    get_movie_info
+    get_movie_info,
+    sample_users_interactions
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -107,5 +108,6 @@ __all__ = [
     "create_item_popularity_csv",
     "search_movies",
     "process_and_save_movies",
-    "get_movie_info"
+    "get_movie_info",
+    "sample_users_interactions"
 ]
