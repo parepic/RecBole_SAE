@@ -167,8 +167,9 @@ def calculate_valid_score(valid_result, valid_metric=None):
         float: valid score
     """
     if valid_metric:
-        print(valid_metric)
-        return valid_result["loss"]
+        if valid_metric == 'loss':
+            return (valid_result[valid_metric] * -1)
+        return valid_result[valid_metric]
     else:
         return valid_result["Recall@10"]
     
