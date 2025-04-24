@@ -44,7 +44,8 @@ from recbole.utils.utils import (
     search_movies,
     process_and_save_movies,
     get_movie_info,
-    sample_users_interactions
+    sample_users_interactions,
+    plot_interaction_distribution
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -109,5 +110,6 @@ __all__ = [
     "search_movies",
     "process_and_save_movies",
     "get_movie_info",
-    "sample_users_interactions"
+    "sample_users_interactions",
+    "plot_interaction_distribution"
 ]

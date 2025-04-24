@@ -1147,24 +1147,6 @@ def build_popularity_tensor(num_items=3706):
             popularity_tensor[index] = row['popularity_label']
     return 
 
-
-import torch
-
-
-def plot_item_distribution(item_ids, title):
-    item_counts = Counter(item_ids.tolist())
-    items, freqs = zip(*item_counts.items())
-    sorted_freqs = sorted(freqs, reverse=True)
-
-    plt.figure(figsize=(10, 4))
-    plt.bar(range(len(sorted_freqs)), sorted_freqs)
-    plt.title(title)
-    plt.xlabel("Items (sorted by frequency)")
-    plt.ylabel("Frequency")
-    plt.tight_layout()
-    plt.show()
-
-
 def get_extreme_correlations(file_name: str, unpopular_only: bool):
     """
     Retrieves all positive and all negative correlation indexes and their values.
@@ -2191,3 +2173,14 @@ def sample_users_interactions(
 
     print(f"Saved {len(sampled_inter_df)} interactions for {X} users to '{sampled_inter_file}'.")
     print(f"Saved {len(sampled_item_df)} items to '{sampled_item_file}'.")
+
+def plot_interaction_distribution(file_path):
+    df = pd.read_csv(file_path)
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, len(df) + 1), df['interaction_count'], linewidth=1)
+    plt.xlabel('Item Rank (Most Popular to Least Popular)')
+    plt.ylabel('Interaction Count')
+    plt.title('Item Popularity Distribution')
+    plt.grid(True)
+    plt.show()
+

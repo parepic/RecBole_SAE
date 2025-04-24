@@ -37,7 +37,8 @@ from recbole.utils import (
     create_item_popularity_csv,
     search_movies,
     process_and_save_movies,
-    sample_users_interactions
+    sample_users_interactions,
+    plot_interaction_distribution
 )
 
 
@@ -387,6 +388,9 @@ if __name__ == "__main__":
     #     header=['item_id:token']      # ensure the column name is exactly this
     # )
 
+    # exit()
+    
+    # plot_interaction_distribution(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
     # exit()
     parser = argparse.ArgumentParser()
     
