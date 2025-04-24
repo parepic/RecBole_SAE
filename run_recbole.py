@@ -371,17 +371,17 @@ if __name__ == "__main__":
     # exit()
     # df = pd.read_csv(r"./dataset/yelp2018/yelp2018.inter", sep='\t', nrows=5)
     # print(df.columns.tolist())
-    # sample_users_interactions(500000)
+    # sample_users_interactions(20000)
     # exit()
 
-    # df = pd.read_csv(r"./dataset/gowalla/gowalla.inter", sep='\t')
+    # df = pd.read_csv(r"./dataset/netflix/netflix.inter", sep='\t')
 
     # # 2. Extract unique item IDs
     # unique_items = df['item_id:token'].drop_duplicates()
 
     # # 3. Write them out to the new file with the correct header
     # unique_items.to_frame().to_csv(
-    #     r"./dataset/gowalla/gowalla.item",     # output filename
+    #     r"./dataset/netflix/netflix.item",     # output filename
     #     sep='\t',                     # same separator
     #     index=False,                  # no index column
     #     header=['item_id:token']      # ensure the column name is exactly this

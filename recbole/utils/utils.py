@@ -2131,10 +2131,10 @@ def get_movie_info(item_id):
 
 def sample_users_interactions(
     X,
-    inter_file=r"./dataset/yoochoose-clicks/yoochoose-clicks.inter",
-    item_file=r"./dataset/yoochoose-clicks/yoochoose-clicks.item",
-    sampled_inter_file=r"./dataset/yoochoose-clicks/yoochoose-clicks-sampled.inter",
-    sampled_item_file=r"./dataset/yoochoose-clicks/yoochoose-clicks-sampled.item",
+    inter_file=r"./dataset/netflix/netflix.inter",
+    item_file=r"./dataset/netflix/netflix.item",
+    sampled_inter_file=r"./dataset/netflix/netflix-sampled.inter",
+    sampled_item_file=r"./dataset/netflix/netflix-sampled.item",
     sep='\t',
     random_state=None
 ):
