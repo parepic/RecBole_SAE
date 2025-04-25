@@ -623,7 +623,7 @@ def fetch_user_popularity_score(user_ids, sequences):
 
 
 def save_batch_activations(bulk_data, neuron_count):
-    file_path = r"./dataset/Amazon_Beauty/neuron_activations_sasrecsae_final_pop.h5"
+    file_path = r"./dataset/mind_small_train/neuron_activations_sasrecsae_final_pop.h5"
     bulk_data = bulk_data.permute(1, 0).detach().cpu().numpy()  # [neuron_count, batch_size]
     real_batch_size = bulk_data.shape[1]  # Might be < batch_size in final step
 
@@ -951,7 +951,7 @@ def make_items_unpopular(item_seq_len):
     #         print(f"Column {i}:")
     #         print(array[:, i])
         
-    item_labels = pd.read_csv("./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
+    item_labels = pd.read_csv("./dataset/mind_small_train/item_popularity_labels_with_titles.csv")
     
     # Filter rows where popularity_label == -1
     filtered_items = item_labels[item_labels['popularity_label'] == -1]
@@ -1891,7 +1891,7 @@ def create_unbiased_set():
     plt.show()
 
 
-def create_item_popularity_csv():
+def create_item_popularity_csv(p):
     # -------------------------------
     # Step 1: Load the training NPZ file and compute item frequencies.
     # -------------------------------
@@ -1938,14 +1938,14 @@ def create_item_popularity_csv():
     df_top["cum_interaction"] = df_top["interaction_count"].cumsum()
     df_top["cum_frac"] = df_top["cum_interaction"] / total_sum
     # Mark items in the top 20% cumulative.
-    df_top["popularity_label_top"] = (df_top["cum_frac"] <= 0.1).astype(int)
+    df_top["popularity_label_top"] = (df_top["cum_frac"] <= p).astype(int)
     
     # Similarly, compute for bottom labels.
     df_bottom = df_merged.sort_values(by="interaction_count", ascending=True).reset_index(drop=True)
     df_bottom["cum_interaction"] = df_bottom["interaction_count"].cumsum()
     df_bottom["cum_frac"] = df_bottom["cum_interaction"] / total_sum
     # Mark items in the bottom 20% cumulative.
-    df_bottom["popularity_label_bottom"] = (df_bottom["cum_frac"] <= 0.1).astype(int)
+    df_bottom["popularity_label_bottom"] = (df_bottom["cum_frac"] <= p).astype(int)
     
     # Create dictionaries mapping item_id:token to top and bottom labels.
     top_labels = df_top.set_index("item_id:token")["popularity_label_top"].to_dict()
