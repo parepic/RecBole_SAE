@@ -180,7 +180,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=50, beta=change, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=800, beta=change, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -281,6 +281,8 @@ if __name__ == "__main__":
     # exit()
     # save_cohens_d()
     # exit()
+    save_cohens_d()
+    exit()
     parser = argparse.ArgumentParser()
     
     

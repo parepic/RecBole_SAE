@@ -200,8 +200,8 @@ class SAE(nn.Module):
 		top_neurons = combined_sorted[:int(self.N)]
 
 		# Load the corresponding statistics files.
-		stats_unpop = pd.read_csv(r"./dataset/Amazon_Beauty/row_stats_unpopular.csv")
-		stats_pop = pd.read_csv(r"./dataset/Amazon_Beauty/row_stats_popular.csv")
+		stats_unpop = pd.read_csv(r"./dataset/mind_small_train/row_stats_popular.csv")
+		stats_pop = pd.read_csv(r"./dataset/mind_small_train/row_stats_unpopular.csv")
 
 		# Create tensors of the absolute Cohen's d values for the selected neurons.
 		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
@@ -232,7 +232,7 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals > mean_val + self.beta * std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
-				pre_acts[condition, neuron_idx] += weight_unpop * std_val
+				pre_acts[condition, neuron_idx] -= weight_unpop * std_val
 			else:  # group == 'pop'
 				# For neurons to be dampened, use the popular statistics for impact.
 				pop_mean = stats_pop.iloc[neuron_idx]["mean"]
@@ -248,7 +248,7 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals < pop_mean + self.gamma * pop_sd
 				# Decrease activations proportionally.
-				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
+				pre_acts[condition, neuron_idx] += weight_pop * pop_sd
     
 		return pre_acts
 		
