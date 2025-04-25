@@ -1938,14 +1938,14 @@ def create_item_popularity_csv():
     df_top["cum_interaction"] = df_top["interaction_count"].cumsum()
     df_top["cum_frac"] = df_top["cum_interaction"] / total_sum
     # Mark items in the top 20% cumulative.
-    df_top["popularity_label_top"] = (df_top["cum_frac"] <= 0.2).astype(int)
+    df_top["popularity_label_top"] = (df_top["cum_frac"] <= 0.05).astype(int)
     
     # Similarly, compute for bottom labels.
     df_bottom = df_merged.sort_values(by="interaction_count", ascending=True).reset_index(drop=True)
     df_bottom["cum_interaction"] = df_bottom["interaction_count"].cumsum()
     df_bottom["cum_frac"] = df_bottom["cum_interaction"] / total_sum
     # Mark items in the bottom 20% cumulative.
-    df_bottom["popularity_label_bottom"] = (df_bottom["cum_frac"] <= 0.2).astype(int)
+    df_bottom["popularity_label_bottom"] = (df_bottom["cum_frac"] <= 0.05).astype(int)
     
     # Create dictionaries mapping item_id:token to top and bottom labels.
     top_labels = df_top.set_index("item_id:token")["popularity_label_top"].to_dict()
