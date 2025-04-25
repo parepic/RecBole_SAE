@@ -273,8 +273,8 @@ if __name__ == "__main__":
     # )
 
     # exit()
-    plot_interaction_distribution(r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv")
-    exit()
+    # plot_interaction_distribution(r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv")
+    # exit()
     # save_cohens_d()
     # exit()
     # create_item_popularity_csv()
