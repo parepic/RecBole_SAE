@@ -161,12 +161,9 @@ def create_visualizations_neurons():
     deep_lt_coverages = []
     dampen_percs = []
     ginis = []
-    ips_ndcgs = []
     ndcg_heads = []
     ndcg_mids = []
     ndcg_tails = []
-
-    dampen_perc = 0
     neuron_count = 0
     
     count = 0
@@ -200,7 +197,7 @@ def create_visualizations_neurons():
         print(test_result['ndcg@10'])
         print(test_result['Deep_LT_coverage@10'])
         neuron_count += 2
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages,
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
                          arps, ndcg_heads, ndcg_mids, ndcg_tails)
 
 
