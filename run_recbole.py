@@ -277,8 +277,8 @@ if __name__ == "__main__":
     
     # plot_interaction_distribution(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
     # exit()
-    # save_mean_SD()
-    # exit()
+    save_cohens_d()
+    exit()
     # create_item_popularity_csv()
     # exit()
     parser = argparse.ArgumentParser()
