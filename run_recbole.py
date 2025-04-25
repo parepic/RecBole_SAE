@@ -181,7 +181,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=150, beta=change, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=512, beta=change, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     
     # process_and_save_movies("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkYTA5ZTdmZmQ0YjI5NWU4ODIwZDMzNDhkZTkwMmFmMyIsIm5iZiI6MTc0NDg2MDcwNy45NjMsInN1YiI6IjY4MDA3NjIzZGU1ZTRkZWM2MmFlZThjYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sk588WSG5LO2s3jkIatnJFtQN5ZwAh9z7mTkhGmPLLA")
     # exit()
-    # plot_h5_columns(row_x=1)
+    # plot_h5_columns(row_x=244)
     # exit()
     # save_cohens_d()
     # exit()
