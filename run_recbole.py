@@ -281,8 +281,8 @@ if __name__ == "__main__":
     # exit()
     # save_cohens_d()
     # exit()
-    save_cohens_d()
-    exit()
+    # save_cohens_d()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
