@@ -25,7 +25,8 @@ stopping_step: 10               # (int) The threshold for validation-based early
 weight_decay: 0.0               # (float) The weight decay value (L2 penalty) for optimizers.
 loss_decimal_place: 4           # (int) The decimal place of training loss.
 require_pow: False              # (bool) Whether or not to perform power operation in EmbLoss.
-
+load_col:                       # (dict) The suffix of atomic files: (list) field names to be loaded.
+    inter: [user_id, item_id, rating, timestamp]
 # Evaluation Settings
 eval_args:
     'split': {'LS': 'valid_and_test'}

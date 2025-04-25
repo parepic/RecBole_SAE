@@ -230,74 +230,6 @@ def compute_corr(pair):
 
 if __name__ == "__main__":
    
-    # with Pool(num_workers) as pool:
-    #     results = pool.map(compute_corr, row_pairs)
-
-    # # Save to CSV
-    # df = pd.DataFrame(results, columns=["row_i", "row_j", "correlation"])
-    # df["abs_corr"] = df["correlation"].abs()
-    # # df.sort_values("abs_corr", ascending=False, inplace=True)
-    # df.drop(columns="abs_corr", inplace=True)
-    # df.to_csv(output_csv, index=False)
-
-    # print(f"Saved correlation results to '{output_csv}' using {num_workers} cores.")
-    
-    # save_cohens_d()
-    # exit()
-    
-    # process_and_save_movies("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkYTA5ZTdmZmQ0YjI5NWU4ODIwZDMzNDhkZTkwMmFmMyIsIm5iZiI6MTc0NDg2MDcwNy45NjMsInN1YiI6IjY4MDA3NjIzZGU1ZTRkZWM2MmFlZThjYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sk588WSG5LO2s3jkIatnJFtQN5ZwAh9z7mTkhGmPLLA")
-    # exit()
-    # plot_h5_columns(row_x=244)
-    # exit()
-    # save_cohens_d()
-    # exit()
-    # remove_sparse_users_items()
-    # exit()
-    
-    
-    # import csv
-
-    # input_file  = r'./dataset/gowalla/gowalla.inter'
-    # output_file = r'./dataset/gowalla/gowalla.item'
-
-    # # Collect unique item tokens
-    # unique_items = set()
-
-    # with open(input_file, 'r', newline='') as infile:
-    #     # If your file uses a different delimiter (e.g. space), change delimiter='\t' accordingly
-    #     reader = csv.DictReader(infile, delimiter='\t')
-    #     for row in reader:
-    #         unique_items.add(row['item_id:token'])
-
-    # # Write them out, one per line (with header)
-    # with open(output_file, 'w', newline='') as outfile:
-    #     writer = csv.writer(outfile, delimiter='\t')
-    #     writer.writerow(['item_id:token'])
-    #     for item in sorted(unique_items):
-    #         writer.writerow([item])
-
-    # print(f"Extracted {len(unique_items)} unique items into '{output_file}'.")
-    # remove_sparse_users_items()
-    # exit()
-    
-    # cols_to_keep = ['item_id:token', 'interaction_count' ,'pop_score' , 'popularity_label']  # <-- adjust as needed
-
-    # # # # load only those columns
-    # df = pd.read_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
-
-    # # # # or, if you already have a full df:
-    # df = df[cols_to_keep]
-
-    # # # # write back out
-    # df.to_csv(r"./dataset/Amazon_Beauty/item_popularity_labels_with_titles2.csv", index=False)
-    # # print(f"Kept {len(cols_to_keep)} columns and wrote {len(df)} rows to file.")
-    # exit()
-    
-    # df['item_id:token'] = df['item_id:token'].astype(int)
-
-
-    # df.to_csv(r"./dataset/gowalla/gowalla-new.item", sep='\t', index=False)
-    
     # exit()
     # create_item_popularity_csv()
     # exit()
@@ -347,8 +279,8 @@ if __name__ == "__main__":
     # exit()
     # save_mean_SD()
     # exit()
-    create_item_popularity_csv()
-    exit()
+    # create_item_popularity_csv()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
@@ -412,7 +344,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'gowalla',
+            'Amazon_Beauty',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
@@ -422,11 +354,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
         
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 

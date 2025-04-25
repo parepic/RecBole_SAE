@@ -14,3 +14,7 @@ sae_lr: 1e-4
 sae_k: 8
 sae_scale_size: 128
 sae_lr: 5e-4
+
+# Selectively Loading
+load_col:                       # (dict) The suffix of atomic files: (list) field names to be loaded.
+    inter: [user_id, item_id, rating, timestamp]

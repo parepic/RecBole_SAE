@@ -1168,10 +1168,10 @@ class Dataset(torch.utils.data.Dataset):
         for alias in self.alias.values():
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
-            # if(alias == 'item_id'):
-            #     self.remap_item_data( r'./dataset/gowalla/gowalla.item', r'./dataset/gowalla/items_remapped.csv',
-            #                             r'./dataset/gowalla/gowalla.inter', r'./dataset/gowalla/interactions_remapped.csv'
-            #                             )
+            if(alias == 'item_id'):
+                self.remap_item_data( r'./dataset/Amazon_Beauty/Amazon_Beauty.item', r'./dataset/Amazon_Beauty/items_remapped.csv',
+                                        r'./dataset/Amazon_Beauty/Amazon_Beauty.inter', r'./dataset/Amazon_Beauty/interactions_remapped.csv'
+                                        )
 
         for field in self._rest_fields:
             remap_list = self._get_remap_list(np.array([field]))
@@ -1807,11 +1807,11 @@ class Dataset(torch.utils.data.Dataset):
         # next_df[1]['item_id'] = torch.from_numpy(val_label)
         # next_df[1].length = val_label.shape[0]
     
-        # np.savez(
-        #     r'./dataset/gowalla/biased_eval_train.npz',
-        #     features=next_df[0]["item_id_list"],
-        #     labels=next_df[0]["item_id"]
-        # )
+        np.savez(
+            r'./dataset/Amazon_Beauty/biased_eval_train.npz',
+            features=next_df[0]["item_id_list"],
+            labels=next_df[0]["item_id"]
+        )
         
         next_ds = [self.copy(_) for _ in next_df]
         return next_ds
