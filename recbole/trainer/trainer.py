@@ -603,6 +603,7 @@ class Trainer(AbstractTrainer):
         # self.model.sae_module.save_highest_activations()
 
 
+
     @torch.no_grad()
     def save_neuron_activations2(
         self, data, model_file=None, show_progress=True, eval_data=True, sae=True
@@ -642,7 +643,7 @@ class Trainer(AbstractTrainer):
             else data
         )
         now = 0
-        times = 300
+        times = 1900
         for batch_idx, batched_data in enumerate(iter_data):
             if now > times:
                 break
@@ -948,8 +949,8 @@ class Trainer(AbstractTrainer):
         num_sample = 0
         # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
         #                                             damp_percent=beta, unpopular_only=True)
-        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
-        #                                             beta=beta, gamma=gamma, unpopular_only=False)
+        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
+                                                    beta=beta, gamma=gamma, unpopular_only=False)
         
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):

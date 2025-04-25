@@ -88,7 +88,7 @@ class SASRec_SAE(SASRec):
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        # item_seq = make_items_unpopular(item_seq).to(self.device)
+        # item_seq = make_items_popular(item_seq).to(self.device)
         seq_output = self.forward(item_seq, item_seq_len, mode='eval')
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
@@ -96,10 +96,11 @@ class SASRec_SAE(SASRec):
         # if(self.mode == "test"):
         #     # user_ids = interaction['user_id']
         # nonzero_idxs = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
-        # save_batch_activations(self.sae_module.last_activations, self.sae_module.hidden_dim, 4096) 
+        # save_batch_activations(self.sae_module.last_activations, self.sae_module.hidden_dim) 
         # self.sae_module.update_highest_activations(item_seq, top_recs, None)
         
-        self.total_loss += (self.sae_module.fvu + self.sae_module.auxk_loss / 32)
+        if hasattr(self.sae_module, 'auxk_loss'):
+            self.total_loss += (self.sae_module.fvu + self.sae_module.auxk_loss / 32)
         
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1

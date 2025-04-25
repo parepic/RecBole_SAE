@@ -196,24 +196,24 @@ def create_visualizations_neurons():
     )  
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [0.0003295620569691932]
-    ndcgs = [0.1593]
-    hits = [0.2925]
-    coverages = [0.8732435597189696]
-    lt_coverages = [0.8687083080654943]
-    deep_lt_coverages = [0.8061178587494376]
-    dampen_percs = [0.0]
-    ginis = [0.7509115939928803]
-    ips_ndcgs = [0.08802518591375912]
-    ndcg_heads = [0.2186]
-    ndcg_mids = [0.1678]
-    ndcg_tails = [0.0774]
+    arps = []
+    ndcgs = []
+    hits = []
+    coverages = []
+    lt_coverages = []
+    deep_lt_coverages = []
+    dampen_percs = []
+    ginis = []
+    ips_ndcgs = []
+    ndcg_heads = []
+    ndcg_mids = []
+    ndcg_tails = []
 
     dampen_perc = 0
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(8, 64, 1).tolist()
+    tochange = np.linspace(0, 512, 8).tolist()
     # tochange = np.linspace(-5, 5, 1)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
@@ -392,6 +392,8 @@ if __name__ == "__main__":
     
     # plot_interaction_distribution(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
     # exit()
+    # save_mean_SD()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
@@ -465,11 +467,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
         
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 
