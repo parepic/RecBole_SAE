@@ -1163,7 +1163,7 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
     
 
     # 1) load
-    df = pd.read_csv(f"./dataset/gowalla/{file_name}")
+    df = pd.read_csv(f"./dataset/Amazon_Beauty/{file_name}")
     # indices = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
     # # 2) if they passed a subset of row positions, slice with .iloc
     # if indices is not None:
