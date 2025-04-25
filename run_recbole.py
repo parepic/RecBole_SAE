@@ -167,8 +167,8 @@ def create_visualizations_neurons():
     neuron_count = 0
     
     count = 0
-    tochange = np.linspace(0, 2048, 17).tolist()
-    # tochange = np.linspace(-5, 5, 11)
+    # tochange = np.linspace(0, 2048, 17).tolist()
+    tochange = np.linspace(-5, 5, 11)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
@@ -180,7 +180,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=2048, beta=-4, gamma=change
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -356,11 +356,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
         
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 
