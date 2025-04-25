@@ -233,9 +233,9 @@ if __name__ == "__main__":
     # create_item_popularity_csv()
     # exit()
     # remove_sparse_users_items()
-    # remove_sparse_users_items()
+    # remove_sparse_users_items(10)
     # exit()
-    # sample_users_interactions(10000)
+    # sample_users_interactions(15000)
     # exit()
     
     # with open(r"./dataset/Amazon_Electronics/Amazon_Electronics.inter", 'r', encoding='utf-8') as f:
@@ -259,27 +259,26 @@ if __name__ == "__main__":
     # sample_users_interactions(20000)
     # exit()
 
-    # df = pd.read_csv(r"./dataset/netflix/netflix.inter", sep='\t')
+    # df = pd.read_csv(r"./dataset/mind_small_train/mind_small_train.inter", sep='\t')
 
     # # 2. Extract unique item IDs
     # unique_items = df['item_id:token'].drop_duplicates()
 
     # # 3. Write them out to the new file with the correct header
     # unique_items.to_frame().to_csv(
-    #     r"./dataset/netflix/netflix.item",     # output filename
+    #     r"./dataset/mind_small_train/mind_small_train.item",     # output filename
     #     sep='\t',                     # same separator
     #     index=False,                  # no index column
     #     header=['item_id:token']      # ensure the column name is exactly this
     # )
 
     # exit()
-    
-    # plot_interaction_distribution(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+    # plot_interaction_distribution(r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv")
     # exit()
     # save_cohens_d()
     # exit()
-    # create_item_popularity_csv()
-    # exit()
+    create_item_popularity_csv()
+    exit()
     # save_cohens_d()
     # exit()
     parser = argparse.ArgumentParser()
@@ -345,7 +344,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'Amazon_Beauty',
+            'mind_small_train',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
