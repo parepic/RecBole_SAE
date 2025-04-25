@@ -80,6 +80,7 @@ from IPython.display import display
 def calculate_percentage_change(new_values, base_value):
     return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
 
+
 def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis, arps, ndcg_heads, ndcg_mids, ndcg_tails):
     # Hardcoded first row for 'sasrec'
     dampen_labels = [f'{dp}' for dp in dampen_percs]
@@ -180,7 +181,7 @@ def create_visualizations_neurons():
             )      
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4, gamma=1
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
