@@ -80,7 +80,7 @@ from IPython.display import display
 def calculate_percentage_change(new_values, base_value):
     return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
 
-def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis, ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails):
+def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis, arps, ndcg_heads, ndcg_mids, ndcg_tails):
     # Hardcoded first row for 'sasrec'
     dampen_labels = [f'{dp}' for dp in dampen_percs]
     
@@ -119,7 +119,6 @@ def create_visualizations():
     deep_lt_coverages = []
     dampen_percs = []
     ginis = []
-    ips_ndcgs = []
     ndcg_heads = []
     ndcg_mids = []
     ndcg_tails = []
@@ -138,15 +137,15 @@ def create_visualizations():
         lt_coverages.append(test_result['LT_coverage@10'])
         deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
-        ips_ndcgs.append(test_result['ips_ndcg@10'])
+        # ips_ndcgs.append(test_result['ips_ndcg@10'])
         dampen_percs.append(dampen_perc)
         arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
-        print(test_result['ips_ndcg@10'])
+        # print(test_result['ips_ndcg@10'])
         print(test_result['coverage@10'])
         dampen_perc += 0.1
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
-                          ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails)
+                          arps, ndcg_heads, ndcg_mids, ndcg_tails)
 
 
 
@@ -242,8 +241,7 @@ def create_visualizations_neurons():
         dampen_percs.append(change)
         arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
-        print(test_result['ips_ndcg@10'])
-        print(test_result['coverage@10'])
+        print(test_result['Deep_LT_coverage@10'])
         neuron_count += 2
     display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
                           ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails)
