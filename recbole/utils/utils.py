@@ -623,7 +623,7 @@ def fetch_user_popularity_score(user_ids, sequences):
 
 
 def save_batch_activations(bulk_data, neuron_count):
-    file_path = r"./dataset/gowalla/neuron_activations_sasrecsae_final_unpop.h5"
+    file_path = r"./dataset/Amazon_Beauty/neuron_activations_sasrecsae_final_pop.h5"
     bulk_data = bulk_data.permute(1, 0).detach().cpu().numpy()  # [neuron_count, batch_size]
     real_batch_size = bulk_data.shape[1]  # Might be < batch_size in final step
 
@@ -951,7 +951,7 @@ def make_items_unpopular(item_seq_len):
     #         print(f"Column {i}:")
     #         print(array[:, i])
         
-    item_labels = pd.read_csv("./dataset/gowalla/item_popularity_labels_with_titles.csv")
+    item_labels = pd.read_csv("./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
     
     # Filter rows where popularity_label == -1
     filtered_items = item_labels[item_labels['popularity_label'] == -1]
@@ -965,10 +965,10 @@ def make_items_unpopular(item_seq_len):
         sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
         
         # Pad with 0s if needed to reach length 50
-        if len(sampled) < 20:
-            sampled += [0] * (20 - len(sampled))
+        if len(sampled) < 10:
+            sampled += [0] * (10 - len(sampled))
         else:
-            sampled = sampled[:20]  # In case count > 50 for any reason
+            sampled = sampled[:10]  # In case count > 50 for any reason
 
         selected_item_ids.append(sampled)
 
@@ -980,7 +980,7 @@ def make_items_unpopular(item_seq_len):
 
 
 def make_items_popular(item_seq_len):
-    item_labels = pd.read_csv("./dataset/gowalla/item_popularity_labels_with_titles.csv")
+    item_labels = pd.read_csv("./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
     
     # Filter rows where popularity_label == -1
     filtered_items = item_labels[item_labels['popularity_label'] == 1]
@@ -994,10 +994,10 @@ def make_items_popular(item_seq_len):
         sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
         
         # Pad with 0s if needed to reach length 50
-        if len(sampled) < 20:
-            sampled += [0] * (20 - len(sampled))
+        if len(sampled) < 10:
+            sampled += [0] * (10 - len(sampled))
         else:
-            sampled = sampled[:20]  # In case count > 50 for any reason
+            sampled = sampled[:10]  # In case count > 50 for any reason
 
         selected_item_ids.append(sampled)
 
@@ -1010,7 +1010,7 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/gowalla/neuron_activations_sasrecsae_final_pop.h5"
+    file_path = r"./dataset/Amazon_Beauty/neuron_activations_sasrecsae_final_unpop.h5"
     dataset_name = 'dataset'  # Replace with actual dataset name inside the h5 file
 
     # Load the real indices from the filtered CSV
@@ -1033,7 +1033,7 @@ def save_mean_SD():
     })
 
     # Save to CSV with real indices
-    output_csv_path = r"./dataset/gowalla/row_stats_popular.csv"
+    output_csv_path = r"./dataset/Amazon_Beauty/row_stats_unpopular.csv"
     df.to_csv(output_csv_path)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
@@ -1043,8 +1043,8 @@ def save_mean_SD():
 
 
 def save_cohens_d():
-    df1 = pd.read_csv(r"./dataset/gowalla/row_stats_popular.csv", index_col=0)
-    df2 = pd.read_csv(r"./dataset/gowalla/row_stats_unpopular.csv", index_col=0)
+    df1 = pd.read_csv(r"./dataset/Amazon_Beauty/row_stats_popular.csv", index_col=0)
+    df2 = pd.read_csv(r"./dataset/Amazon_Beauty/row_stats_unpopular.csv", index_col=0)
 
     # Compute pooled standard deviation
     s_pooled = np.sqrt((df1['std']**2 + df2['std']**2) / 2)
@@ -1056,7 +1056,7 @@ def save_cohens_d():
     df_result = pd.DataFrame({'cohen_d': cohen_d})
 
     # Save to CSV with index column
-    df_result.to_csv(r"./dataset/gowalla/cohens_d.csv")
+    df_result.to_csv(r"./dataset/Amazon_Beauty/cohens_d.csv")
 
     print("Cohen's d values saved to cohens_d.csv")
     
