@@ -106,50 +106,6 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
 
     
 
-def create_visualizations():
-    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-    )  
-    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = []
-    ndcgs = []
-    hits = []
-    coverages = []
-    lt_coverages = []
-    deep_lt_coverages = []
-    dampen_percs = []
-    ginis = []
-    ndcg_heads = []
-    ndcg_mids = []
-    ndcg_tails = []
-    dampen_perc = 0
-    neuron_count = 0
-    for i in range(17):
-        test_result = trainer.evaluate(
-            valid_data, model_file=args.path, show_progress=config["show_progress"], dampen_perc = dampen_perc
-        )
-        ndcgs.append(test_result['ndcg@10'])
-        ndcg_heads.append(test_result['ndcg-head@10'])
-        ndcg_mids.append(test_result['ndcg-mid@10'])
-        ndcg_tails.append(test_result['ndcg-tail@10'])
-        hits.append(test_result['hit@10'])
-        coverages.append(test_result['coverage@10'])
-        lt_coverages.append(test_result['LT_coverage@10'])
-        deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
-        ginis.append(test_result['Gini_coef@10'])
-        # ips_ndcgs.append(test_result['ips_ndcg@10'])
-        dampen_percs.append(dampen_perc)
-        arps.append(test_result['ARP@10'])
-        print(test_result['ndcg@10'])
-        # print(test_result['ips_ndcg@10'])
-        print(test_result['coverage@10'])
-        dampen_perc += 0.1
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
-                          arps, ndcg_heads, ndcg_mids, ndcg_tails)
-
-
-
-
 def tune_hyperparam():
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
@@ -187,6 +143,8 @@ def tune_hyperparam():
         print("blyat ", best)
     return best_triplet, best_ndcg
     
+
+
 
 def create_visualizations_neurons():
     
@@ -237,14 +195,13 @@ def create_visualizations_neurons():
         lt_coverages.append(test_result['LT_coverage@10'])
         deep_lt_coverages.append(test_result['Deep_LT_coverage@10'])
         ginis.append(test_result['Gini_coef@10'])
-        ips_ndcgs.append(test_result['ips_ndcg@10'])
         dampen_percs.append(change)
         arps.append(test_result['ARP@10'])
         print(test_result['ndcg@10'])
         print(test_result['Deep_LT_coverage@10'])
         neuron_count += 2
-    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis,
-                          ips_ndcgs, arps, ndcg_heads, ndcg_mids, ndcg_tails)
+    display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages,
+                         arps, ndcg_heads, ndcg_mids, ndcg_tails)
 
 
 from scipy.stats import pearsonr

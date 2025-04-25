@@ -982,6 +982,7 @@ class Trainer(AbstractTrainer):
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
         # if self.model.total_loss != 0:
         #     result['loss'] = self.model.total_loss.item()
+        
         if isinstance(self.model, SASRec_SAE):
             self.model.sae_module.activation_count.zero_()
             self.model.total_loss = 0
