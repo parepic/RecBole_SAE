@@ -623,7 +623,7 @@ def fetch_user_popularity_score(user_ids, sequences):
 
 
 def save_batch_activations(bulk_data, neuron_count):
-    file_path = r"./dataset/mind_small_train/neuron_activations_sasrecsae_final_unpop.h5"
+    file_path = r"./dataset/mind_small_train/neuron_activations_sasrecsae_final_pop.h5"
     bulk_data = bulk_data.permute(1, 0).detach().cpu().numpy()  # [neuron_count, batch_size]
     real_batch_size = bulk_data.shape[1]  # Might be < batch_size in final step
 
@@ -1325,7 +1325,7 @@ def get_popularity_label_indices(id_tensor):
                       each item in id_tensor.
     """
     # Read the CSV that maps item IDs to popularity labels.
-    df = pd.read_csv(r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv", encoding='latin1')
+    df = pd.read_csv(r"./dataset/lastfm/item_popularity_labels_with_titles.csv", encoding='latin1')
     
     # Create a mapping from item ID to popularity label.
     id_to_label = dict(zip(df['item_id:token'], df['popularity_label']))
@@ -1725,8 +1725,8 @@ def compute_and_save_correlations(row1, row2, min_corr, num_rows=500000, output_
 def remove_sparse_users_items(n):
     # --- Step 1: Load the Data ---
     # The files use tab as the delimiter and have headers that include type annotations.
-    items = pd.read_csv(r"./dataset/mind_small_train/mind_small_train.item", sep="\t", header=0)
-    interactions = pd.read_csv(r"./dataset/mind_small_train/mind_small_train.inter", sep="\t", header=0)
+    items = pd.read_csv(r"./dataset/lastfm/lastfm.item", sep="\t", header=0)
+    interactions = pd.read_csv(r"./dataset/lastfm/lastfm.inter", sep="\t", header=0)
     # --- Step 2: Iterative Filtering ---
     # We use a threshold of at least 5 interactions for both users and items.
     iteration = 0
@@ -1755,8 +1755,8 @@ def remove_sparse_users_items(n):
 
     # --- Step 4: Save the Filtered Files ---
     # Files are saved with the header intact (including the type annotations).
-    items.to_csv(r"./dataset/mind_small_train/mind_small_train.item.filtered", sep="\t", index=False, header=True)
-    interactions.to_csv(r"./dataset/mind_small_train/mind_small_train.inter.filtered", sep="\t", index=False, header=True)
+    items.to_csv(r"./dataset/lastfm/lastfm.item.filtered", sep="\t", index=False, header=True)
+    interactions.to_csv(r"./dataset/lastfm/lastfm.inter.filtered", sep="\t", index=False, header=True)
 
     print("Filtering complete. Files saved as 'ml-1m.item.filtered', 'ml-1m.inter.filtered', and 'ml-1m.user.filtered'.")
 
@@ -1895,7 +1895,7 @@ def create_item_popularity_csv(p):
     # -------------------------------
     # Step 1: Load the training NPZ file and compute item frequencies.
     # -------------------------------
-    train_npz_path = r"./dataset/mind_small_train/biased_eval_train.npz"
+    train_npz_path = r"./dataset/lastfm/biased_eval_train.npz"
     data = np.load(train_npz_path)
     labels = data["labels"]  # assuming this array contains item IDs (item_id:token)
     total_interactions = len(labels)
@@ -1915,7 +1915,7 @@ def create_item_popularity_csv(p):
     # -------------------------------
     # Step 2: Load the items_remapped CSV file.
     # -------------------------------
-    items_csv_path = r"./dataset/mind_small_train/items_remapped.csv"
+    items_csv_path = r"./dataset/lastfm/items_remapped.csv"
     df_titles = pd.read_csv(items_csv_path)
     
     # -------------------------------
@@ -1973,7 +1973,7 @@ def create_item_popularity_csv(p):
     # -------------------------------
     # Optionally, sort the final DataFrame by item_id for consistent ordering.
     df_final = df_merged.sort_values(by="interaction_count", ascending=False).reset_index(drop=True)
-    output_csv =  r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv"
+    output_csv =  r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
     df_final.to_csv(output_csv, index=False)
     print(f"CSV file '{output_csv}' created successfully.")
     

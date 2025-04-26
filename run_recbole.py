@@ -273,15 +273,17 @@ if __name__ == "__main__":
     # )
 
     # exit()
-    # plot_interaction_distribution(r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv")
+    # plot_interaction_distribution(r"./dataset/lastfm/item_popularity_labels_with_titles.csv")
     # exit()
     # save_cohens_d()
     # exit()
-    # create_item_popularity_csv()
+    # create_item_popularity_csv(0.2)
     # exit()
     # save_cohens_d()
     # exit()
     # save_cohens_d()
+    # exit()
+    # remove_sparse_users_items(5)
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -346,7 +348,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'mind_small_train',
+            'lastfm',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,
@@ -356,11 +358,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        # )  
+        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        )  
         
-        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 

@@ -1169,8 +1169,8 @@ class Dataset(torch.utils.data.Dataset):
             remap_list = self._get_remap_list(alias)
             self._remap(remap_list)
             if(alias == 'item_id'):
-                self.remap_item_data( r'./dataset/mind_small_train/mind_small_train.item', r'./dataset/mind_small_train/items_remapped.csv',
-                                        r'./dataset/mind_small_train/mind_small_train.inter', r'./dataset/mind_small_train/interactions_remapped.csv'
+                self.remap_item_data( r'./dataset/lastfm/lastfm.item', r'./dataset/lastfm/items_remapped.csv',
+                                        r'./dataset/lastfm/lastfm.inter', r'./dataset/lastfm/interactions_remapped.csv'
                                         )
 
         for field in self._rest_fields:
@@ -1808,7 +1808,7 @@ class Dataset(torch.utils.data.Dataset):
         # next_df[1].length = val_label.shape[0]
     
         np.savez(
-            r'./dataset/mind_small_train/biased_eval_train.npz',
+            r'./dataset/lastfm/biased_eval_train.npz',
             features=next_df[0]["item_id_list"],
             labels=next_df[0]["item_id"]
         )
