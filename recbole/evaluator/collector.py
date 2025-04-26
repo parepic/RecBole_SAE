@@ -157,20 +157,20 @@ class Collector(object):
             self.data_struct.update_tensor("rec.items", topk_idx)
 
         if self.register.need("rec.topk"):
-            B, I = scores_tensor.shape
-            mask = torch.full_like(scores_tensor, False, dtype=torch.bool)
+            # B, I = scores_tensor.shape
+            # mask = torch.full_like(scores_tensor, False, dtype=torch.bool)
     
-            # Scatter True values at the specified indices
-            item_seq_len = interaction['item_id_list'].shape[1]
+            # # Scatter True values at the specified indices
+            # item_seq_len = interaction['item_id_list'].shape[1]
 
-            batch_indices = torch.arange(B).unsqueeze(1).expand(-1, item_seq_len)
-            mask[batch_indices, interaction['item_id_list']] = True
+            # batch_indices = torch.arange(B).unsqueeze(1).expand(-1, item_seq_len)
+            # mask[batch_indices, interaction['item_id_list']] = True
             
-            # Apply mask
-            scores_tensor.masked_fill_(mask, float('-inf'))
-            _, topk_idx = torch.topk(
-                scores_tensor, max(self.topk), dim=-1
-            )  # n_users x k
+            # # Apply mask
+            # scores_tensor.masked_fill_(mask, float('-inf'))
+            # _, topk_idx = torch.topk(
+            #     scores_tensor, max(self.topk), dim=-1
+            # )  # n_users x k
             pos_matrix = torch.zeros_like(scores_tensor, dtype=torch.int)
             pos_matrix[positive_u, positive_i] = 1
             pos_len_list = pos_matrix.sum(dim=1, keepdim=True)
