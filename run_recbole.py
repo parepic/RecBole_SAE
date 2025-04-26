@@ -168,7 +168,7 @@ def create_visualizations_neurons():
     coverages = [0.8194957983193277]
     lt_coverages = [0.8169110126150699]
     deep_lt_coverages = [0.7359234234234234]
-    dampen_percs = []  # still no value provided
+    dampen_percs = [0.0]  # still no value provided
     ginis = [0.6642737940991374]
     ndcg_heads = [0.6935]
     ndcg_mids = [0.5673]
