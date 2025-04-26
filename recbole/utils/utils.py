@@ -1033,7 +1033,7 @@ def save_mean_SD():
     })
 
     # Save to CSV with real indices
-    output_csv_path = r"./dataset/Amazon_Beauty/row_stats_unpopular.csv"
+    output_csv_path = r"./dataset/mind_small_train/row_stats_unpopular.csv"
     df.to_csv(output_csv_path)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
