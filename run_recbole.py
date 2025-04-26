@@ -127,107 +127,93 @@ def tune_hyperparam():
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
 
     # 2) build your grid
-    Ns     = [0] + list(np.linspace(512, 4096, 8))
-    betas  = np.concatenate(([-100], np.linspace(-3, 3, 4), [100]))
-    gammas = np.concatenate(([-100], np.linspace(-3, 3, 4), [100]))
+    all_Ns   = list(np.linspace(512, 4096, 8))
+    betas    = np.concatenate(([-100], np.linspace(-3, 3, 4), [100]))
+    gammas   = np.concatenate(([-100], np.linspace(-3, 3, 4), [100]))
 
     # 3) baseline & bookkeeping
     baseline_stats = {
-        'ndcg@10': 0.6512,
-        'Gini_coef@10': 0.6672,
+        'ndcg@10':          0.5944,
+        'Gini_coef@10':     0.6672,
         'Deep_LT_coverage@10': 0.7354,
-        'ndcg-head@10': 0.6733,
-        'ndcg-mid@10': 0.5653,
-        'ndcg-tail@10': 0.599
+        'ndcg-head@10':     0.6733,
+        'ndcg-mid@10':      0.5653,
+        'ndcg-tail@10':     0.5990
     }
+    best_diff    = 0.0
+    best_triplet = None
+    it_num       = 0
+    records      = []
 
-    best_diff     = 0.0
-    best_triplet  = None
-    it_num        = 0
+    # 4) single n=0 evaluation
+    print("=== Running n=0 case ===")
+    res0 = trainer.evaluate(
+        valid_data,
+        model_file=args.path,
+        show_progress=config["show_progress"]
+    )
 
-    # prepare results storage
-    records = []
+    # compute and log n=0 metrics
+    ndcg0 = res0['ndcg@10']
+    gini0 = res0['Gini_coef@10']
+    diff_ndcg0 = abs(ndcg0 - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10']
+    diff_gini0 = abs(gini0 - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+    gain0 = diff_gini0 - diff_ndcg0
 
-    # 4) iterate over (n, β, γ)
-    for n, beta, gamma in itertools.product(Ns, betas, gammas):
-        # evaluate
-        if n == 0:
-            test_result = trainer.evaluate(
-                valid_data,
-                model_file=args.path,
-                show_progress=config["show_progress"]
-            )
-        else:
-            test_result = trainer.evaluate(
-                valid_data,
-                model_file=args.path,
-                show_progress=config["show_progress"],
-                N=n,
-                beta=beta,
-                gamma=gamma
-            )
-            
+    print(f"[Iter {it_num:04d}] n=0 → ndcgΔ={diff_ndcg0:.3f}, giniΔ={diff_gini0:.3f}")
+    if diff_ndcg0 <= 0.05 and gain0 > best_diff:
+        best_diff    = gain0
+        best_triplet = (0, None, None)
+    records.append({
+        'N': 0, 'beta': None, 'gamma': None,
+        'ndcg': ndcg0, 'gini': gini0, 'gain': gain0,
+        'Deep long tail coverage': res0.get('Deep_LT_coverage@10'),
+        'ndcg-head': res0.get('ndcg-head@10'),
+        'ndcg-mid': res0.get('ndcg-mid@10'),
+        'ndcg-tail': res0.get('ndcg-tail@10'),
+    })
+    it_num += 1
+
+    # 5) full sweep for n>0
+    for n, beta, gamma in itertools.product(all_Ns, betas, gammas):
+        res = trainer.evaluate(
+            valid_data,
+            model_file=args.path,
+            show_progress=config["show_progress"],
+            N=n, beta=beta, gamma=gamma
+        )
+
         # compute metrics
-        ndcg = test_result['ndcg@10']
-        gini = test_result['Gini_coef@10']
-        gain = (abs(gini - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
-                - abs(ndcg - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10'])
-        deep_cover = test_result.get('Deep_LT_coverage@10', None)
-        head = test_result.get('ndcg-head@10', None)
-        mid  = test_result.get('ndcg-mid@10', None)
-        tail = test_result.get('ndcg-tail@10', None)
-
-        # log for best
+        ndcg   = res['ndcg@10']
+        gini   = res['Gini_coef@10']
         diff_ndcg = abs(ndcg - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10']
         diff_gini = abs(gini - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+        gain = diff_gini - diff_ndcg
+
+        # update best
         if diff_ndcg <= 0.05 and gain > best_diff:
             best_diff    = gain
             best_triplet = (n, beta, gamma)
 
-        # append record
+        # record + print
         records.append({
-            'N': n,
-            'beta': beta,
-            'gamma': gamma,
-            'ndcg': ndcg,
-            'gini': gini,
-            'gain': gain,
-            'Deep long tail coverage': deep_cover,
-            'ndcg-head': head,
-            'ndcg-mid': mid,
-            'ndcg-tail': tail
+            'N': n, 'beta': beta, 'gamma': gamma,
+            'ndcg': ndcg, 'gini': gini, 'gain': gain,
+            'Deep long tail coverage': res.get('Deep_LT_coverage@10'),
+            'ndcg-head': res.get('ndcg-head@10'),
+            'ndcg-mid': res.get('ndcg-mid@10'),
+            'ndcg-tail': res.get('ndcg-tail@10'),
         })
-
-        # simple print
-        if n == 0:
-            print(f"[Iter {it_num:04d}] n=0 → ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}")
-        else:
-            print(f"[Iter {it_num:04d}] N={n:.0f}, β={beta:.2f}, γ={gamma:.2f} → "
-                  f"ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}, best_gain={best_diff:.3f}")
+        print(f"[Iter {it_num:04d}] N={n:.0f}, β={beta:.2f}, γ={gamma:.2f} → "
+              f"ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}, best_gain={best_diff:.3f}")
         it_num += 1
 
-    # add baseline row
-    baseline_row = {
-        'N': 'baseline',
-        'beta': 'baseline',
-        'gamma': 'baseline',
-        'ndcg': baseline_stats['ndcg@10'],
-        'gini': baseline_stats['Gini_coef@10'],
-        'gain': 0.0,
-        'Deep long tail coverage': baseline_stats['Deep_LT_coverage@10'],
-        'ndcg-head': baseline_stats['ndcg-head@10'],
-        'ndcg-mid': baseline_stats['ndcg-mid@10'],
-        'ndcg-tail': baseline_stats['ndcg-tail@10']
-    }
-    records.append(baseline_row)
-
-    # save to CSV
+    # 6) save results + final report
     df = pd.DataFrame(records)
-    output_path = args.output_csv if hasattr(args, 'output_csv') else 'tuning_results.csv'
-    df.to_csv(output_path, index=False)
-    print(f"Results saved to {output_path}")
+    out_csv = getattr(args, 'output_csv', 'tuning_results.csv')
+    df.to_csv(out_csv, index=False)
+    print(f"Results saved to {out_csv}")
 
-    # 5) final report
     print("=== DONE ===")
     print(f"Best triplet: {best_triplet}, best gain: {best_diff:.3f}")
     return best_triplet
@@ -455,12 +441,12 @@ if __name__ == "__main__":
         
     
     if(args.model == "SASRec" and args.train):
-        config_file_list = (
-                args.config_files.strip().split(" ") if args.config_files else None
-            )
-        parameter_dict = {
-            'train_neg_sample_args': None,
-        }   
+        # config_file_list = (
+        #         args.config_files.strip().split(" ") if args.config_files else None
+        #     )
+        # parameter_dict = {
+        #     'train_neg_sample_args': None,
+        # }   
 
         # config_file_list = [r'./recbole/recbole/properties/overall.yaml',
         #             r'./recbole/recbole/properties/model/SASRec.yaml',
