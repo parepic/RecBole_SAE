@@ -60,7 +60,7 @@ def fair_rerank_exact(scores_tensor: torch.Tensor, alpha: float = 0.0):
     # 2) Precompute weights (Merit^α) and position bias
     v = E[:, None]                      # (K,1)
     am_rel = r_true.sum(0) ** alpha     # vector of length n_items
-
+    print("sik ", am_rel)
     # 3) Build the convex objective:
     #     sum_{d=1..n_items} am_rel[d] * log( sum_{q=1..B} r_true[q,d] * Pi[q, d*K:(d+1)*K] * v )
     obj = 0
