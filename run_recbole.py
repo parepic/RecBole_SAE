@@ -166,7 +166,7 @@ def create_visualizations_neurons():
     ndcg_tails = [0.0367]
     neuron_count = 0
     count = 0
-    tochange = np.linspace(0, 2048, 17).tolist()
+    tochange = np.linspace(0, 2048, 1).tolist()
     # tochange = np.linspace(-5, 5, 2)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
@@ -175,12 +175,12 @@ def create_visualizations_neurons():
     for change in tochange:
         if count==0:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"]
+                valid_data, model_file=args.path, show_progress=config["show_progress"]
             )     
             print(test_result) 
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4, gamma=0
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -403,5 +403,5 @@ if __name__ == "__main__":
                 dataset,
                 valid_data=valid_data,
                 show_progress=True,
-                sasrec_sae_file=r"./recbole/saved/aaa32.pth"
+                sasrec_sae_file=r"./recbole/saved/SASRec_SAE-Apr-26-k32-64-lastfm.pth"
                 )
