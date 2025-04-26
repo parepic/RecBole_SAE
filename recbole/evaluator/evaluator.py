@@ -67,14 +67,14 @@ class Evaluator(object):
 
         # Slice recommendation_count to ignore index 0
         recommendation_count = recommendation_count[1:]
-        # Plot
-        plt.figure(figsize=(10, 4))
-        plt.plot(recommendation_count)
-        plt.xlabel('Index')
-        plt.ylabel('Value')
-        plt.title('Tensor Plot')
-        plt.grid(True)
-        plt.show()
+        # # Plot
+        # plt.figure(figsize=(10, 4))
+        # plt.plot(recommendation_count)
+        # plt.xlabel('Index')
+        # plt.ylabel('Value')
+        # plt.title('Tensor Plot')
+        # plt.grid(True)
+        # plt.show()
         offset = 1  # Because IDs start at 1
 
         # Adjust number of items
