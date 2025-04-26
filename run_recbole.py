@@ -285,6 +285,8 @@ if __name__ == "__main__":
     # exit()
     # remove_sparse_users_items(5)
     # exit()
+    # save_mean_SD()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
@@ -401,5 +403,4 @@ if __name__ == "__main__":
                 dataset,
                 valid_data=valid_data,
                 show_progress=True,
-                sasrec_sae_file=r"./recbole/saved/temp.pth"
                 )

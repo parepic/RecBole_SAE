@@ -1010,7 +1010,7 @@ def make_items_popular(item_seq_len):
 
 def save_mean_SD():
     # Load your .h5 file
-    file_path = r"./dataset/mind_small_train/neuron_activations_sasrecsae_final_unpop.h5"
+    file_path = r"./dataset/mind_small_train/neuron_activations_sasrecsae_final_pop.h5"
     dataset_name = 'dataset'  # Replace with actual dataset name inside the h5 file
 
     # Load the real indices from the filtered CSV
@@ -1033,7 +1033,7 @@ def save_mean_SD():
     })
 
     # Save to CSV with real indices
-    output_csv_path = r"./dataset/mind_small_train/row_stats_unpopular.csv"
+    output_csv_path = r"./dataset/mind_small_train/row_stats_popular.csv"
     df.to_csv(output_csv_path)
 
     print(f"Row-wise mean and std saved to {output_csv_path}")
