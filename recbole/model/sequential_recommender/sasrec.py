@@ -569,7 +569,7 @@ class SASRec(SequentialRecommender):
                 vals = pre_acts[:, neuron_idx]
                 condition = vals > mean_val + self.beta * std_val
                 # Increase activations by an amount proportional to the standard deviation and effective weight.
-                pre_acts[condition, neuron_idx] += weight * std_val
+                pre_acts[:, neuron_idx] += weight * std_val
 
             else:  # group == 'pop'
                 # For neurons to be dampened, use the popular statistics for impact.
