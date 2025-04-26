@@ -1,4 +1,9 @@
 from recbole.utils.logger import init_logger, set_color
+
+from recbole.utils.fair_reranker import (
+    fair_rerank_exact
+)
+
 from recbole.utils.utils import (
     get_local_time,
     ensure_dir,
@@ -111,5 +116,6 @@ __all__ = [
     "process_and_save_movies",
     "get_movie_info",
     "sample_users_interactions",
-    "plot_interaction_distribution"
+    "plot_interaction_distribution",
+    "fair_rerank_exact"
 ]

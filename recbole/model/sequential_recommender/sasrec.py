@@ -41,7 +41,8 @@ from recbole.utils import (
     save_batch_activations,
     get_extreme_correlations,
     skew_sample,
-    calculate_IPS
+    calculate_IPS,
+    fair_rerank_exact
 )
 
 import pandas as pd
@@ -514,6 +515,7 @@ class SASRec(SequentialRecommender):
         # scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
+        scores = fair_rerank_exact(scores, alpha=0.5)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
