@@ -980,7 +980,7 @@ def make_items_unpopular(item_seq_len):
 
 
 def make_items_popular(item_seq_len):
-    item_labels = pd.read_csv("./dataset/Amazon_Beauty/item_popularity_labels_with_titles.csv")
+    item_labels = pd.read_csv("./dataset/lastfm/item_popularity_labels_with_titles.csv")
     
     # Filter rows where popularity_label == -1
     filtered_items = item_labels[item_labels['popularity_label'] == 1]
@@ -991,13 +991,13 @@ def make_items_popular(item_seq_len):
     selected_item_ids = []
 
     for count in nonzero_counts:
-        sampled = pd.Series(available_ids).sample(n=count, replace=False).tolist()
+        sampled = pd.Series(available_ids).sample(n=count, replace=True).tolist()
         
         # Pad with 0s if needed to reach length 50
-        if len(sampled) < 20:
-            sampled += [0] * (20 - len(sampled))
+        if len(sampled) < 50:
+            sampled += [0] * (50 - len(sampled))
         else:
-            sampled = sampled[:20]  # In case count > 50 for any reason
+            sampled = sampled[:50]  # In case count > 50 for any reason
 
         selected_item_ids.append(sampled)
 
