@@ -248,7 +248,7 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals < pop_mean + self.gamma * pop_sd
 				# Decrease activations proportionally.
-				pre_acts[:, neuron_idx] -= weight_pop * pop_sd
+				pre_acts[condition, neuron_idx] -= weight_pop * pop_sd
     
 		return pre_acts
 		
