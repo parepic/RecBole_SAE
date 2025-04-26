@@ -180,7 +180,7 @@ def create_visualizations_neurons():
             print(test_result) 
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-4, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-4, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
