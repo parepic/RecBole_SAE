@@ -163,20 +163,20 @@ def create_visualizations_neurons():
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     arps = [0.00038130350295296784]
-    ndcgs = [0.0192]
-    hits = [0.0301]
+    ndcgs = [0.6105]
+    hits = [0.6667]
     coverages = [0.8194957983193277]
     lt_coverages = [0.8169110126150699]
     deep_lt_coverages = [0.7359234234234234]
-    dampen_percs = [0]  # no value provided in your OrderedDict
+    dampen_percs = []  # still no value provided
     ginis = [0.6642737940991374]
-    ndcg_heads = [0.0684]
-    ndcg_mids = [0.0178]
-    ndcg_tails = [0.0]
+    ndcg_heads = [0.6935]
+    ndcg_mids = [0.5673]
+    ndcg_tails = [0.6359]
     neuron_count = 0
     count = 0
     # tochange = np.linspace(0, 4096, 17).tolist()
-    tochange = np.linspace(-5, 5, 1)
+    tochange = np.linspace(-5, 5, 2)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
