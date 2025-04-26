@@ -153,21 +153,21 @@ def create_visualizations_neurons():
     )  
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = []
-    ndcgs = []
-    hits = []
-    coverages = []
-    lt_coverages = []
-    deep_lt_coverages = []
-    dampen_percs = []  # no value provided in your OrderedDict
-    ginis = []
-    ndcg_heads = []
-    ndcg_mids = []
-    ndcg_tails = []
+    arps = [0.00038130350295296784]
+    ndcgs = [0.0192]
+    hits = [0.0301]
+    coverages = [0.8194957983193277]
+    lt_coverages = [0.8169110126150699]
+    deep_lt_coverages = [0.7359234234234234]
+    dampen_percs = [0]  # no value provided in your OrderedDict
+    ginis = [0.6642737940991374]
+    ndcg_heads = [0.0684]
+    ndcg_mids = [0.0178]
+    ndcg_tails = [0.0]
     neuron_count = 0
     count = 0
     # tochange = np.linspace(0, 4096, 17).tolist()
-    tochange = np.linspace(-5, 5, 1)
+    tochange = np.linspace(-5, 5, 2)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
@@ -180,7 +180,7 @@ def create_visualizations_neurons():
             print(test_result) 
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-4, gamma=change
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-4, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
