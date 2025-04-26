@@ -166,7 +166,7 @@ def create_visualizations_neurons():
     ndcg_tails = [0.0367]
     neuron_count = 0
     count = 0
-    tochange = np.linspace(0, 2048, 2).tolist()
+    tochange = np.linspace(0, 2048, 17).tolist()
     # tochange = np.linspace(-5, 5, 2)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
@@ -180,7 +180,7 @@ def create_visualizations_neurons():
             print(test_result) 
         else:
             test_result = trainer.evaluate(
-                test_data, model_file=args.path, show_progress=config["show_progress"], N=2048, beta=-4, gamma=0
+                test_data, model_file=args.path, show_progress=config["show_progress"], N=change, beta=-4, gamma=0
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -275,8 +275,8 @@ if __name__ == "__main__":
     # exit()
     # plot_interaction_distribution(r"./dataset/lastfm/item_popularity_labels_with_titles.csv")
     # exit()
-    save_cohens_d()
-    exit()
+    # save_cohens_d()
+    # exit()
     # create_item_popularity_csv(0.2)
     # exit()
     # save_cohens_d()
