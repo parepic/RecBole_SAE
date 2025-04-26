@@ -1325,7 +1325,7 @@ def get_popularity_label_indices(id_tensor):
                       each item in id_tensor.
     """
     # Read the CSV that maps item IDs to popularity labels.
-    df = pd.read_csv(r"./dataset/mind_small_train/item_popularity_labels_with_titles.csv", encoding='latin1')
+    df = pd.read_csv(r"./dataset/lastfm/item_popularity_labels_with_titles.csv", encoding='latin1')
     
     # Create a mapping from item ID to popularity label.
     id_to_label = dict(zip(df['item_id:token'], df['popularity_label']))
