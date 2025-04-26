@@ -77,8 +77,17 @@ import pandas as pd
 from IPython.display import display
 
 
+
 def calculate_percentage_change(new_values, base_value):
-    return [f"{new:.4f} ({((new - base_value) / base_value) * 100:.2f}%)" for new in new_values]
+    result = []
+    for new in new_values:
+        if base_value == 0:
+            change = "inf" if new != 0 else "0.00%"
+        else:
+            change = f"{((new - base_value) / base_value) * 100:.2f}%"
+        result.append(f"{new:.4f} ({change})")
+    return result
+
 
 
 def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, deep_lt_coverages, ginis, arps, ndcg_heads, ndcg_mids, ndcg_tails):
