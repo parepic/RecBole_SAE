@@ -167,7 +167,7 @@ def create_visualizations_neurons():
     neuron_count = 0
     count = 0
     # tochange = np.linspace(0, 4096, 17).tolist()
-    tochange = np.linspace(-5, 5, 2)
+    tochange = np.linspace(-5, 5, 11)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
