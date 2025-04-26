@@ -168,9 +168,9 @@ class Collector(object):
             
             # # Apply mask
             # scores_tensor.masked_fill_(mask, float('-inf'))
-            # _, topk_idx = torch.topk(
-            #     scores_tensor, max(self.topk), dim=-1
-            # )  # n_users x k
+            _, topk_idx = torch.topk(
+                scores_tensor, max(self.topk), dim=-1
+            )  # n_users x k
             pos_matrix = torch.zeros_like(scores_tensor, dtype=torch.int)
             pos_matrix[positive_u, positive_i] = 1
             pos_len_list = pos_matrix.sum(dim=1, keepdim=True)
