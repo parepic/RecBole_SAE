@@ -56,7 +56,7 @@ class Evaluator(object):
         """
         import pandas as pd
         import numpy as np
-        file = r'./dataset/lastfm/item_popularity_labels_with_titles.csv'
+        file = r'./dataset/mind_small_train/item_popularity_labels_with_titles.csv'
         # Load item metadata
         item_data = pd.read_csv(file)
 
