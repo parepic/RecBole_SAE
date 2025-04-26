@@ -205,10 +205,10 @@ class SAE(nn.Module):
 
 		# Create tensors of the absolute Cohen's d values for the selected neurons.
 		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
-
+		min_cohen = min(abs(c) for _, c, _ in combined_neurons)
 		# Define a helper normalization function.
 		def normalize_to_range(x, new_min, new_max):
-			min_val = 0
+			min_val = min_cohen
 			max_val = torch.max(x)
 			if max_val == min_val:
 				return torch.full_like(x, (new_min + new_max) / 2)

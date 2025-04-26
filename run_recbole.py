@@ -75,6 +75,7 @@ def plot_graphs(ndcgs, hits, coverages, lt_coverages, dampen_percs):
 
 import pandas as pd
 from IPython.display import display
+import itertools
 
 
 
@@ -117,48 +118,119 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
     
 
 def tune_hyperparam():
+    # 1) load everything
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-        model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-    )  
+        model_file=args.path,
+        sae=(args.model == 'SASRec_SAE'),
+        device=device
+    )
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    Ns = np.linspace(512, 4096, 8)
-    
-    # betas = np.linspace(-3, 3, 7)
-    # np.insert(betas, 0, -100)
-    # betas.append(100)
-    
-    # gammas = np.linspace(-3, 3, 7)
-    # np.insert(gammas, 0, -100)
-    # gammas.append(100)
-    
-    best_triplet = []
-    best_ndcg = -1
-    it_num = 0
-    baseline_ndcg = -1
-    for n in Ns:
-        if it_num == 0:
+
+    # 2) build your grid
+    Ns     = [0] + list(np.linspace(512, 4096, 8))
+    betas  = np.concatenate(([-100], np.linspace(-3, 3, 4), [100]))
+    gammas = np.concatenate(([-100], np.linspace(-3, 3, 4), [100]))
+
+    # 3) baseline & bookkeeping
+    baseline_stats = {
+        'ndcg@10': 0.6512,
+        'Gini_coef@10': 0.6672,
+        'Deep_LT_coverage@10': 0.7354,
+        'ndcg-head@10': 0.6733,
+        'ndcg-mid@10': 0.5653,
+        'ndcg-tail@10': 0.599
+    }
+
+    best_diff     = 0.0
+    best_triplet  = None
+    it_num        = 0
+
+    # prepare results storage
+    records = []
+
+    # 4) iterate over (n, β, γ)
+    for n, beta, gamma in itertools.product(Ns, betas, gammas):
+        # evaluate
+        if n == 0:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"]
+                valid_data,
+                model_file=args.path,
+                show_progress=config["show_progress"]
             )
-            baseline_ndcg = test_result['ndcg@10']
-            it_num += 1
-            continue
-        for beta in betas:
-            for gamma in gammas:
-                test_result = trainer.evaluate(
-                    valid_data, model_file=args.path, show_progress=config["show_progress"], N=n, beta=beta, gamma=gamma
-                )
-                if test_result['ndcg@10'] >= best_ndcg:
-                    best_triplet = [n, beta, gamma]
-                    best_ndcg = test_result['ndcg@10']
-                print(f"Iteration number: {it_num} N: {n} Beta: {beta}, Gamma: {gamma} ")
-                print(f"Current ndcg {test_result['ndcg@10']}, best ndcg:  {best_ndcg}, best triplet: {best_triplet}" )
-                it_num +=1
-    print(f"Best ever triplet: {best_triplet}, with results {best_ndcg}, baseline was {baseline_ndcg}")
-    for best in best_triplet:
-        print("blyat ", best)
-    return best_triplet, best_ndcg
-    
+        else:
+            test_result = trainer.evaluate(
+                valid_data,
+                model_file=args.path,
+                show_progress=config["show_progress"],
+                N=n,
+                beta=beta,
+                gamma=gamma
+            )
+            
+        # compute metrics
+        ndcg = test_result['ndcg@10']
+        gini = test_result['Gini_coef@10']
+        gain = (abs(gini - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+                - abs(ndcg - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10'])
+        deep_cover = test_result.get('Deep_LT_coverage@10', None)
+        head = test_result.get('ndcg-head@10', None)
+        mid  = test_result.get('ndcg-mid@10', None)
+        tail = test_result.get('ndcg-tail@10', None)
+
+        # log for best
+        diff_ndcg = abs(ndcg - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10']
+        diff_gini = abs(gini - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+        if diff_ndcg <= 0.05 and gain > best_diff:
+            best_diff    = gain
+            best_triplet = (n, beta, gamma)
+
+        # append record
+        records.append({
+            'N': n,
+            'beta': beta,
+            'gamma': gamma,
+            'ndcg': ndcg,
+            'gini': gini,
+            'gain': gain,
+            'Deep long tail coverage': deep_cover,
+            'ndcg-head': head,
+            'ndcg-mid': mid,
+            'ndcg-tail': tail
+        })
+
+        # simple print
+        if n == 0:
+            print(f"[Iter {it_num:04d}] n=0 → ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}")
+        else:
+            print(f"[Iter {it_num:04d}] N={n:.0f}, β={beta:.2f}, γ={gamma:.2f} → "
+                  f"ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}, best_gain={best_diff:.3f}")
+        it_num += 1
+
+    # add baseline row
+    baseline_row = {
+        'N': 'baseline',
+        'beta': 'baseline',
+        'gamma': 'baseline',
+        'ndcg': baseline_stats['ndcg@10'],
+        'gini': baseline_stats['Gini_coef@10'],
+        'gain': 0.0,
+        'Deep long tail coverage': baseline_stats['Deep_LT_coverage@10'],
+        'ndcg-head': baseline_stats['ndcg-head@10'],
+        'ndcg-mid': baseline_stats['ndcg-mid@10'],
+        'ndcg-tail': baseline_stats['ndcg-tail@10']
+    }
+    records.append(baseline_row)
+
+    # save to CSV
+    df = pd.DataFrame(records)
+    output_path = args.output_csv if hasattr(args, 'output_csv') else 'tuning_results.csv'
+    df.to_csv(output_path, index=False)
+    print(f"Results saved to {output_path}")
+
+    # 5) final report
+    print("=== DONE ===")
+    print(f"Best triplet: {best_triplet}, best gain: {best_diff:.3f}")
+    return best_triplet
 
 
 
@@ -196,7 +268,7 @@ def create_visualizations_neurons():
             print(test_result) 
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-4, gamma=4
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-100, gamma=100
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -430,8 +502,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            # tune_hyperparam()
-            create_visualizations_neurons()
+            tune_hyperparam()
+            # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     valid_data, model_file=args.path, show_progress=config["show_progress"]
