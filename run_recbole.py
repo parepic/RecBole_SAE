@@ -305,34 +305,7 @@ def compute_corr(pair):
 
 if __name__ == "__main__":
     
-    
-    data = {
-    "gamma": [0.0, 5.0],
-    "NDCG@10": [0.6185, 0.6075],
-    "NDCG-HEAD@10": [0.6935, 0.6761],
-    "NDCG-MID@10": [0.5673, 0.5652],
-    "NDCG-TAIL@10": [0.6359, 0.6380],
-    "Deep LT Coverage@10": [0.7359, 0.7911],
-    "Gini coefficient@10": [0.6643, 0.6033],
-    "ARP@10": [0.0004, 0.0004],
-    }
 
-    # Create DataFrame
-    df = pd.DataFrame(data)
-
-    # Insert name column
-    df.insert(0, "name", ["SASRec", "PopSteer"])
-
-    # Drop 'gamma' and 'ARP@10'
-    df = df.drop(columns=["gamma", "ARP@10"])
-
-    # Show the final table
-    print(df)
-
-
-    # Save as PNG
-    plt.savefig("metrics_comparison.png")
-    plt.show()
     # exit()
     # create_item_popularity_csv(0.2)
     # exit()
