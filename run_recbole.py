@@ -230,7 +230,7 @@ def compute_corr(pair):
 if __name__ == "__main__":
    
     # exit()
-    # create_item_popularity_csv(0.1)
+    create_item_popularity_csv(0.1)
     # exit()
     # remove_sparse_users_items()
     # remove_sparse_users_items(10)
