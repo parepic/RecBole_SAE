@@ -515,7 +515,7 @@ class SASRec(SequentialRecommender):
         # scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
-        scores = fair_rerank_exact(scores, alpha=0.5)
+        scores = fair_rerank_exact(scores, alpha=1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1

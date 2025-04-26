@@ -48,6 +48,7 @@ def boost_scores(row_scores, chosen_indices):
 
 
 def fair_rerank_exact(scores_tensor: torch.Tensor, alpha: float = 0.0):
+    
     scores = scores_tensor.detach().cpu().numpy()
     B, N = scores.shape
     n_items = N - 1   # we ignore index 0
