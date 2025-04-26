@@ -208,7 +208,7 @@ class SAE(nn.Module):
 
 		# Define a helper normalization function.
 		def normalize_to_range(x, new_min, new_max):
-			min_val = torch.min(x)
+			min_val = 0.0
 			max_val = torch.max(x)
 			if max_val == min_val:
 				return torch.full_like(x, (new_min + new_max) / 2)
@@ -232,7 +232,7 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals > mean_val + self.beta * std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
-				pre_acts[:, neuron_idx] += 2 * weight_unpop * std_val
+				pre_acts[:, neuron_idx] += weight_unpop * std_val
 			else:  # group == 'pop'
 				# For neurons to be dampened, use the popular statistics for impact.
 				pop_mean = stats_pop.iloc[neuron_idx]["mean"]
@@ -248,7 +248,7 @@ class SAE(nn.Module):
 				vals = pre_acts[:, neuron_idx]
 				condition = vals < pop_mean + self.gamma * pop_sd
 				# Decrease activations proportionally.
-				pre_acts[:, neuron_idx] -= 2 * weight_pop * pop_sd
+				pre_acts[:, neuron_idx] -= weight_pop * pop_sd
     
 		return pre_acts
 		
