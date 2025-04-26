@@ -16,4 +16,3 @@ dataset/lfm1b-artists/lfm1b-artists_unsparsed.inter
 dataset/lfm1b-artists/lfm1b-artists_unsparsed.item
 dataset/lfm1b-artists/lfm1b-artists.inter
 dataset/lfm1b-artists/interactions_remapped.csv
-recbole/saved/SASRec-Feb-10-2025_lastfm1.pth

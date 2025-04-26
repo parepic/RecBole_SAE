@@ -153,20 +153,20 @@ def create_visualizations_neurons():
     )  
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [0.00043169099339227223]
-    ndcgs = [0.2274]
-    hits = [0.3799]
-    coverages = [0.36224188790560474]
-    lt_coverages = [0.3570578905630452]
-    deep_lt_coverages = [0.16349693251533742]
-    dampen_percs = [0.0]  # no value provided in your OrderedDict
-    ginis = [0.9430732040412941]
-    ndcg_heads = [0.4403]
-    ndcg_mids = [0.197]
-    ndcg_tails = [0.0367]
+    arps = []
+    ndcgs = []
+    hits = []
+    coverages = []
+    lt_coverages = []
+    deep_lt_coverages = []
+    dampen_percs = []  # no value provided in your OrderedDict
+    ginis = []
+    ndcg_heads = []
+    ndcg_mids = []
+    ndcg_tails = []
     neuron_count = 0
     count = 0
-    tochange = np.linspace(0, 2048, 1).tolist()
+    tochange = np.linspace(0, 4096, 17).tolist()
     # tochange = np.linspace(-5, 5, 2)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
@@ -237,7 +237,8 @@ if __name__ == "__main__":
     # exit()
     # sample_users_interactions(15000)
     # exit()
-    
+    # save_cohens_d()
+    # exit()
     # with open(r"./dataset/Amazon_Electronics/Amazon_Electronics.inter", 'r', encoding='utf-8') as f:
     #     for i, line in enumerate(f):
     #         if i >= 10000000:
