@@ -164,7 +164,7 @@ def create_visualizations_neurons():
     ndcg_heads = [0.4403]
     ndcg_mids = [0.197]
     ndcg_tails = [0.0367]
-    
+    neuron_count = 0
     count = 0
     tochange = np.linspace(0, 2048, 2).tolist()
     # tochange = np.linspace(-5, 5, 2)
