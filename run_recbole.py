@@ -121,9 +121,15 @@ def tune_hyperparam():
         model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
     )  
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    Ns = np.linspace(2, 64, 33)
-    betas = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
-    gammas = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
+    Ns = np.linspace(512, 4096, 8)
+    
+    # betas = np.linspace(-3, 3, 7)
+    # np.insert(betas, 0, -100)
+    # betas.append(100)
+    
+    # gammas = np.linspace(-3, 3, 7)
+    # np.insert(gammas, 0, -100)
+    # gammas.append(100)
     
     best_triplet = []
     best_ndcg = -1
@@ -190,7 +196,7 @@ def create_visualizations_neurons():
             print(test_result) 
         else:
             test_result = trainer.evaluate(
-                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-40, gamma=60
+                valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=-4, gamma=4
             )
         count += 1
         ndcgs.append(test_result['ndcg@10'])
@@ -240,7 +246,35 @@ def compute_corr(pair):
 
 
 if __name__ == "__main__":
-   
+    
+    
+    data = {
+    "gamma": [0.0, 5.0],
+    "NDCG@10": [0.6185, 0.6075],
+    "NDCG-HEAD@10": [0.6935, 0.6761],
+    "NDCG-MID@10": [0.5673, 0.5652],
+    "NDCG-TAIL@10": [0.6359, 0.6380],
+    "Deep LT Coverage@10": [0.7359, 0.7911],
+    "Gini coefficient@10": [0.6643, 0.6033],
+    "ARP@10": [0.0004, 0.0004],
+    }
+
+    # Create DataFrame
+    df = pd.DataFrame(data)
+
+    # Insert name column
+    df.insert(0, "name", ["SASRec", "PopSteer"])
+
+    # Drop 'gamma' and 'ARP@10'
+    df = df.drop(columns=["gamma", "ARP@10"])
+
+    # Show the final table
+    print(df)
+
+
+    # Save as PNG
+    plt.savefig("metrics_comparison.png")
+    plt.show()
     # exit()
     # create_item_popularity_csv(0.2)
     # exit()

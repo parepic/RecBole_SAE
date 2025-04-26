@@ -43,6 +43,9 @@ class Evaluator(object):
         return result_dict
     
     
+    
+    
+    
     def evaluate_fairness(self, recommendation_count):
         """
         Evaluate Long Tail Coverage, Coverage, Gini Coefficient, and Average Recommendation Popularity (ARP),
@@ -56,12 +59,22 @@ class Evaluator(object):
         """
         import pandas as pd
         import numpy as np
+        import matplotlib.pyplot as plt
+
         file = r'./dataset/lastfm/item_popularity_labels_with_titles.csv'
         # Load item metadata
         item_data = pd.read_csv(file)
 
         # Slice recommendation_count to ignore index 0
         recommendation_count = recommendation_count[1:]
+        # Plot
+        plt.figure(figsize=(10, 4))
+        plt.plot(recommendation_count)
+        plt.xlabel('Index')
+        plt.ylabel('Value')
+        plt.title('Tensor Plot')
+        plt.grid(True)
+        plt.show()
         offset = 1  # Because IDs start at 1
 
         # Adjust number of items

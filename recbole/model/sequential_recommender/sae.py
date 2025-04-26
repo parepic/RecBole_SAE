@@ -208,7 +208,7 @@ class SAE(nn.Module):
 
 		# Define a helper normalization function.
 		def normalize_to_range(x, new_min, new_max):
-			min_val = 0.0
+			min_val = 0
 			max_val = torch.max(x)
 			if max_val == min_val:
 				return torch.full_like(x, (new_min + new_max) / 2)
