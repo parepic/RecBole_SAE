@@ -51,7 +51,7 @@ def fair_rerank_exact(
         scores_tensor: torch.Tensor,
         alpha: float = 0.0,
         K: int = 10,
-        top_n: int = 200,
+        top_n: int = 100,
         solver: str = "ECOS"        # ECOS is fast for tiny QPs; SCS also works
     ):
     """
@@ -114,4 +114,4 @@ def fair_rerank_exact(
 
         new_scores[u] = boost_scores(new_scores[u], chosen_items)
 
-    return torch.from_numpy(new_scores).to(scores_tensor.device), topk_lists
+    return torch.from_numpy(new_scores).to(scores_tensor.device)
