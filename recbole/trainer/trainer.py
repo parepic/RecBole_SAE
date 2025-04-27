@@ -287,13 +287,15 @@ class Trainer(AbstractTrainer):
             #     self.model.item_log_prior.grad[0] = 0     
                 
             scaler.step(self.optimizer)
-            if hasattr(self, 'scheduler'):
-                self.scheduler.step(metrics=self.model.total_loss.item())
             scaler.update()
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
                     set_color("GPU RAM: " + get_gpu_usage(self.device), "yellow")
                 )
+                
+        if hasattr(self, 'scheduler'):
+            self.scheduler.step(metrics=self.model.total_loss.item())
+
         return total_loss
 
     def _valid_epoch(self, valid_data, show_progress=False):

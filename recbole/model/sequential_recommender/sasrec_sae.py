@@ -21,7 +21,7 @@ class SASRec_SAE(SASRec):
         self.sae_module = SAE(config, self.hidden_size)  # SAE initialization
         # Mode can be 'train', 'test', or 'inference'
         self.mode = mode
-        self.total_loss = 0
+        self.total_loss = torch.tensor(0.0)
         self.to(config["device"])
         for param in self.parameters():
             param.requires_grad = False  # Freeze all parameters
