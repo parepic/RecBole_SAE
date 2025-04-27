@@ -34,6 +34,18 @@ def bv_decompose(X, eps=1e-9):
     lambdas /= lambdas.sum()       # normalise
     return lambdas, perms          # lists of equal length
 
+
+
+def gumbel_sample_perm(X, *, rng=np.random):
+    G = rng.gumbel(size=X.shape)
+    C = -(np.log(X + 1e-12) + G)
+    row, col = linear_sum_assignment(C)
+    perm = np.empty(X.shape[1], dtype=int)
+    perm[col] = row
+    return perm
+
+
+
 def boost_scores(row_scores, chosen_indices):
     """
     Increase chosen_indices so they become the top-10 in the given order.
@@ -51,68 +63,80 @@ def fair_rerank_exact(
         scores_tensor: torch.Tensor,
         alpha: float = 0.0,
         K: int = 10,
-        top_n: int = 50,
-        solver: str = "ECOS"        # ECOS is fast for tiny QPs; SCS also works
+        top_n: int = 200,
+        solver: str = "SCS"
     ):
     """
-    Re-rank each query independently with the NSW objective.
+    Re-rank an entire batch with ONE global NSW solve.
 
-    * Only the `top_n` (=200) highest-scoring items of the query are kept.
-    * Each query is solved separately =>   n_u × K  variables  (≤ 2 000).
+    • keeps only each user’s `top_n` items
+    • builds one big convex program (sum of user sub-objectives)
+    • after the solve, draws a single Gumbel-matching permutation per user
     """
-    scores = scores_tensor.detach().cpu().numpy()
-    B, N = scores.shape
-    v   = E[:, None]                          # (K, 1)
-    r_all = scores[:, 1:]                     # ground‐truth relevance
-    global_merit = (r_all.sum(axis=0) ** alpha)   # Merit_i^α   (length N-1)
+    scores = scores_tensor.detach().cpu().numpy()      # B × N
+    B, N    = scores.shape
+    v       = E[:, None]                                # (K,1) position bias vector
+    r_all   = scores[:, 1:]                             # drop PAD at idx 0
+    global_merit = (r_all.sum(axis=0) ** alpha)         # Merit_i^α
 
+    # -----------------------------------------------------------------------
+    # build CVXPY variables, objective parts, and constraints for **all** users
+    # -----------------------------------------------------------------------
+    objective_terms = []
+    constraints     = []
+    user_infos      = []        # will keep (Pi_var, cand_idx) for post-processing
+
+    for u in range(B):
+        # ----- candidate reduction ------------------------------------------------
+        user_scores = scores[u, 1:]                      # (N-1,)
+        if user_scores.size > top_n:
+            cand_idx = np.argpartition(-user_scores, top_n-1)[:top_n]
+        else:
+            cand_idx = np.arange(user_scores.size)
+        cand_idx.sort()
+        n_u = cand_idx.size
+
+        r_u      = user_scores[cand_idx]                 # (n_u,)
+        merit_u  = global_merit[cand_idx]                # (n_u,)
+
+        # ----- variables + objective ---------------------------------------------
+        Pi = cp.Variable((n_u, K), nonneg=True)          # per-user DSM
+        impacts = cp.matmul(cp.multiply(Pi, v.T), np.ones((K,1)))[:, 0]
+        # Σ_i Merit_i^α · log( r_ui · Imp_i )
+        term = cp.sum(cp.multiply(merit_u, cp.log(r_u * impacts + 1e-12)))
+        objective_terms.append(term)
+
+        # ----- constraints --------------------------------------------------------
+        constraints += [cp.sum(Pi, axis=1) <= 1,   # each item ≤ 1 slot
+                        cp.sum(Pi, axis=0) <= 1]   # each slot ≤ 1 item
+
+        user_infos.append((Pi, cand_idx))
+
+    # -----------------------------------------------------------------------
+    # single convex solve
+    # -----------------------------------------------------------------------
+    prob = cp.Problem(cp.Maximize(cp.sum(objective_terms)), constraints)
+    prob.solve(
+        solver="SCS",           # <- 64-bit indices
+        verbose=False,
+        eps=1e-4,               # relaxed tolerance speeds things up
+        max_iters=2_000
+    )
+    if prob.status != cp.OPTIMAL:
+        raise RuntimeError(f"Global solver failed: {prob.status}")
+
+    # -----------------------------------------------------------------------
+    # post-process: one permutation per user + score boosting
+    # -----------------------------------------------------------------------
     new_scores = scores.copy()
     topk_lists = []
 
-    for u in range(B):
-        print(u)
-        # -------------------------------------------------
-        # 1) keep only the top-`top_n` items of this user
-        # -------------------------------------------------
-        user_scores = scores[u, 1:]                 # (N-1,)
-        if len(user_scores) > top_n:
-            cand_idx = np.argpartition(-user_scores, top_n-1)[:top_n]
-        else:
-            cand_idx = np.arange(len(user_scores))
-        cand_idx.sort()                             # keep ascending id order
-        n_u = len(cand_idx)
+    for (Pi, cand_idx), u in zip(user_infos, range(B)):
+        X_opt = Pi.value
+        perm  = gumbel_sample_perm(X_opt)
+        chosen = (cand_idx[perm] + 1).tolist()          # +1 to undo PAD offset
+        topk_lists.append(chosen)
 
-        r_u = user_scores[cand_idx]                 # (n_u,)
-        merit_u = global_merit[cand_idx]            # (n_u,)
-
-        # -------------------------------------------------
-        # 2) build & solve tiny CVX problem
-        # -------------------------------------------------
-        Pi = cp.Variable((n_u, K), nonneg=True)     # probabilities
-
-        # NSW objective  Σ_i Merit_i^α · log( r_ui · Σ_k Pi_ik e(k) )
-        impacts = cp.matmul(cp.multiply(Pi, v.T), np.ones((K, 1)))[:, 0]  # Σ_k Pi_ik e(k)
-        obj = cp.sum(cp.multiply(merit_u, cp.log(cp.multiply(r_u, impacts) + 1e-12)))
-
-        # constraints: each item ≤1 slot, each slot ≤1 item
-        constraints = [cp.sum(Pi, axis=1) <= 1,    # per item
-                       cp.sum(Pi, axis=0) <= 1]    # per slot
-
-        prob = cp.Problem(cp.Maximize(obj), constraints)
-        prob.solve(solver=solver, verbose=False)
-
-        if Pi.value is None:
-            raise RuntimeError(f"Solver failed on user {u}")
-
-        # -------------------------------------------------
-        # 3) BvN → draw one permutation, boost scores
-        # -------------------------------------------------
-        X_opt = Pi.value                           # (n_u, K)
-        lam, perms = bv_decompose(X_opt)
-        perm = perms[np.random.choice(len(lam), p=lam)]   # choose permutation
-        chosen_items = (cand_idx[perm] + 1).tolist()      # +1 to undo offset
-        topk_lists.append(chosen_items)
-
-        new_scores[u] = boost_scores(new_scores[u], chosen_items)
+        new_scores[u] = boost_scores(new_scores[u], chosen)
 
     return torch.from_numpy(new_scores).to(scores_tensor.device)
