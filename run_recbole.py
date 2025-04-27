@@ -217,7 +217,7 @@ def tune_hyperparam():
             'ndcg-head': res.get('ndcg-head@10'),
             'ndcg-mid': res.get('ndcg-mid@10'),
             'ndcg-tail': res.get('ndcg-tail@10'),
-            'arp': res0.get('ARP@10')
+            'arp': res.get('ARP@10')
 
         })
         print(f"[Iter {it_num:04d}] N={n:.0f}, β={beta:.2f} → "
