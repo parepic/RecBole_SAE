@@ -117,6 +117,8 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
 
     
 
+
+
 def tune_hyperparam():
     # 1) load everything
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
@@ -133,12 +135,13 @@ def tune_hyperparam():
 
     # 3) baseline & bookkeeping
     baseline_stats = {
-        'ndcg@10':          0.5944,
-        'Gini_coef@10':     0.6672,
-        'Deep_LT_coverage@10': 0.7354,
-        'ndcg-head@10':     0.6733,
-        'ndcg-mid@10':      0.5653,
-        'ndcg-tail@10':     0.5990
+        'ndcg@10':          0.1212,
+        'Gini_coef@10':     0.7573,
+        'Deep_LT_coverage@10': 0.4859,
+        'ndcg-head@10':     0.1848,
+        'ndcg-mid@10':      0.1234,
+        'ndcg-tail@10':     0.0621,
+        'arp':              0.2423
     }
     best_diff    = 0.0
     best_triplet = None
@@ -161,16 +164,17 @@ def tune_hyperparam():
     gain0 = diff_gini0 - diff_ndcg0
 
     print(f"[Iter {it_num:04d}] n=0 → ndcgΔ={diff_ndcg0:.3f}, giniΔ={diff_gini0:.3f}")
-    if diff_ndcg0 <= 0.05 and gain0 > best_diff:
+    if diff_ndcg0 <= 0.1 and gain0 > best_diff:
         best_diff    = gain0
-        best_triplet = (0, None, None)
+        best_pair = (0, None)
     records.append({
-        'N': 0, 'beta': None, 'gamma': None,
+        'N': 0, 'beta': None,
         'ndcg': ndcg0, 'gini': gini0, 'gain': gain0,
         'Deep long tail coverage': res0.get('Deep_LT_coverage@10'),
         'ndcg-head': res0.get('ndcg-head@10'),
         'ndcg-mid': res0.get('ndcg-mid@10'),
         'ndcg-tail': res0.get('ndcg-tail@10'),
+        'arp': res0.get('ARP@10')
     })
     it_num += 1
 
@@ -250,7 +254,7 @@ def create_visualizations_neurons():
             test_result = trainer.evaluate(
                 valid_data, model_file=args.path, show_progress=config["show_progress"]
             )
-            print(valid_data) 
+            print(test_result) 
         else:
             test_result = trainer.evaluate(
                 valid_data, model_file=args.path, show_progress=config["show_progress"], N=4096, beta=1.5
