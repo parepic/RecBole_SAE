@@ -282,6 +282,10 @@ class Trainer(AbstractTrainer):
             scaler.scale(loss + sync_loss).backward()
             if self.clip_grad_norm:
                 clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
+                
+            if self.model.freeze_pad0:
+                self.model.item_log_prior.grad[0] = 0     
+                
             scaler.step(self.optimizer)
             scaler.update()
             if self.gpu_available and show_progress:
@@ -913,6 +917,9 @@ class Trainer(AbstractTrainer):
         Returns:
             collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
         """
+        
+        
+        
         if not eval_data:
             return
                  
@@ -949,8 +956,8 @@ class Trainer(AbstractTrainer):
         num_sample = 0
         # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
         #                                             damp_percent=beta, unpopular_only=True)
-        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
-                                                    beta=beta, gamma=gamma, unpopular_only=False)
+        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
+        #                                             beta=beta, gamma=gamma, unpopular_only=False)
         
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):

@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # @Time    : 2020/9/18 11:33
 # @Author  : Hui Wang
@@ -104,7 +105,18 @@ class SASRec(SequentialRecommender):
 
         # parameters initialization
         self.apply(self._init_weights)
+        self.item_log_prior = nn.Parameter(torch.zeros(self.n_items))
 
+        # never update the padding token’s prior (purely optional)
+        self.freeze_pad0 = True
+        if self.freeze_pad0:
+            self.item_log_prior.data[0] = 0.0          # log(1) = 0
+        
+        self.prior_weight = 1.0
+
+    def _detach(self, x: torch.Tensor) -> torch.Tensor:
+        """Return a tensor whose *value* is x but which does *not* back-prop."""
+        return x.detach()
 
     def random_reranker(
         self,
@@ -464,30 +476,39 @@ class SASRec(SequentialRecommender):
 
     
     def calculate_loss(self, interaction, scores=None, show_res=None):
-        item_seq = interaction[self.ITEM_SEQ]
+        item_seq     = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        pos_items = interaction[self.POS_ITEM_ID]  # shape: (batch_size,)
+        pos_items    = interaction[self.POS_ITEM_ID]               # (B,)
+
+        B = pos_items.size(0)
+        seq_out   = self.forward(item_seq, item_seq_len)           # (B, H)
+        all_items = self.item_embedding.weight                     # (N, H)
+
+        # ---------- (a) user-specific logits  f_w  ------------------------------
+        context_logits = torch.matmul(seq_out, all_items.T)        # (B, N)
+
+        # ---------- (b) add *detached* prior so g_z ≠ learn from L_user ---------
+        prior_bias = self._detach(self.item_log_prior).unsqueeze(0)  # (1, N)
+        user_logits = context_logits + prior_bias                  # (B, N)
+
+        # ---------- (c) user-specific CE loss  ----------------------------------
+        ce_user = nn.functional.cross_entropy(
+            user_logits, pos_items, reduction="none"
+        ).mean()
+
+        # ---------- (d) prior-only loss  L_P   (updates g_z) --------------------
+        prior_logits = self.item_log_prior.unsqueeze(0).expand(B, -1)  # (B, N)
+        ce_prior = nn.functional.cross_entropy(
+            prior_logits, pos_items, reduction="none"
+        ).mean()
+
+        # ---------- (e) total loss ----------------------------------------------
+        loss = ce_user + self.prior_weight * ce_prior
         
-        # Forward pass
-        seq_output = self.forward(item_seq, item_seq_len)  # shape: (batch_size, hidden_dim)
-        test_item_emb = self.item_embedding.weight          # shape: (num_items, hidden_dim)
-        logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))  # (batch_size, num_items)
-        # Cross-entropy loss per sample (no reduction!)
-        loss_fn = nn.CrossEntropyLoss(reduction='none')
-        ce_loss = loss_fn(logits, pos_items)  # shape: (batch_size,)
+        
+        return loss
 
 
-        # if scores is not None:
-        #     # Clamp scores to avoid exploding weights
-        #     scores = torch.tensor(scores, dtype=torch.float32, device=logits.device)
-        #     scores = torch.clamp(scores, min=1e-4)
-        #     # Inverse propensity weighting
-        #     weighted_loss = (ce_loss / scores).mean()
-        # else:
-        #     weighted_loss = ce_loss.mean()
-        # print("ISP-weighed loss", weighted_loss)
-        return ce_loss.mean()
-    
 
     def predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
@@ -509,13 +530,13 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        # scores[:, 0] =  float("-inf")
+        scores[:, 0] =  float("-inf")
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
-        scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
+        # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
             self.recommendation_count[key.item()] += 1
