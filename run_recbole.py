@@ -364,8 +364,8 @@ if __name__ == "__main__":
     # exit()
     # save_mean_SD()
     # exit()
-    create_item_popularity_csv(0.2)
-    exit()
+    # create_item_popularity_csv(0.2)
+    # exit()
     parser = argparse.ArgumentParser()
     
     
