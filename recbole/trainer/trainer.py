@@ -961,8 +961,8 @@ class Trainer(AbstractTrainer):
         num_sample = 0
         # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
         #                                             damp_percent=beta, unpopular_only=True)
-        # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
-        #                                             beta=beta, gamma=gamma, unpopular_only=False)
+        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
+                                                    beta=beta, gamma=gamma, unpopular_only=False)
         
         if isinstance(self.model, SASRec_SAE):
             self.model.sae_module.activation_count.zero_()

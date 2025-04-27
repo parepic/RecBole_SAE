@@ -294,6 +294,8 @@ from multiprocessing import Pool, cpu_count
 
 # === PREPARE PAIRS (i < j only) ===
 # row_pairs = list(combinations(range(64), 2))  # Only unique pairs
+# save_cohens_d()
+# exit()
 
 def compute_corr(pair):
     i, j = pair
@@ -365,6 +367,9 @@ if __name__ == "__main__":
     # save_mean_SD()
     # exit()
     # create_item_popularity_csv(0.2)
+    # exit()
+    
+    # save_mean_SD()
     # exit()
     parser = argparse.ArgumentParser()
     
@@ -453,7 +458,6 @@ if __name__ == "__main__":
         #     device=config["device"],
         #     path=args.path
         #     )
-        # save_mean_SD()
 
         if(args.test):
             # if(args.corr_file):
