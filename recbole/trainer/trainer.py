@@ -988,7 +988,6 @@ class Trainer(AbstractTrainer):
         result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
-        print( " total loss blya ", self.model.total_loss)
         if hasattr(self.model, 'total_loss') and self.model.total_loss != 0:
             result['loss'] = self.model.total_loss.item()
         
