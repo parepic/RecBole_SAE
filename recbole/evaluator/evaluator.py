@@ -113,7 +113,7 @@ class Evaluator(object):
         popularity_lookup = dict(zip(item_data['item_id:token'], item_data['normalized_popularity']))
 
         # Look up the popularity for each recommended item
-        popularity_scores = [popularity_lookup.get(item_id, 0.0) for item_id in recommended_items]
+        popularity_scores = [popularity_lookup.get(item_id, 0.0) for item_id in recommended_items] * total_interactions
 
         arp = float(np.mean(popularity_scores)) if len(popularity_scores) > 0 else 0.0
         return {
