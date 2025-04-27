@@ -288,7 +288,7 @@ class Trainer(AbstractTrainer):
                 
             scaler.step(self.optimizer)
             if hasattr(self, 'scheduler'):
-                self.scheduler.step()
+                self.scheduler.step(metrics=self.model.total_loss.item())
             scaler.update()
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
@@ -962,6 +962,9 @@ class Trainer(AbstractTrainer):
         # self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
         #                                             beta=beta, gamma=gamma, unpopular_only=False)
         
+        if isinstance(self.model, SASRec_SAE):
+            self.model.sae_module.activation_count.zero_()
+            self.model.total_loss = 0
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
@@ -992,10 +995,6 @@ class Trainer(AbstractTrainer):
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
         if hasattr(self.model, 'total_loss') and self.model.total_loss != 0:
             result['loss'] = self.model.total_loss.item()
-        
-        if isinstance(self.model, SASRec_SAE):
-            self.model.sae_module.activation_count.zero_()
-            self.model.total_loss = 0
         self.unique_elements = set()
         return result
 
