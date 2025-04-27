@@ -215,8 +215,8 @@ class SAE(nn.Module):
 			return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
 		# Normalize the Cohen's d values to [0, 2.5]
-		weights_unpop = normalize_to_range(abs_cohens, new_min=0, new_max=1)
-		weights_pop = normalize_to_range(abs_cohens, new_min=0, new_max=1)
+		weights_unpop = normalize_to_range(abs_cohens, new_min=0, new_max=2)
+		weights_pop = normalize_to_range(abs_cohens, new_min=0, new_max=2)
 
 		# Now update the neuron activations based on group.
 		for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
