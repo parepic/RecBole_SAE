@@ -86,6 +86,9 @@ def fair_rerank_exact(scores_tensor: torch.Tensor, alpha: float = 0.0):
 
     # 5) Solve the convex program: maximize ∑ am_rel[d]·log(impact_d)
     prob = cp.Problem(cp.Maximize(obj), constraints)
+    print("Pi shape:", Pi.shape)       # should print (B, n_items*K)
+    print("number of scalar variables in Pi:", Pi.size)  # should print B*n_items*K
+
     prob.solve(solver=cp.SCS)
 
     # 6) Reshape back to (B, n_items, K)
