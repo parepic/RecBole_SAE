@@ -287,6 +287,8 @@ class Trainer(AbstractTrainer):
             #     self.model.item_log_prior.grad[0] = 0     
                 
             scaler.step(self.optimizer)
+            if hasattr(self, 'scheduler'):
+                self.scheduler.step()
             scaler.update()
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
@@ -749,7 +751,7 @@ class Trainer(AbstractTrainer):
         self.model = sasrec_sae
         config["model"] = "SASRec_SAE"
         self.optimizer = torch.optim.Adam(self.model.sae_module.parameters(), lr=config['sae_lr'])
-
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10)
         message_output = "Loading SASREC model structure and parameters from {}".format(
             checkpoint_file
         )

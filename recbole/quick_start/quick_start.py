@@ -253,7 +253,7 @@ def load_data_and_model(model_file, device='cuda', sae=True):
     config = checkpoint["config"]
     config["sae_k"] = 32
     config["sae_scale_size"] = 64
-    config["sae_lr"] = 5e-4
+    config["sae_lr"] = 1e-3
 
     config["valid_metric"] = 'NDCG@10'
     config["eval_batch_size"] = 2048
@@ -267,7 +267,6 @@ def load_data_and_model(model_file, device='cuda', sae=True):
         config['valid_metric'] = 'loss'
         config['model'] = 'SASRec_SAE'
         config['stopping_step'] = 20
-        # config['learning_rate'] = 0.0001
 
     init_seed(config["seed"], config["reproducibility"])
     init_logger(config)
