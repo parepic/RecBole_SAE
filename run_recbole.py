@@ -118,8 +118,6 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
     
     
     
-    
-
 
 def tune_hyperparam():
     # 1) load everything
@@ -128,8 +126,9 @@ def tune_hyperparam():
         sae=(args.model == 'SASRec_SAE'),
         device=device
     )
+    
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-
+    
     # 2) build your grid
     all_Ns   = list(np.linspace(512, 4096, 2))
     betas    = np.linspace(0.5, 4, 2)
@@ -149,7 +148,7 @@ def tune_hyperparam():
     it_num       = 0
     records      = []
     
-    records.append({'N': -1, 'beta': None,
+    records.append({'N': 'SASRec', 'beta': None,
         'ndcg': baseline_stats['ndcg@10'], 'gini': baseline_stats['Gini_coef@10'], 'gain': 0,
         'Deep long tail coverage': baseline_stats['Deep_LT_coverage@10'],
         'ndcg-head': baseline_stats['ndcg-head@10'],
