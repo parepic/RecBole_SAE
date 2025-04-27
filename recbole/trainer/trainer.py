@@ -283,8 +283,8 @@ class Trainer(AbstractTrainer):
             if self.clip_grad_norm:
                 clip_grad_norm_(self.model.parameters(), **self.clip_grad_norm)
                 
-            if self.model.freeze_pad0:
-                self.model.item_log_prior.grad[0] = 0     
+            # if self.model.freeze_pad0:
+            #     self.model.item_log_prior.grad[0] = 0     
                 
             scaler.step(self.optimizer)
             scaler.update()
@@ -512,6 +512,7 @@ class Trainer(AbstractTrainer):
                     self.cur_step,
                     max_step=self.stopping_step,
                     bigger=self.valid_metric_bigger,
+                    epoch_idx=epoch_idx
                 )
                 valid_end_time = time()
                 valid_score_output = (

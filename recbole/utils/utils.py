@@ -152,6 +152,8 @@ def early_stopping(value, best, cur_step, max_step, bigger=True, epoch_idx=None)
             cur_step += 1
             if cur_step > max_step:
                 stop_flag = True
+    if epoch_idx < 50:
+        stop_flag = False
     return best, cur_step, stop_flag, update_flag
 
 

@@ -414,12 +414,12 @@ if __name__ == "__main__":
         
     
     if(args.model == "SASRec" and args.train):
-        # config_file_list = (
-        #         args.config_files.strip().split(" ") if args.config_files else None
-        #     )
-        # parameter_dict = {
-        #     'train_neg_sample_args': None,
-        # }   
+        config_file_list = (
+                args.config_files.strip().split(" ") if args.config_files else None
+            )
+        parameter_dict = {
+            'train_neg_sample_args': None,
+        }   
 
         # config_file_list = [r'./recbole/recbole/properties/overall.yaml',
         #             r'./recbole/recbole/properties/model/SASRec.yaml',
