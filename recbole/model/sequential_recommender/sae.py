@@ -198,7 +198,7 @@ class SAE(nn.Module):
 		# Now sort by the absolute Cohen's d value (in descending order) and pick the overall top N neurons.
 		combined_sorted = sorted(combined_neurons, key=lambda x: abs(x[1]), reverse=True)
 		top_neurons = combined_sorted[:int(self.N)]
-
+		a = 6
 		# Load the corresponding statistics files.
 		stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
 		stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
