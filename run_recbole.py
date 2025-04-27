@@ -364,6 +364,8 @@ if __name__ == "__main__":
     # exit()
     # save_mean_SD()
     # exit()
+    create_item_popularity_csv(0.2)
+    exit()
     parser = argparse.ArgumentParser()
     
     
@@ -427,7 +429,7 @@ if __name__ == "__main__":
         
         run(
             'SASRec',
-            'lastfm',
+            'ml-1m',
             # config_file_list=config_file_list,
             config_dict=parameter_dict,
             nproc=args.nproc,

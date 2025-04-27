@@ -1897,7 +1897,7 @@ def create_item_popularity_csv(p):
     # -------------------------------
     # Step 1: Load the training NPZ file and compute item frequencies.
     # -------------------------------
-    train_npz_path = r"./dataset/lastfm/biased_eval_train.npz"
+    train_npz_path = r"./dataset/ml-1m/biased_eval_train.npz"
     data = np.load(train_npz_path)
     labels = data["labels"]  # assuming this array contains item IDs (item_id:token)
     total_interactions = len(labels)
@@ -1917,7 +1917,7 @@ def create_item_popularity_csv(p):
     # -------------------------------
     # Step 2: Load the items_remapped CSV file.
     # -------------------------------
-    items_csv_path = r"./dataset/lastfm/items_remapped.csv"
+    items_csv_path = r"./dataset/ml-1m/items_remapped.csv"
     df_titles = pd.read_csv(items_csv_path)
     
     # -------------------------------
@@ -1975,7 +1975,7 @@ def create_item_popularity_csv(p):
     # -------------------------------
     # Optionally, sort the final DataFrame by item_id for consistent ordering.
     df_final = df_merged.sort_values(by="interaction_count", ascending=False).reset_index(drop=True)
-    output_csv =  r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
+    output_csv =  r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
     df_final.to_csv(output_csv, index=False)
     print(f"CSV file '{output_csv}' created successfully.")
     
