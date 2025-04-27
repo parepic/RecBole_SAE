@@ -99,11 +99,21 @@ def fair_rerank_exact(
         r_u      = user_scores[cand_idx]                 # (n_u,)
         merit_u  = global_merit[cand_idx]                # (n_u,)
 
-        # ----- variables + objective ---------------------------------------------
-        Pi = cp.Variable((n_u, K), nonneg=True)          # per-user DSM
-        impacts = cp.matmul(cp.multiply(Pi, v.T), np.ones((K,1)))[:, 0]
-        # Σ_i Merit_i^α · log( r_ui · Imp_i )
-        term = cp.sum(cp.multiply(merit_u, cp.log(r_u * impacts + 1e-12)))
+
+        Pi = cp.Variable((n_u, K), nonneg=True)           # (n_u × K) DSM
+
+        # matrix–vector product :  (n_u × K)  @  (K × 1)  →  (n_u × 1)
+        impacts = Pi @ v                                  # shape  (n_u, 1)
+        impacts = cp.reshape(impacts, (n_u,))             # flatten to (n_u,)
+
+        # convert numpy 1-D arrays → CVXPY Constant for broadcasting
+        r_u_c     = cp.Constant(r_u)                      # (n_u,)
+        merit_u_c = cp.Constant(merit_u)                  # (n_u,)
+
+        # element-wise multiplies everywhere else
+        weighted   = cp.multiply(r_u_c, impacts)          # r_ui · Imp_i
+        term       = cp.sum(cp.multiply(merit_u_c,
+                                        cp.log(weighted + 1e-12)))
         objective_terms.append(term)
 
         # ----- constraints --------------------------------------------------------
