@@ -51,7 +51,7 @@ def fair_rerank_exact(
         scores_tensor: torch.Tensor,
         alpha: float = 0.0,
         K: int = 10,
-        top_n: int = 100,
+        top_n: int = 50,
         solver: str = "ECOS"        # ECOS is fast for tiny QPs; SCS also works
     ):
     """
