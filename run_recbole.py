@@ -226,22 +226,21 @@ def create_visualizations_neurons():
     )  
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [0.0003809845918493728]
-    ndcgs = [0.5944]
-    hits = [0.6512]
-    coverages = [0.8205042016806723]
-    lt_coverages = [0.8179338561200137]
-    deep_lt_coverages = [0.7353603603603603]
+    arps = [0.00035533782557826705]
+    ndcgs = [0.6273]
+    hits = [0.6725]
+    coverages = [0.892436974789916]
+    lt_coverages = [0.8908966928060007]
+    deep_lt_coverages = [0.8716216216216216]
     dampen_percs = [0.0]  # still no value provided
-    ginis = [0.6671675612976469]
-    ndcg_heads = [0.6733]
-    ndcg_mids = [0.5653]
-    ndcg_tails = [0.599]
-
+    ginis = [0.5849518873628745]
+    ndcg_heads = [0.6589]
+    ndcg_mids = [0.5763]
+    ndcg_tails = [0.6798]
     neuron_count = 0
     count = 0
     # tochange = np.linspace(0, 4096, 17).tolist()
-    tochange = np.linspace(-5, 5, 1)
+    tochange = np.linspace(-5, 5, 2)
     # tochange = [[0.0, 1.0],  [0.0, 0.25], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0]]
     toc = [[0.0, 1.0], [0.5, 1.0], [0.0, 0.5], [0.5, 1.5], [0, 1.5], [0.5, 2.0], [1.0, 2.0], [1.0, 2.0], [1.5, 2.0], [1.5, 2.5]]
     
@@ -438,11 +437,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
         
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 
@@ -452,8 +451,8 @@ if __name__ == "__main__":
         #     device=config["device"],
         #     path=args.path
         #     )
-        
-        # exit()
+        # save_mean_SD()
+
         if(args.test):
             # if(args.corr_file):
             #     test_result = trainer.dampen_neurons(

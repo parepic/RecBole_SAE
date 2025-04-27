@@ -988,6 +988,7 @@ class Trainer(AbstractTrainer):
         result['Deep_LT_coverage@10'] = fairness_dict['Deep_LT_coverage@10']
         result['coverage@10'] = fairness_dict['coverage@10']
         result['Gini_coef@10'] = fairness_dict['Gini_coef@10']
+        print( " total loss blya ", self.model.total_loss)
         if self.model.total_loss != 0:
             result['loss'] = self.model.total_loss.item()
         
@@ -996,6 +997,7 @@ class Trainer(AbstractTrainer):
             self.model.total_loss = 0
         self.unique_elements = set()
         return result
+
 
     def _map_reduce(self, result, num_sample):
         gather_result = {}
