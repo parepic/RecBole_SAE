@@ -70,6 +70,7 @@ def fair_rerank_exact(
     topk_lists = []
 
     for u in range(B):
+        print(u)
         # -------------------------------------------------
         # 1) keep only the top-`top_n` items of this user
         # -------------------------------------------------
