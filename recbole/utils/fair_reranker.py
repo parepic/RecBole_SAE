@@ -47,61 +47,71 @@ def boost_scores(row_scores, chosen_indices):
 
 
 
-def fair_rerank_exact(scores_tensor: torch.Tensor, alpha: float = 0.0):
-    
+def fair_rerank_exact(
+        scores_tensor: torch.Tensor,
+        alpha: float = 0.0,
+        K: int = 10,
+        top_n: int = 200,
+        solver: str = "ECOS"        # ECOS is fast for tiny QPs; SCS also works
+    ):
+    """
+    Re-rank each query independently with the NSW objective.
+
+    * Only the `top_n` (=200) highest-scoring items of the query are kept.
+    * Each query is solved separately =>   n_u × K  variables  (≤ 2 000).
+    """
     scores = scores_tensor.detach().cpu().numpy()
     B, N = scores.shape
-    n_items = N - 1   # we ignore index 0
-    K = 10
-    r_true = scores[:, 1:]   # shape (B, n_items)
+    v   = E[:, None]                          # (K, 1)
+    r_all = scores[:, 1:]                     # ground‐truth relevance
+    global_merit = (r_all.sum(axis=0) ** alpha)   # Merit_i^α   (length N-1)
 
-    # 1) Decision variable: one big matrix Pi of shape (B, n_items*K)
-    Pi = cp.Variable((B, n_items * K), nonneg=True)
+    new_scores = scores.copy()
+    topk_lists = []
 
-    # 2) Precompute weights (Merit^α) and position bias
-    v = E[:, None]                      # (K,1)
-    am_rel = r_true.sum(0) ** alpha     # vector of length n_items
-    print("sik ", am_rel)
-    # 3) Build the convex objective:
-    #     sum_{d=1..n_items} am_rel[d] * log( sum_{q=1..B} r_true[q,d] * Pi[q, d*K:(d+1)*K] * v )
-    obj = 0
-    for d in range(n_items):
-        slice_d = slice(K*d, K*(d+1))
-        impact_d = r_true[:, d] @ Pi[:, slice_d] @ v  # scalar
-        obj += am_rel[d] * cp.log(impact_d + 1e-12)
-
-    # 4) Feasibility constraints (each query fills ≤1 item per slot & each item is placed ≤1 slot per query)
-    one_q = np.ones((B, 1))
-    constraints = []
-    # 4a) For each item d: the B×K block sums ≤ 1 down each row
-    for d in range(n_items):
-        basis = np.zeros((n_items*K, 1))
-        basis[K*d:K*(d+1)] = 1
-        constraints.append(Pi @ basis <= one_q)
-    # 4b) For each slot k: the B×n_items entries sum ≤ 1 down each row
-    for k in range(K):
-        basis = np.zeros((n_items*K, 1))
-        basis[np.arange(n_items)*K + k] = 1
-        constraints.append(Pi @ basis <= one_q)
-
-    # 5) Solve the convex program: maximize ∑ am_rel[d]·log(impact_d)
-    prob = cp.Problem(cp.Maximize(obj), constraints)
-    print("Pi shape:", Pi.shape)       # should print (B, n_items*K)
-    print("number of scalar variables in Pi:", Pi.size)  # should print B*n_items*K
-
-    prob.solve(solver=cp.SCS)
-
-    # 6) Reshape back to (B, n_items, K)
-    Pi_opt = Pi.value.reshape(B, n_items, K)
-
-    # 7) For each user, BvN-decompose their slice, sample one permutation, boost scores
-    topk_lists, new_scores = [], scores.copy()
     for u in range(B):
-        X_opt = Pi_opt[u]                # shape (n_items, K)
-        lambdas, perms = bv_decompose(X_opt)
-        pick = np.random.choice(len(lambdas), p=lambdas)
-        chosen = (perms[pick] + 1).tolist()   # +1 to re-index since we skipped item 0
-        topk_lists.append(chosen)
-        new_scores[u] = boost_scores(new_scores[u], chosen)
+        # -------------------------------------------------
+        # 1) keep only the top-`top_n` items of this user
+        # -------------------------------------------------
+        user_scores = scores[u, 1:]                 # (N-1,)
+        if len(user_scores) > top_n:
+            cand_idx = np.argpartition(-user_scores, top_n-1)[:top_n]
+        else:
+            cand_idx = np.arange(len(user_scores))
+        cand_idx.sort()                             # keep ascending id order
+        n_u = len(cand_idx)
+
+        r_u = user_scores[cand_idx]                 # (n_u,)
+        merit_u = global_merit[cand_idx]            # (n_u,)
+
+        # -------------------------------------------------
+        # 2) build & solve tiny CVX problem
+        # -------------------------------------------------
+        Pi = cp.Variable((n_u, K), nonneg=True)     # probabilities
+
+        # NSW objective  Σ_i Merit_i^α · log( r_ui · Σ_k Pi_ik e(k) )
+        impacts = cp.matmul(cp.multiply(Pi, v.T), np.ones((K, 1)))[:, 0]  # Σ_k Pi_ik e(k)
+        obj = cp.sum(cp.multiply(merit_u, cp.log(cp.multiply(r_u, impacts) + 1e-12)))
+
+        # constraints: each item ≤1 slot, each slot ≤1 item
+        constraints = [cp.sum(Pi, axis=1) <= 1,    # per item
+                       cp.sum(Pi, axis=0) <= 1]    # per slot
+
+        prob = cp.Problem(cp.Maximize(obj), constraints)
+        prob.solve(solver=solver, verbose=False)
+
+        if Pi.value is None:
+            raise RuntimeError(f"Solver failed on user {u}")
+
+        # -------------------------------------------------
+        # 3) BvN → draw one permutation, boost scores
+        # -------------------------------------------------
+        X_opt = Pi.value                           # (n_u, K)
+        lam, perms = bv_decompose(X_opt)
+        perm = perms[np.random.choice(len(lam), p=lam)]   # choose permutation
+        chosen_items = (cand_idx[perm] + 1).tolist()      # +1 to undo offset
+        topk_lists.append(chosen_items)
+
+        new_scores[u] = boost_scores(new_scores[u], chosen_items)
 
     return torch.from_numpy(new_scores).to(scores_tensor.device), topk_lists
