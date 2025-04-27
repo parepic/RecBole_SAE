@@ -226,7 +226,7 @@ def tune_hyperparam():
 
     # 6) save results + final report
     df = pd.DataFrame(records)
-    out_csv = getattr(args, 'output_csv', 'tuning_results.csv')
+    out_csv = getattr(args, 'output_csv', 'tuning_results_PopSteer.csv')
     df.to_csv(out_csv, index=False)
     print(f"Results saved to {out_csv}")
 
