@@ -65,11 +65,10 @@ class SAE(nn.Module):
 		return
 
 
-	def set_dampen_hyperparam(self, corr_file=None, N=None, beta=None, gamma=None, unpopular_only=False):
+	def set_dampen_hyperparam(self, corr_file=None, N=None, beta=None, unpopular_only=False):
 		self.corr_file = corr_file
 		self.N = N
 		self.beta = beta
-		self.gamma = gamma
 		self.unpopular_only = unpopular_only	
   
   
@@ -215,7 +214,7 @@ class SAE(nn.Module):
 			return (x - min_val) / (max_val - min_val) * (new_max - new_min) + new_min
 
 		# Normalize the Cohen's d values to [0, 2.5]
-		weights = normalize_to_range(abs_cohens, new_min=0, new_max=1.5)
+		weights = normalize_to_range(abs_cohens, new_min=0, new_max=self.beta)
 
 		# Now update the neuron activations based on group.
 		for i, (neuron_idx, cohen, group) in enumerate(top_neurons):
@@ -228,7 +227,6 @@ class SAE(nn.Module):
     
 				# Identify positions where the neuron's activation is above its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals > mean_val + self.beta * std_val
 				# Increase activations by an amount proportional to the standard deviation and effective weight.
 				pre_acts[:, neuron_idx] += weight * std_val
 			else:  # group == 'pop'
@@ -244,7 +242,6 @@ class SAE(nn.Module):
 
 				# Identify positions where the neuron's activation is below its mean.
 				vals = pre_acts[:, neuron_idx]
-				condition = vals < pop_mean + (-1 * self.gamma) * pop_sd
 				# Decrease activations proportionally.
 				pre_acts[:, neuron_idx] -= weight * pop_sd
     

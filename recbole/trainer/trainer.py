@@ -907,7 +907,7 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def evaluate(
-        self, eval_data, load_best_model=True, model_file=None, show_progress=False, N=None, beta=None, gamma=None 
+        self, eval_data, load_best_model=True, model_file=None, show_progress=False, N=None, beta=None
     ):
         r"""Evaluate the model based on the eval data.
 
@@ -962,7 +962,7 @@ class Trainer(AbstractTrainer):
         # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
         #                                             damp_percent=beta, unpopular_only=True)
         self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
-                                                    beta=beta, gamma=gamma, unpopular_only=False)
+                                                    beta=beta, unpopular_only=False)
         
         if isinstance(self.model, SASRec_SAE):
             self.model.sae_module.activation_count.zero_()
