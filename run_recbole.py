@@ -366,8 +366,8 @@ def tune_hyperparam_random():
     
 
     # 2) build your grid
-    all_Ns   = [0.2, 0.5, 0.7, 0.9, 0.99]
-
+    all_Ns   = [15, 30, 50, 75, 100]
+    betas = [1]
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
         'ndcg@10':               0.6273,
@@ -442,7 +442,7 @@ def tune_hyperparam_random():
 
     # 6) save results + final report
     df = pd.DataFrame(records)
-    out_csv = getattr(args, 'output_csv', 'tuning_results_FAIR.csv')
+    out_csv = getattr(args, 'output_csv', 'tuning_results_random.csv')
     df.to_csv(out_csv, index=False)
     print(f"Results saved to {out_csv}")
     
@@ -702,7 +702,7 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam_FAIRSTAR()
+            tune_hyperparam_random()
             # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
