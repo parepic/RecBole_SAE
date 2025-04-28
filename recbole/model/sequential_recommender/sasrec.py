@@ -217,7 +217,7 @@ class SASRec(SequentialRecommender):
         Returns:
         adjusted_scores (np.ndarray): Adjusted scores with same shape as input.
         """
-        csv_file = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
+        csv_file = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
         # Load the CSV file
         df = pd.read_csv(csv_file)
         
@@ -265,7 +265,7 @@ class SASRec(SequentialRecommender):
         scores = scores.detach().cpu()
 
         # ---- load popularity labels (unchanged) -----------------------
-        df   = pd.read_csv("./dataset/lastfm/item_popularity_labels_with_titles.csv")
+        df   = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values
         labs = df["popularity_label"].astype(int).values
         max_id = ids.max()
@@ -534,7 +534,7 @@ class SASRec(SequentialRecommender):
             looked‑up in `niche_labels` to derive the fraction internally.
         """
         
-        df = pd.read_csv(r"./dataset/lastfm/item_popularity_labels_with_titles.csv")
+        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
 
