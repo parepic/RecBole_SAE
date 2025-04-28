@@ -130,8 +130,8 @@ def tune_hyperparam():
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     
     # 2) build your grid
-    all_Ns   = list(np.linspace(512, 4096, 1))
-    betas    = np.linspace(1, 4, 1)
+    all_Ns   = list(np.linspace(512, 4096, 8))
+    betas    = np.linspace(1, 4, 8)
 
     # 3) baseline & bookkeeping
     baseline_stats = {
