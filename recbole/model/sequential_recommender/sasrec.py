@@ -530,7 +530,7 @@ class SASRec(SequentialRecommender):
         scores[:, 0] =  float("-inf")
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
+        # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
