@@ -141,7 +141,8 @@ def tune_hyperparam():
         'ndcg-head@10':          0.6589,
         'ndcg-mid@10':           0.5763,
         'ndcg-tail@10':          0.6798,
-        'arp':                   0.00035533782557826705
+        'arp':                   0.00035533782557826705,
+        'time':                  0.54
     }
     
     best_diff    = 0.0
@@ -160,7 +161,7 @@ def tune_hyperparam():
         'ndcg-mid': baseline_stats['ndcg-mid@10'],
         'ndcg-tail': baseline_stats['ndcg-tail@10'],
         'arp': baseline_stats['arp'],
-        'inference_time': 0.0
+        'inference_time': baseline_stats['time']
     })
     
     # 4) single n=0 evaluation
@@ -263,9 +264,10 @@ def tune_hyperparam_FAIRSTAR():
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     
+
     # 2) build your grid
-    all_Ns   = [0.3,]
-    betas    = [0.01]
+    all_Ns   = [0.3, 0.5, 0.7, 0.9, 0.99]
+    betas   = [0.01, 0.05, 0.1]
 
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
