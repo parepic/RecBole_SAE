@@ -199,8 +199,8 @@ class SAE(nn.Module):
 		top_neurons = combined_sorted[:int(self.N)]
 		print("amciq")
 		# Load the corresponding statistics files.
-		stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
-		stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+		stats_unpop = pd.read_csv(r"./dataset/lsatfm/row_stats_popular.csv")
+		stats_pop = pd.read_csv(r"./dataset/lastfm/row_stats_unpopular.csv")
 
 		# Create tensors of the absolute Cohen's d values for the selected neurons.
 		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
