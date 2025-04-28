@@ -85,6 +85,8 @@ class SASRec_SAE(SASRec):
 
         return total_loss
 
+
+
     def full_sort_predict(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
@@ -93,6 +95,7 @@ class SASRec_SAE(SASRec):
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
+        scores[:, 0] =  float("-inf")
         # if(self.mode == "test"):
         #     # user_ids = interaction['user_id']
         # nonzero_idxs = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()

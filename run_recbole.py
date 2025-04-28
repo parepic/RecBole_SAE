@@ -119,8 +119,6 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
     
     
 
-
-
 def tune_hyperparam():
     # 1) load everything
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
@@ -133,7 +131,7 @@ def tune_hyperparam():
     
     # 2) build your grid
     all_Ns   = list(np.linspace(512, 4096, 8))
-    betas    = np.linspace(0.5, 4, 8)
+    betas    = np.linspace(1, 4, 8)
 
     # 3) baseline & bookkeeping
     baseline_stats = {
@@ -178,6 +176,8 @@ def tune_hyperparam():
     if diff_ndcg0 <= 0.1 and gain0 > best_diff:
         best_diff    = gain0
         best_pair = (0, None)
+    
+    
     records.append({
         'N': 0, 'beta': None,
         'ndcg': ndcg0, 'gini': gini0, 'gain': gain0,
@@ -235,7 +235,6 @@ def tune_hyperparam():
     print("=== DONE ===")
     print(f"Best triplet: {best_pair}, best gain: {best_diff:.3f}")
     return best_pair
-
 
 
 
@@ -605,8 +604,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            # tune_hyperparam()
-            create_visualizations_neurons()
+            tune_hyperparam()
+            # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     valid_data, model_file=args.path, show_progress=config["show_progress"]

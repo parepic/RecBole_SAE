@@ -377,12 +377,13 @@ class SASRec(SequentialRecommender):
         return torch.from_numpy(boosted).to(device=self.device, dtype=torch.float32)
               
                    
-     
+                   
+    
                    
     # ------------------------------------------------------------------
     # 1.  Top-level driver ------------------------------------------------
     # ------------------------------------------------------------------
-    def FAIR(self, scores, *, p: float = 0.9, alpha: float = 0.1,
+    def FAIR(self, scores, *, p: float = 0.99, alpha: float = 0.1,
             L: int = 500, K: int = 10):
         """
         Re-rank each batch row with FA*IR.
@@ -529,7 +530,7 @@ class SASRec(SequentialRecommender):
         scores[:, 0] =  float("-inf")
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        scores = self.FAIR(scores).to(self.device)
+        # scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
