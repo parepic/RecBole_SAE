@@ -131,7 +131,7 @@ def tune_hyperparam():
     
     # 2) build your grid
     all_Ns   = list(np.linspace(512, 4096, 8))
-    betas    = np.linspace(1, 4, 8)
+    betas    = np.linspace(1, 4, 7)
 
     # 3) baseline & bookkeeping
     baseline_stats = {
