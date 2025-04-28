@@ -806,7 +806,7 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam()
+            tune_hyperparam_FAIRSTAR()
             # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
