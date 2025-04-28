@@ -683,7 +683,7 @@ class SASRec(SequentialRecommender):
         pos_weight = 1.0 / np.log2(np.arange(top_k) + 2)
         exp_budget = pos_weight.sum()
         if policy == "Equal":
-            target_ratio = np.array([0.3, 0.7])
+            target_ratio = np.array([0.7, 0.3])
         elif policy == "AvgEqual":
             target_ratio = np.array([1 - niche_np.mean(), niche_np.mean()])
         else:
