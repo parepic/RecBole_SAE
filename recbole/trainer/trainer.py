@@ -48,7 +48,7 @@ from recbole.utils import (
     WandbLogger,
     get_popularity_label_indices
     )
-from recbole.model.sequential_recommender import SASRec_SAE, SASRecWithGating
+from recbole.model.sequential_recommender import SASRec_SAE, SASRecWithGating, SASRec
 from torch.nn.parallel import DistributedDataParallel
 
 
@@ -959,18 +959,19 @@ class Trainer(AbstractTrainer):
         )
         
         num_sample = 0
-        # self.model.sae_module.set_dampen_hyperparam(corr_file='DADA', neuron_count=N, 
-        #                                             damp_percent=beta, unpopular_only=True)
-        self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
-                                                    beta=beta, unpopular_only=False)
         
         if isinstance(self.model, SASRec_SAE):
+            self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
+                                        beta=beta, unpopular_only=False)
             self.model.sae_module.activation_count.zero_()
             self.model.total_loss = 0
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
-            interaction, scores, positive_u, positive_i = eval_func(batched_data)
+            if isinstance(self.model, SASRec):
+                interaction, scores, positive_u, positive_i = eval_func(batched_data, param1=N, param2=beta)
+            else:
+                interaction, scores, positive_u, positive_i = eval_func(batched_data)
             labels.extend(get_popularity_label_indices(positive_i))
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
