@@ -106,6 +106,7 @@ class SASRec(SequentialRecommender):
         self.apply(self._init_weights)
 
 
+
     def random_reranker(
         self,
         scores: torch.Tensor,
@@ -136,7 +137,7 @@ class SASRec(SequentialRecommender):
         # 2) Randomly sample sample_k of those top_k **without** replacement
         #    This gives positions in the topk array (0..top_k-1), shape [B, sample_k]
         rand_vals = torch.ones(B, top_k)
-        samp_pos = torch.multinomial(rand_vals, sample_k, replacement=False)
+        samp_pos = torch.multinomial(rand_vals, sample_k, replacement=True)
 
         # 3) Map back to the original indices in [0..N)
         batch_idx = torch.arange(B).unsqueeze(1).expand(-1, sample_k)  # [B, sample_k]
