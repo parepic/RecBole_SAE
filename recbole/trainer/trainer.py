@@ -968,7 +968,7 @@ class Trainer(AbstractTrainer):
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
-            if isinstance(self.model, SASRec):
+            if type(self.model) is SASRec:
                 interaction, scores, positive_u, positive_i = eval_func(batched_data, param1=N, param2=beta)
             else:
                 interaction, scores, positive_u, positive_i = eval_func(batched_data)
