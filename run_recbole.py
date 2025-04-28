@@ -253,8 +253,6 @@ def tune_hyperparam():
 
 
 
-
-
 def tune_hyperparam_FAIRSTAR():
     # 1) load everything
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
@@ -266,8 +264,8 @@ def tune_hyperparam_FAIRSTAR():
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
     
     # 2) build your grid
-    all_Ns   = [0.3, 0.5, 0.7, 0.9, 0.99]
-    betas    = [0.01, 0.05, 0.1]
+    all_Ns   = [0.3,]
+    betas    = [0.01]
 
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
@@ -600,7 +598,7 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam()
+            tune_hyperparam_FAIRSTAR()
             # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
