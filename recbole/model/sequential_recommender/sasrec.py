@@ -531,8 +531,8 @@ class SASRec(SequentialRecommender):
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
-        # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
-        scores = self.random_reranker(scores=scores, top_k=param1)
+        scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
+        # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
@@ -649,6 +649,7 @@ class SASRec(SequentialRecommender):
         *,
         top_k: int = 10,
         policy: Literal["Equal", "AvgEqual"] = "Equal",
+        p: float = 0.5,
         personal: bool = True,
         user_interest: Optional[Array] = None,
         lambda_: float = 0.7,
@@ -684,7 +685,7 @@ class SASRec(SequentialRecommender):
         pos_weight = 1.0 / np.log2(np.arange(top_k) + 2)
         exp_budget = pos_weight.sum()
         if policy == "Equal":
-            target_ratio = np.array([0.3, 0.7])
+            target_ratio = np.array([1-p, p])
         elif policy == "AvgEqual":
             target_ratio = np.array([1 - niche_np.mean(), niche_np.mean()])
         else:
