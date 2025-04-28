@@ -135,16 +135,15 @@ def tune_hyperparam():
 
     # 3) baseline & bookkeeping
     baseline_stats = {
-        'ndcg@10':               0.6273,
-        'Gini_coef@10':          0.5849518873628745,
-        'Deep_LT_coverage@10':   0.8716216216216216,
-        'ndcg-head@10':          0.6589,
-        'ndcg-mid@10':           0.5763,
-        'ndcg-tail@10':          0.6798,
-        'arp':                   0.00035533782557826705,
-        'time':                  0.54
-    }
-    
+            'ndcg@10':          0.1212,
+            'Gini_coef@10':     0.7573,
+            'Deep_LT_coverage@10': 0.4859,
+            'ndcg-head@10':     0.1848,
+            'ndcg-mid@10':      0.1234,
+            'ndcg-tail@10':     0.0621,
+            'arp':              3.0278,
+            'time':             0.0
+            }
     best_diff    = 0.0
     best_pair    = None
     it_num       = 0
@@ -271,14 +270,15 @@ def tune_hyperparam_FAIRSTAR():
 
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
-        'ndcg@10':               0.6273,
-        'Gini_coef@10':          0.5849518873628745,
-        'Deep_LT_coverage@10':   0.8716216216216216,
-        'ndcg-head@10':          0.6589,
-        'ndcg-mid@10':           0.5763,
-        'ndcg-tail@10':          0.6798,
-        'arp':                   0.00035533782557826705
-    }
+            'ndcg@10':          0.1212,
+            'Gini_coef@10':     0.7573,
+            'Deep_LT_coverage@10': 0.4859,
+            'ndcg-head@10':     0.1848,
+            'ndcg-mid@10':      0.1234,
+            'ndcg-tail@10':     0.0621,
+            'arp':              3.0278,
+            'time':             0.0
+            }
     best_diff = 0.0
     best_pair = None
     it_num    = 0
@@ -372,14 +372,15 @@ def tune_hyperparam_pct():
     
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
-        'ndcg@10':               0.6273,
-        'Gini_coef@10':          0.5849518873628745,
-        'Deep_LT_coverage@10':   0.8716216216216216,
-        'ndcg-head@10':          0.6589,
-        'ndcg-mid@10':           0.5763,
-        'ndcg-tail@10':          0.6798,
-        'arp':                   0.00035533782557826705
-    }
+            'ndcg@10':          0.1212,
+            'Gini_coef@10':     0.7573,
+            'Deep_LT_coverage@10': 0.4859,
+            'ndcg-head@10':     0.1848,
+            'ndcg-mid@10':      0.1234,
+            'ndcg-tail@10':     0.0621,
+            'arp':              3.0278,
+            'time':             0.0
+            }
     best_diff = 0.0
     best_pair = None
     it_num    = 0
@@ -444,7 +445,7 @@ def tune_hyperparam_pct():
 
     # 6) save results + final report
     df = pd.DataFrame(records)
-    out_csv = getattr(args, 'output_csv', 'tuning_results_FAIR.csv')
+    out_csv = getattr(args, 'output_csv', 'tuning_results_PCT.csv')
     df.to_csv(out_csv, index=False)
     print(f"Results saved to {out_csv}")
     
@@ -472,14 +473,15 @@ def tune_hyperparam_random():
     betas = [1]
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
-        'ndcg@10':               0.6273,
-        'Gini_coef@10':          0.5849518873628745,
-        'Deep_LT_coverage@10':   0.8716216216216216,
-        'ndcg-head@10':          0.6589,
-        'ndcg-mid@10':           0.5763,
-        'ndcg-tail@10':          0.6798,
-        'arp':                   0.00035533782557826705
-    }
+            'ndcg@10':          0.1212,
+            'Gini_coef@10':     0.7573,
+            'Deep_LT_coverage@10': 0.4859,
+            'ndcg-head@10':     0.1848,
+            'ndcg-mid@10':      0.1234,
+            'ndcg-tail@10':     0.0621,
+            'arp':              3.0278,
+            'time':             0.0
+            }
     best_diff = 0.0
     best_pair = None
     it_num    = 0
