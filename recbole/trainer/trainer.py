@@ -859,7 +859,7 @@ class Trainer(AbstractTrainer):
         return self.best_valid_score, self.best_valid_result
     
 
-    def _full_sort_batch_eval(self, batched_data):
+    def _full_sort_batch_eval(self, batched_data, param1=None, param2=None):
 
         interaction, history_index, positive_u, positive_i = batched_data
         self.unique_elements.update(positive_i.tolist())
@@ -870,7 +870,8 @@ class Trainer(AbstractTrainer):
         # positive_u = positive_u[:N]
         # positive_i = positive_i[indices]
         try:
-            scores = self.model.full_sort_predict(interaction.to(self.device))
+            if type(self.model) is SASRec:
+                scores = self.model.full_sort_predict(interaction.to(self.device), param1=param1, param2=param2)
         except NotImplementedError:
             inter_len = len(interaction)
             new_inter = interaction.to(self.device).repeat_interleave(self.tot_item_num)
@@ -968,10 +969,7 @@ class Trainer(AbstractTrainer):
         labels = []
         for batch_idx, batched_data in enumerate(iter_data):
             num_sample += len(batched_data)
-            if type(self.model) is SASRec:
-                interaction, scores, positive_u, positive_i = eval_func(batched_data, param1=N, param2=beta)
-            else:
-                interaction, scores, positive_u, positive_i = eval_func(batched_data)
+            interaction, scores, positive_u, positive_i = eval_func(batched_data, param1=N, param2=beta)
             labels.extend(get_popularity_label_indices(positive_i))
             if self.gpu_available and show_progress:
                 iter_data.set_postfix_str(
