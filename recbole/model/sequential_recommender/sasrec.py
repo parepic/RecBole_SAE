@@ -529,8 +529,8 @@ class SASRec(SequentialRecommender):
         scores[:, 0] =  float("-inf")
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        scores = self.FAIR(scores).to(self.device)
-        # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
+        # scores = self.FAIR(scores).to(self.device)
+        scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
@@ -660,7 +660,7 @@ class SASRec(SequentialRecommender):
             looked‑up in `niche_labels` to derive the fraction internally.
         """
         
-        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        df = pd.read_csv(r"./dataset/lastfm/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
 
