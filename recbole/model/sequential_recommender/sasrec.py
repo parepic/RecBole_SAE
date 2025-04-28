@@ -379,84 +379,101 @@ class SASRec(SequentialRecommender):
                    
      
                    
-    def FAIR(self, scores):
-        L=500
+    # ------------------------------------------------------------------
+    # 1.  Top-level driver ------------------------------------------------
+    # ------------------------------------------------------------------
+    def FAIR(self, scores, *, p: float = 0.30, alpha: float = 0.10,
+            L: int = 500, K: int = 10):
+        """
+        Re-rank each batch row with FA*IR.
+            p      – target minimum proportion of protected items
+            alpha  – family-wise significance level for the binomial test
+        Remaining arguments are kept for backward-compatibility.
+        """
         scores = scores.detach().cpu()
-        # 1) Load the CSV; adjust path as needed
-        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
-        ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
-        labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
-        # 2) Build a 1D BoolTensor of size (max_id+1,) so we can index by ID directly
+
+        # ---- load popularity labels (unchanged) -----------------------
+        df   = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        ids  = df["item_id:token"].astype(int).values
+        labs = df["popularity_label"].astype(int).values
         max_id = ids.max()
-        popularity_label = torch.zeros(max_id+1, dtype=torch.bool)
 
-        # 3) Fill it: True where label == 1 (popular)
-        #    If your “popular” is actually encoded as -1, just change (labs == 1) to (labs == -1)
-        popularity_label[ids] = torch.from_numpy((labs != -1))
+        popularity_label = torch.zeros(max_id + 1, dtype=torch.bool)
+        popularity_label[ids] = torch.from_numpy(labs != -1)  # True = popular
+        # We treat *unpopular* as protected
+        popularity_label = ~popularity_label
 
-        B, N = scores.size()
-        L = 500
-        K = 10
-        p = 0.3       # require ≥96% unpopular (“protected”)
-            
-        # 1) build your truncated candidate set and labels
-        top500_idx    = torch.argsort(scores, dim=1, descending=True)[:, :L]  # (B,500)
-        labels500     = popularity_label[top500_idx]                           # (B,500) bool
-        protected500  = ~labels500                                             # True=unpopular
-        
-        # 2) for each batch‐row, run fair_topk
-        fair_pos = []
+        # ---- take top-L candidates per row ----------------------------
+        B, N          = scores.size()
+        top_idx       = torch.argsort(scores, dim=1, descending=True)[:, :L]
+        protected_top = popularity_label[top_idx]                  # (B,L) bool
+
+        # ---- run FA*IR row-wise ---------------------------------------
         for b in range(B):
-            row_scores     = scores[b, top500_idx[b]]      # (500,)
-            row_protected  = protected500[b]               # (500,)
-            sel_in_500      = self.fair_topk(row_scores, row_protected, K, p)
-            # 1) map back to the *original* N‑dimensional positions
-            orig_pos = top500_idx[b, sel_in_500]  # shape (K,)
+            row_scores    = scores[b, top_idx[b]]          # (L,)
+            row_protected = protected_top[b]               # (L,)
+            sel_in_top    = self.fair_topk(row_scores,
+                                        row_protected,
+                                        K, p, alpha)    # indices into 0..L-1
 
-            # 2) compute a “base” just above the current max score
-            base = scores[b].max().item() + 1.0   # e.g. if max was 37.2, base = 38.2
+            # map back to original positions and overwrite scores
+            orig_pos = top_idx[b, sel_in_top]
+            base     = scores[b].max().item() + 1.0
+            offsets  = torch.arange(K - 1, -1, -1, dtype=scores.dtype)
+            scores[b, orig_pos] = base + offsets            # keep FA*IR order
 
-            # 3) assign descending offsets so they keep FA*IR’s order
-            #    [38.2 + K-1, 38.2 + K-2, …, 38.2 + 0]
-            offsets = torch.arange(K-1, -1, -1, device=scores.device, dtype=scores.dtype)
-            new_vals = base + offsets               # shape (K,)
-
-            # 4) write them back into `scores[b]`
-            scores[b, orig_pos] = new_vals
-            fair_pos.append(sel_in_500)    
         return scores
-            
-            
-    def fair_topk(self, scores1d, protected1d, K, p):
-        idx_sorted  = np.argsort(-scores1d)   # descending
-        prot_list   = [i for i in idx_sorted if protected1d[i]]
-        nonprot_list= [i for i in idx_sorted if not protected1d[i]]
 
-        sel = []
-        cp = cn = pp = np_ptr = 0
 
-        for t in range(1, K+1):
-            needed = math.ceil(p * t)
-            if cp < needed:
-                if pp < len(prot_list):
-                    choose = prot_list[pp]; pp += 1; cp += 1
-                else:
-                    choose = nonprot_list[np_ptr]; np_ptr += 1; cn += 1
-            else:
-                next_p  = prot_list[pp]    if pp < len(prot_list)    else None
+
+    def fair_topk(self,
+                scores1d: torch.Tensor,
+                protected1d: torch.Tensor,
+                K: int,
+                p: float,
+                alpha: float = 0.10):
+        """
+        One-dimensional FA*IR (Algorithm 2) that *exactly* follows the
+        binomial rule with Šidák-style multiple-test correction.
+        """
+        # --------------------------------------------------------------
+        # helper: minimum #protected required at each prefix
+        def _min_protected_per_prefix(k, p_, alpha_):
+            alpha_c = 1.0 - (1.0 - alpha_) ** (1.0 / k)          # Šidák :contentReference[oaicite:0]{index=0}&#8203;:contentReference[oaicite:1]{index=1}
+            m = np.zeros(k, dtype=int)
+            for t in range(1, k + 1):                            # prefix length
+                cdf = 0.0
+                for z in range(t + 1):                           # binomial CDF
+                    cdf += math.comb(t, z) * (p_ ** z) * ((1.0 - p_) ** (t - z))
+                    if cdf > alpha_c:
+                        m[t - 1] = z
+                        break
+            return m
+
+        m_needed = _min_protected_per_prefix(K, p, alpha)        # :contentReference[oaicite:2]{index=2}&#8203;:contentReference[oaicite:3]{index=3}
+
+        # --------------------------------------------------------------
+        # build two quality-sorted lists
+        idx_sorted   = np.argsort(-scores1d)                     # high→low
+        prot_list    = [i for i in idx_sorted if protected1d[i]]
+        nonprot_list = [i for i in idx_sorted if not protected1d[i]]
+
+        sel  = []
+        tp = tn = pp = np_ptr = 0
+
+        for pos in range(K):                                     # positions 0..K-1
+            need = m_needed[pos]                                 # min protected so far
+            if tp < need:                                        # *must* take protected
+                choose = prot_list[pp];  pp += 1;  tp += 1
+            else:                                                # free to take best
+                next_p  = prot_list[pp]  if pp  < len(prot_list)     else None
                 next_np = nonprot_list[np_ptr] if np_ptr < len(nonprot_list) else None
 
-                if next_p is None and next_np is None:
-                    break
-                elif next_p is None:
-                    choose = next_np; np_ptr += 1; cn += 1
-                elif next_np is None:
-                    choose = next_p; pp += 1; cp += 1
+                if next_np is None or (next_p is not None and
+                                    scores1d[next_p] >= scores1d[next_np]):
+                    choose = next_p;   pp += 1;  tp += 1
                 else:
-                    if scores1d[next_p] >= scores1d[next_np]:
-                        choose = next_p; pp += 1; cp += 1
-                    else:
-                        choose = next_np; np_ptr += 1; cn += 1
+                    choose = next_np;  np_ptr += 1;  tn += 1
 
             sel.append(choose)
 
@@ -509,10 +526,10 @@ class SASRec(SequentialRecommender):
         # save_batch_activations(seq_output, 64)
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        # scores[:, 0] =  float("-inf")
+        scores[:, 0] =  float("-inf")
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
-        # scores = self.FAIR(scores).to(self.device)
+        scores = self.FAIR(scores).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq)
         # scores = self.random_reranker(scores=scores, top_k=20)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
