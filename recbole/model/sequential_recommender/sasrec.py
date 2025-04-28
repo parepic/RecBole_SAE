@@ -382,7 +382,7 @@ class SASRec(SequentialRecommender):
     # ------------------------------------------------------------------
     # 1.  Top-level driver ------------------------------------------------
     # ------------------------------------------------------------------
-    def FAIR(self, scores, *, p: float = 0.30, alpha: float = 0.10,
+    def FAIR(self, scores, *, p: float = 0.65, alpha: float = 0.10,
             L: int = 500, K: int = 10):
         """
         Re-rank each batch row with FA*IR.
