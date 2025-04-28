@@ -872,6 +872,9 @@ class Trainer(AbstractTrainer):
         try:
             if type(self.model) is SASRec:
                 scores = self.model.full_sort_predict(interaction.to(self.device), param1=param1, param2=param2)
+            else:
+                scores = self.model.full_sort_predict(interaction.to(self.device))
+                
         except NotImplementedError:
             inter_len = len(interaction)
             new_inter = interaction.to(self.device).repeat_interleave(self.tot_item_num)
