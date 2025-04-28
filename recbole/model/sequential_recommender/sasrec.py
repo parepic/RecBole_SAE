@@ -647,7 +647,7 @@ class SASRec(SequentialRecommender):
         scores: Array,
         *,
         top_k: int = 10,
-        policy: Literal["Equal", "AvgEqual"] = "AvgEqual",
+        policy: Literal["Equal", "AvgEqual"] = "Equal",
         personal: bool = True,
         user_interest: Optional[Array] = None,
         lambda_: float = 0.1,
@@ -683,7 +683,7 @@ class SASRec(SequentialRecommender):
         pos_weight = 1.0 / np.log2(np.arange(top_k) + 2)
         exp_budget = pos_weight.sum()
         if policy == "Equal":
-            target_ratio = np.array([0.5, 0.5])
+            target_ratio = np.array([0.4, 0.6])
         elif policy == "AvgEqual":
             target_ratio = np.array([1 - niche_np.mean(), niche_np.mean()])
         else:
