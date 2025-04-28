@@ -119,6 +119,8 @@ def display_metrics_table(dampen_percs, ndcgs, hits, coverages, lt_coverages, de
     
     
 
+
+
 def tune_hyperparam():
     # 1) load everything
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
@@ -233,6 +235,127 @@ def tune_hyperparam():
     print("=== DONE ===")
     print(f"Best triplet: {best_pair}, best gain: {best_diff:.3f}")
     return best_pair
+
+
+
+
+
+
+def tune_hyperparam_FAIRSTAR():
+    # 1) load everything
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path,
+        sae=(args.model == 'SASRec_SAE'),
+        device=device
+    )
+    
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+    
+    # 2) build your grid
+    all_Ns   = list(np.linspace(512, 4096, 8))
+    betas    = np.linspace(0.5, 4, 8)
+
+    # 3) baseline & bookkeeping
+    baseline_stats = {
+        'ndcg@10':          0.1212,
+        'Gini_coef@10':     0.7573,
+        'Deep_LT_coverage@10': 0.4859,
+        'ndcg-head@10':     0.1848,
+        'ndcg-mid@10':      0.1234,
+        'ndcg-tail@10':     0.0621,
+        'arp':              3.0278
+    }
+    best_diff    = 0.0
+    best_pair = None
+    it_num       = 0
+    records      = []
+    
+    records.append({'N': -1, 'beta': None,
+        'ndcg': baseline_stats['ndcg@10'], 'gini': baseline_stats['Gini_coef@10'], 'gain': 0,
+        'Deep long tail coverage': baseline_stats['Deep_LT_coverage@10'],
+        'ndcg-head': baseline_stats['ndcg-head@10'],
+        'ndcg-mid': baseline_stats['ndcg-mid@10'],
+        'ndcg-tail': baseline_stats['ndcg-tail@10'],
+        'arp': baseline_stats['arp']
+        })
+    
+    # 4) single n=0 evaluation
+    print("=== Running n=0 case ===")
+    res0 = trainer.evaluate(
+        valid_data,
+        model_file=args.path,
+        show_progress=config["show_progress"]
+    )
+
+    # compute and log n=0 metrics
+    ndcg0 = res0['ndcg@10']
+    gini0 = res0['Gini_coef@10']
+    diff_ndcg0 = abs(ndcg0 - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10']
+    diff_gini0 = abs(gini0 - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+    gain0 = diff_gini0 - diff_ndcg0
+
+    print(f"[Iter {it_num:04d}] n=0 → ndcgΔ={diff_ndcg0:.3f}, giniΔ={diff_gini0:.3f}")
+    if diff_ndcg0 <= 0.1 and gain0 > best_diff:
+        best_diff    = gain0
+        best_pair = (0, None)
+    records.append({
+        'N': 0, 'beta': None,
+        'ndcg': ndcg0, 'gini': gini0, 'gain': gain0,
+        'Deep long tail coverage': res0.get('Deep_LT_coverage@10'),
+        'ndcg-head': res0.get('ndcg-head@10'),
+        'ndcg-mid': res0.get('ndcg-mid@10'),
+        'ndcg-tail': res0.get('ndcg-tail@10'),
+        'arp': res0.get('ARP@10')
+    })
+    
+    it_num += 1
+
+    # 5) full sweep for n>0
+    for n, beta in itertools.product(all_Ns, betas):
+        res = trainer.evaluate(
+            valid_data,
+            model_file=args.path,
+            show_progress=config["show_progress"],
+            N=n, beta=beta
+        )
+
+        # compute metrics
+        ndcg   = res['ndcg@10']
+        gini   = res['Gini_coef@10']
+        diff_ndcg = abs(ndcg - baseline_stats['ndcg@10']) / baseline_stats['ndcg@10']
+        diff_gini = abs(gini - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+        gain = diff_gini - diff_ndcg
+
+        # update best
+        if diff_ndcg <= 0.05 and gain > best_diff:
+            best_diff    = gain
+            best_pair = (n, beta)
+
+        # record + print
+        records.append({
+            'N': n, 'beta': beta, 
+            'ndcg': ndcg, 'gini': gini, 'gain': gain,
+            'Deep long tail coverage': res.get('Deep_LT_coverage@10'),
+            'ndcg-head': res.get('ndcg-head@10'),
+            'ndcg-mid': res.get('ndcg-mid@10'),
+            'ndcg-tail': res.get('ndcg-tail@10'),
+            'arp': res.get('ARP@10')
+
+        })
+        print(f"[Iter {it_num:04d}] N={n:.0f}, β={beta:.2f} → "
+              f"ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}, best_gain={best_diff:.3f}")
+        it_num += 1
+
+    # 6) save results + final report
+    df = pd.DataFrame(records)
+    out_csv = getattr(args, 'output_csv', 'tuning_results_PopSteer.csv')
+    df.to_csv(out_csv, index=False)
+    print(f"Results saved to {out_csv}")
+
+    print("=== DONE ===")
+    print(f"Best triplet: {best_pair}, best gain: {best_diff:.3f}")
+    return best_pair
+
 
 
 
@@ -482,8 +605,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            # tune_hyperparam()
-            create_visualizations_neurons()
+            tune_hyperparam()
+            # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     valid_data, model_file=args.path, show_progress=config["show_progress"]

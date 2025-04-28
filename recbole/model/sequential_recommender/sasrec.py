@@ -393,7 +393,7 @@ class SASRec(SequentialRecommender):
         scores = scores.detach().cpu()
 
         # ---- load popularity labels (unchanged) -----------------------
-        df   = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        df   = pd.read_csv("./dataset/lastfm/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values
         labs = df["popularity_label"].astype(int).values
         max_id = ids.max()
