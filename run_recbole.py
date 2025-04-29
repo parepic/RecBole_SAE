@@ -1021,8 +1021,8 @@ if __name__ == "__main__":
     
     # save_mean_SD()
     # exit()
-    extract_sort_top_neurons()
-    exit()
+    # extract_sort_top_neurons()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
