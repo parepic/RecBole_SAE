@@ -654,6 +654,104 @@ def tune_hyperparam_random():
     return best_pair
 
 
+def tune_hyperparam_ipr():
+    # 1) load everything
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path,
+        sae=(args.model == 'SASRec_SAE'),
+        device=device
+    )
+    
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+    
+
+    # 2) build your grid
+    all_Ns   = [0.1, 0.3, 0.5, 0.5, 1.0]
+    betas = [1]
+    # 3) baseline & bookkeeping (updated values)
+    baseline_stats = {
+            'ndcg@10':          0.1212,
+            'Gini_coef@10':     0.7573,
+            'Deep_LT_coverage@10': 0.4859,
+            'ndcg-head@10':     0.1848,
+            'ndcg-mid@10':      0.1234,
+            'ndcg-tail@10':     0.0621,
+            'arp':              3.0278,
+            'time':             0.0
+            }
+    best_diff = 0.0
+    best_pair = None
+    it_num    = 0
+    records   = []
+    
+    # baseline record with zero inference time
+    records.append({
+        'N': -1, 'beta': None,
+        'ndcg': baseline_stats['ndcg@10'],
+        'gini': baseline_stats['Gini_coef@10'],
+        'gain': 0,
+        'Deep long tail coverage': baseline_stats['Deep_LT_coverage@10'],
+        'ndcg-head': baseline_stats['ndcg-head@10'],
+        'ndcg-mid': baseline_stats['ndcg-mid@10'],
+        'ndcg-tail': baseline_stats['ndcg-tail@10'],
+        'arp': baseline_stats['arp'],
+        'inference_time': 0.0
+    })
+    it_num += 1
+
+    # 5) full sweep for n>0
+    for n, beta in itertools.product(all_Ns, betas):
+        # measure inference time
+        start_time = time.time()
+        res = trainer.evaluate(
+            valid_data,
+            model_file=args.path,
+            show_progress=config["show_progress"],
+            N=n, beta=beta
+        )
+        inference_time = time.time() - start_time
+
+        # compute metrics
+        ndcg      = res['ndcg@10']
+        gini      = res['Gini_coef@10']
+        diff_ndcg = abs(ndcg  - baseline_stats['ndcg@10'])      / baseline_stats['ndcg@10']
+        diff_gini = abs(gini  - baseline_stats['Gini_coef@10']) / baseline_stats['Gini_coef@10']
+        gain      = diff_gini - diff_ndcg
+
+        # update best
+        if diff_ndcg <= 0.05 and gain > best_diff:
+            best_diff = gain
+            best_pair = (n, beta)
+
+        # record + print
+        records.append({
+            'N': n, 'beta': beta,
+            'ndcg': ndcg, 'gini': gini, 'gain': gain,
+            'Deep long tail coverage': res.get('Deep_LT_coverage@10'),
+            'ndcg-head': res.get('ndcg-head@10'),
+            'ndcg-mid': res.get('ndcg-mid@10'),
+            'ndcg-tail': res.get('ndcg-tail@10'),
+            'arp': res.get('ARP@10'),
+            'inference_time': inference_time
+        })
+        print(
+            f"[Iter {it_num:04d}] N={n:.2f}, β={beta:.2f} → "
+            f"ndcgΔ={diff_ndcg:.3f}, giniΔ={diff_gini:.3f}, "
+            f"time={inference_time:.2f}s, best_gain={best_diff:.3f}"
+        )
+        it_num += 1
+
+    # 6) save results + final report
+    df = pd.DataFrame(records)
+    out_csv = getattr(args, 'output_csv', 'tuning_results_ipr.csv')
+    df.to_csv(out_csv, index=False)
+    print(f"Results saved to {out_csv}")
+    
+    print("=== DONE ===")
+    print(f"Best triplet: {best_pair}, best gain: {best_diff:.3f}")
+    return best_pair
+
+
 
 def tune_hyperparam_pmmf():
     # 1) load everything
@@ -699,6 +797,7 @@ def tune_hyperparam_pmmf():
         'arp': baseline_stats['arp'],
         'inference_time': 0.0
     })
+    
     it_num += 1
 
     # 5) full sweep for n>0
@@ -1001,7 +1100,7 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam_pmmf()
+            tune_hyperparam_ipr()
             # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(

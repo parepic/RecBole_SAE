@@ -208,7 +208,7 @@ class SASRec(SequentialRecommender):
         return output  # [B H]
     
     
-    def simple_reranker(self, scores):
+    def simple_reranker(self, scores, alpha):
         """
         Adjust the scores based on item popularity.
         
@@ -247,7 +247,7 @@ class SASRec(SequentialRecommender):
         pop_scores = df['pop_score'].values
         
         # Adjust scores using the formula: score * (1 / (pop_score + 1))
-        adjusted_scores = scores.detach().cpu().numpy() * (1 / (pop_scores * (0.2/max(pop_scores)) + 1))
+        adjusted_scores = scores.detach().cpu().numpy() * (1 / (pop_scores * (alpha/max(pop_scores)) + 1))
         
         return adjusted_scores
     
@@ -402,10 +402,10 @@ class SASRec(SequentialRecommender):
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
         scores[:, 0] =  float("-inf")
         # print(scores[:, 0:20])
-        # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
+        scores = torch.tensor(self.simple_reranker(scores, param1)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
-        scores = self.online_p_mmf(scoress=scores, lam=param1, eta=param2)
+        # scores = self.online_p_mmf(scoress=scores, lam=param1, eta=param2)
         # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
