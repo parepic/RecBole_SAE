@@ -693,10 +693,10 @@ class SASRec(SequentialRecommender):
         labels = df['popularity_label'].values
 
         # Determine number of items
-        N = item_ids.max()
+        bla = item_ids.max() + 1
 
         # Create tensor and assign labels
-        labels = torch.empty(N, dtype=torch.long)
+        labels = torch.empty(bla, dtype=torch.long)
         labels[item_ids] = torch.tensor(labels, dtype=torch.long)
         
         B, NN1 = scores.shape                       # batch size, N+1
