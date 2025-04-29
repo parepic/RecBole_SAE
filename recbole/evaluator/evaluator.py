@@ -130,5 +130,5 @@ class Evaluator(object):
             'Deep_LT_coverage@10': deep_long_tail_coverage,
             'coverage@10': coverage,
             'Gini_coef@10': gini_coefficient,
-            'ARP@10': (scaled_arp * 1000)
+            'ARP@10': (scaled_arp)
         }

@@ -2198,7 +2198,7 @@ def extract_sort_top_neurons():
     """
     file1 = r"./dataset/ml-1m/neuron_activations.csv"
     file2 = r"./dataset/ml-1m/cohens_d.csv"
-    output_file = r"./dataset/ml-1m/top50_neuron_indices.txt"
+    output_file = r"./dataset/ml-1m/top50_neuron_indices_small.txt"
 
     # Load CSVs with first column as index
     df1 = pd.read_csv(file1, index_col=0)
@@ -2221,11 +2221,11 @@ def extract_sort_top_neurons():
         raise KeyError(f"Indices {missing} from activations not found in cohens_d.csv") from e
 
     # Sort indices by descending Cohen's d and select top 50
-    sorted_indices = cohen_d_series.sort_values(ascending=False).index.to_list()
+    sorted_indices = cohen_d_series.sort_values(ascending=True).index.to_list()
     top50 = sorted_indices[:100]
 
     # Ensure all top-50 Cohen's d values are positive
-    non_positive = [idx for idx in top50 if cohen_d_series.loc[idx] <= 0]
+    non_positive = [idx for idx in top50 if cohen_d_series.loc[idx] >= 0]
     if non_positive:
         raise ValueError(f"Non-positive Cohen's d values found among top 50 indices: {non_positive}")
 
