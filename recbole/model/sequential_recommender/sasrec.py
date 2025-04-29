@@ -405,7 +405,7 @@ class SASRec(SequentialRecommender):
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
-        scores = self.online_p_mmf(scoress=scores, lam=0.5)
+        scores = self.online_p_mmf(scoress=scores, lam=param1, eta=param2)
         # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]

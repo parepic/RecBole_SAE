@@ -667,8 +667,8 @@ def tune_hyperparam_pmmf():
     
 
     # 2) build your grid
-    all_Ns   = [0.3, 0.5, 0.7, 0.9, 0.99]
-    betas   = [0.01, 0.05, 0.1]
+    all_Ns   = [0.1, 0.3, 0.5, 0.7, 0.9]
+    betas   = [5e-1, 5e-2, 5e-3]
 
     # 3) baseline & bookkeeping (updated values)
     baseline_stats = {
@@ -1001,8 +1001,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            # tune_hyperparam_pct()
-            create_visualizations_neurons()
+            tune_hyperparam_pmmf()
+            # create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     valid_data, model_file=args.path, show_progress=config["show_progress"]
