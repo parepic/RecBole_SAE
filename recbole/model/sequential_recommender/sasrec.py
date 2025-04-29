@@ -666,7 +666,6 @@ class SASRec(SequentialRecommender):
         
         csv_path = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
         df = pd.read_csv(csv_path)
-        y = y.cpu()
         # Convert item IDs to int (in case they are strings)
         df['item_id:token'] = df['item_id:token'].astype(int)
         
