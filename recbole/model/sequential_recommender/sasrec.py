@@ -17,7 +17,10 @@ Reference:
 
 from __future__ import annotations
 
-
+import torch
+from scipy.optimize import minimize
+import numpy as np
+from itertools import chain, combinations
 import cvxpy as cp
 import math
 import torch
@@ -405,7 +408,7 @@ class SASRec(SequentialRecommender):
         # scores = torch.tensor(self.simple_reranker(scores, param1)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
-        scores = self.online_p_mmf(scoress=scores, lam=param1, eta=param2)
+        scores = self.online_p_mmf(scoress=scores)
         # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
@@ -643,51 +646,73 @@ class SASRec(SequentialRecommender):
     
 
 
-    def online_p_mmf(
-        self,
-        scoress: torch.Tensor,
-        *,
-        K: int = 10,
-        lam: float = 1.0,        # trade–off coefficient λ
-        eta: float = 5e-1,       # dual learning-rate η
-        alpha: float = 0.4,      # momentum coefficient α  (0≤α<1)
-    ):
+    def powerset(self, iterable):
+        s = list(iterable)
+        return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
+
+    def compute_e_t(self, mu, y, lambda_param):
+        P = y.size(0)
+        mu_np = mu.numpy()
+        y_np = y.numpy()
+        lambda_np = float(lambda_param)
+
+        def objective(e):
+            return - (np.min(e / y_np) + (mu_np @ e) / lambda_np)
+
+        bounds = [(0, float(y_p)) for y_p in y_np]
+        e_init = y_np / 2
+
+        result = minimize(objective, e_init, bounds=bounds, method='SLSQP')
+        return torch.tensor(result.x)
+
+    def project_mu(self, v, y, lambda_param):
+        P = y.size(0)
+        v_np = v.numpy()
+        y_np = y.numpy()
+        lambda_np = float(lambda_param)
+
+        def objective(mu):
+            return np.sum(y_np**2 * (mu - v_np)**2)
+
+        constraints = []
+        for S in self.powerset(range(P)):
+            S = list(S)
+            constraints.append({
+                'type': 'ineq',
+                'fun': lambda mu, S=S: np.sum(y_np[S] * mu[S]) + lambda_np
+            })
+
+        result = minimize(objective, v_np, constraints=constraints, method='SLSQP')
+        return torch.tensor(result.x)
+
+    def online_p_mmf(self, scoress, y=torch.tensor([0.33, 0.33, 0.34]), lambda_param=0.5, K=10, eta=0.1, alpha=0.5):
         """
-        One pass of the online P-MMF algorithm (Algorithm 1, Xu et al., WWW ’23).
+        Online recommendation algorithm with boosting logic.
 
-        Parameters
-        ----------
-        scores : FloatTensor [B, N+1]
-            Relevance scores.  Column 0 is a dummy item and is ignored.
-        labels : LongTensor  [N]
-            Group label of every real item n∈{1…N}.  Values ∈{-1,0,1}.
-        probs  : list/tuple/1-D Tensor length 3
-            Target exposure shares for the three groups; must sum to 1.
-        K      : int
-            Length of the ranking list produced for each user (default 10).
-        lam    : float
-            Fairness–utility trade-off coefficient λ (paper Eq.(3)).
-        eta    : float
-            Step size for the dual update (paper line 12).
-        alpha  : float
-            Momentum term (paper line 11).
+        Parameters:
+        - scores: torch.Tensor of size [B, N+1], where B is batch size, N is number of items.
+                Index 0 is a dummy item (ignored), scores can be negative.
+        - labels: torch.Tensor of size [N], group labels {1, 0, -1} for items 1 to N.
+        - y: torch.Tensor of size [P], provider capacities (P=3 for groups 1, 0, -1).
+        - lambda_param: float, regularization parameter.
+        - K: int, number of items to recommend per user.
+        - eta: float, step size.
+        - alpha: float, smoothing parameter.
 
-        Returns
-        -------
-        new_scores : FloatTensor [B, N+1]
-            `scores` with the chosen top-K items boosted so they remain on top.
-        topk_idx   : LongTensor [B, K]
-            Indices of the items shown to every user in their final order.
+        Returns:
+        - scores: torch.Tensor of size [B, N+1], modified scores with boosting.
+        - topk_all: torch.Tensor of size [B, K], indices of top-K items per user (1 to N).
         """
-
-        ###############################################################
-        # Pre-processing & static structures
-        ###############################################################
+        device = scoress.device
+        scores = scores.clone().detach().cpu()
+        B, N1 = scores.shape
+        N = N1 - 1  # Actual number of items (excluding dummy)
+        P = 3  # Number of groups: 1, 0, -1
         scores = scoress.clone()
         scores = scores.detach().cpu()
         csv_path = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
         df = pd.read_csv(csv_path)
-
+        y = y.cpu()
         # Convert item IDs to int (in case they are strings)
         df['item_id:token'] = df['item_id:token'].astype(int)
         
@@ -701,93 +726,55 @@ class SASRec(SequentialRecommender):
         # Create tensor and assign labels
         labels = torch.empty(bla, dtype=torch.long)
         labels[item_ids] = torch.tensor(labelss, dtype=torch.long)
-        
-        B, NN1 = scores.shape                       # batch size, N+1
-        N      = NN1 - 1
-        device = scores.device
+        # Map labels {1, 0, -1} to group indices {0, 1, 2}
+        label_to_group = {1: 0, 0: 1, -1: 2}
+        group_of_item = torch.tensor([label_to_group[int(label)] for label in labels])
 
-        counts = torch.tensor([
-            (labels == -1).sum().item(),
-            (labels == 0).sum().item(),
-            (labels == 1).sum().item()
-        ], dtype=torch.float32, device=device)
-
-        probs = counts / counts.sum()   # [p(1), p(0), p(-1)]
-        # Map labels {-1,0,1} ➔ group indices {0,1,2}
-        group_of_item = (labels + 1).to(torch.long).to(device)  # [N]
-
-        probs = torch.as_tensor(probs, dtype=scores.dtype, device=device)
-        assert torch.isclose(probs.sum(), torch.tensor(1., device=device)), "`probs` must sum to 1"
-
-        # Initialise dual parameters and remaining resources
-        mu     = torch.zeros(3, device=device)                    # μ₁…μ₃   (paper line 2)
-        beta   = (probs * K * B).clone()                          # β₁…β₃   (paper line 2)
-        g_prev = torch.zeros_like(mu)                             # momentum g₀  (line 2)
-
-        ###############################################################
-        # Per-user loop (Algorithm 1, outer for-loop over t)
-        ###############################################################
-        topk_all = torch.empty((B, K), dtype=torch.long, device=device)
+        mu = torch.zeros(P)
+        beta = y.clone()
+        g_prev = torch.zeros(P)
+        topk_all = torch.empty((B, K), dtype=torch.long)
 
         for t in range(B):
-            row              = scores[t]                 # [N+1]
-            row_real_items   = row[1:]                   # ignore dummy
-            g_items          = group_of_item             # alias, [N]
+            # Ignore dummy item (index 0)
+            row_real_items = scores[t, 1:]  # Scores for items 1 to N
 
-            # (line 5) mask providers with exhausted quota
-            m = torch.where(beta > 0, 0., float('inf'))  # length 3
+            # Compute m based on beta
+            m = torch.where(beta > 0, torch.tensor(0.), torch.tensor(float('inf')))
 
-            # (line 7) compute objective  sᵢ − λ(μ + m)_grp(i)
-            adjusted = row_real_items - lam * (mu[g_items] + m[g_items])
+            # Compute adjusted scores
+            adjusted = row_real_items - (mu[group_of_item] + m[group_of_item])
 
-            # pick the Top-K
-            topk_rel = torch.topk(adjusted, K).indices           # indices in 0…N-1
-            topk_idx = (topk_rel + 1)                            # add 1 → real ids
+            # Select top-K items (indices relative to 0 to N-1)
+            topk_rel = torch.topk(adjusted, K).indices
+            topk_idx = topk_rel + 1  # Convert to item IDs 1 to N
             topk_all[t] = topk_idx
 
-            # ------------------------------------------------------------------
-            # Dual & state updates (lines 8–12)
-            # ------------------------------------------------------------------
-            # exposure counts for this user
-            counts = torch.bincount(g_items[topk_rel], minlength=3).to(beta.dtype)
+            # Compute provider counts
+            selected_groups = group_of_item[topk_rel]
+            counts = torch.bincount(selected_groups, minlength=P)
 
-            beta = torch.clamp(beta - counts, min=0.)            # (line 8)
+            # Update beta
+            beta = torch.clamp(beta - counts, min=0.)
 
-            # e_t  is γ  (Lemma 1); γ = total target resources per group
-            e_t = (probs * K).to(beta.dtype)
+            # Compute e_t via optimization
+            e_t = self.compute_e_t(mu, y, lambda_param)
 
-            g_tilde = -counts + e_t                              # (line 10)
-            g_curr  = alpha * g_tilde + (1 - alpha) * g_prev     # (line 11)
-            g_prev  = g_curr
+            # Compute g_tilde and g_curr
+            g_tilde = -counts + e_t
+            g_curr = alpha * g_tilde + (1 - alpha) * g_prev
+            g_prev = g_curr
 
+            # Update mu
+            v = mu - eta * g_curr
+            mu = self.project_mu(v, y, lambda_param)
 
-            v  = mu - eta * g_curr          # gradient step before projection
-            mu = self._project_mu(v, probs, lam) # exact projection onto D
-
-            # ------------------------------------------------------------------
-            # Boost chosen items so they stay on top in this row
-            # ------------------------------------------------------------------
+            # Boost scores of selected items
             max_before = row_real_items.max()
-            for rank, item_id in enumerate(topk_idx):
-                boost = K - rank               # higher rank ⇒ larger boost
-                row[item_id] = max_before + boost
+            boosts = torch.arange(K, 0, -1, dtype=torch.float32)
+            scores[t, topk_idx] = max_before + boosts
 
-        return torch.tensor(scores, dtype=scoress.dtype, device=scoress.device)
-    
-    def _project_mu(self, v, gamma, lam):
-        """
-        Solve:   min  ∑ (γ_i (μ_i - v_i))²
-                 s.t.  Σ_{i∈S} γ_i μ_i ≥ –λ        ∀ non-empty S⊆{0,1,2}
-        """
-        P  = len(v)                                      # here P = 3 groups
-        μ  = cp.Variable(P)
-        obj = cp.Minimize(cp.sum_squares(cp.multiply(gamma, μ - v)))
-        # enumerate all 2^P−1 non-empty subsets  (P is tiny so this is fine)
-        constr = []
-        from itertools import combinations
-        for r in range(1, P + 1):
-            for S in combinations(range(P), r):
-                constr.append(cp.sum(cp.multiply(gamma[list(S)], μ[list(S)])) >= -lam)
-        prob = cp.Problem(obj, constr)
-        prob.solve(warm_start=True, solver=cp.ECOS)      # ECOS is the light default
-        return torch.as_tensor(μ.value, dtype=v.dtype, device=v.device)
+        # Return to original device
+        scores = scores.to(device)
+        topk_all = topk_all.to(device)
+        return scores
