@@ -264,7 +264,7 @@ class SAE(nn.Module):
 			pre_acts = self.dampen_neurons(pre_acts)
 		
 		pre_acts = nn.functional.relu(pre_acts)   
-		z = self.topk_activation(pre_acts, sequences, save_result=False, k=30)
+		z = self.topk_activation(pre_acts, sequences, save_result=False, k=50)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
