@@ -408,7 +408,7 @@ class SASRec(SequentialRecommender):
         # scores = torch.tensor(self.simple_reranker(scores, param1)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
-        scores = self.online_p_mmf(scoress=scores)
+        scores = self.p_mmf_re_ranking(scoress=scores)
         # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
@@ -643,105 +643,9 @@ class SASRec(SequentialRecommender):
 
         return torch.as_tensor(reranked, dtype=scores.dtype, device=scores.device) if isinstance(scores, torch.Tensor) else reranked
     
-    
-
-    def online_p_mmf(self, scoress, y=torch.tensor([0.33, 0.33, 0.34]), lambda_param=0.5, K=10, eta=0.1, alpha=0.5):
-        """
-        Online recommendation algorithm with boosting logic.
-
-        Parameters:
-        - scores: torch.Tensor of size [B, N+1], where B is batch size, N is number of items.
-                Index 0 is a dummy item (ignored), scores can be negative.
-        - labels: torch.Tensor of size [N], group labels {1, 0, -1} for items 1 to N.
-        - y: torch.Tensor of size [P], provider capacities (P=3 for groups 1, 0, -1).
-        - lambda_param: float, regularization parameter.
-        - K: int, number of items to recommend per user.
-        - eta: float, step size.
-        - alpha: float, smoothing parameter.
-
-        Returns:
-        - scores: torch.Tensor of size [B, N+1], modified scores with boosting.
-        - topk_all: torch.Tensor of size [B, K], indices of top-K items per user (1 to N).
-        """
-        device = scoress.device
-        scores = scoress.clone().detach().cpu()
-        B, N1 = scores.shape
-        N = N1 - 1  # Actual number of items (excluding dummy)
-        P = 3  # Number of groups: 1, 0, -1
-        scores = scoress.clone()
-        scores = scores.detach().cpu()
-        csv_path = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
-        df = pd.read_csv(csv_path)
-        y = y.cpu()
-        # Convert item IDs to int (in case they are strings)
-        df['item_id:token'] = df['item_id:token'].astype(int)
-        
-        # Extract item IDs and popularity labels
-        item_ids = df['item_id:token'].values - 1
-        labelss = df['popularity_label'].values
-
-        # Determine number of items
-        bla = item_ids.max() + 1
-
-        # Create tensor and assign labels
-        labels = torch.empty(bla, dtype=torch.long)
-        labels[item_ids] = torch.tensor(labelss, dtype=torch.long)
-        # Map labels {1, 0, -1} to group indices {0, 1, 2}
-        label_to_group = {1: 0, 0: 1, -1: 2}
-        group_of_item = torch.tensor([label_to_group[int(label)] for label in labels])
-
-        mu = torch.zeros(P)
-        beta = y.clone()
-        g_prev = torch.zeros(P)
-        topk_all = torch.empty((B, K), dtype=torch.long)
-
-        for t in range(B):
-            # Ignore dummy item (index 0)
-            row_real_items = scores[t, 1:]  # Scores for items 1 to N
-
-            # Compute m based on beta
-            m = torch.where(beta > 0, torch.tensor(0.), torch.tensor(float('inf')))
-
-            # Compute adjusted scores
-            adjusted = row_real_items - (mu[group_of_item] + m[group_of_item])
-
-            # Select top-K items (indices relative to 0 to N-1)
-            topk_rel = torch.topk(adjusted, K).indices
-            topk_idx = topk_rel + 1  # Convert to item IDs 1 to N
-            topk_all[t] = topk_idx
-
-            # Compute provider counts
-            selected_groups = group_of_item[topk_rel]
-            counts = torch.bincount(selected_groups, minlength=P)
-
-            # Update beta
-            beta = torch.clamp(beta - counts, min=0.)
-
-            # Compute e_t via optimization
-            e_t = self.compute_e_t(mu, y, lambda_param)
-
-            # Compute g_tilde and g_curr
-            g_tilde = -counts + e_t
-            g_curr = alpha * g_tilde + (1 - alpha) * g_prev
-            g_prev = g_curr
-
-            # Update mu
-            v = mu - eta * g_curr
-            mu = self.project_mu(v, y, lambda_param)
-
-            # Boost scores of selected items
-            max_before = row_real_items.max()
-            boosts = torch.arange(K, 0, -1, dtype=torch.float32)
-            scores[t, topk_idx] = max_before + boosts
-
-        # Return to original device
-        scores = scores.to(device)
-        topk_all = topk_all.to(device)
-        return scores
 
 
-
-    def p_mmf_re_ranking(self, scoresss, K, lambd=0.1, eta=0.1, alpha=0.9):
+    def p_mmf_re_ranking(self, scoresss, K=10, lambd=0.1, eta=0.1, alpha=0.9):
         """
         Modifies a scores tensor using the P-MMF algorithm to ensure fairness across three groups.
         
