@@ -2196,9 +2196,9 @@ def extract_sort_top_neurons():
     saves them to a file, and returns the output file path.
     Raises ValueError if any of the top-50 cohen_d values are non-positive or KeyError if required data is missing.
     """
-    file1 = r"./dataset/lastfm/neuron_activations.csv"
-    file2 = r"./dataset/lastfm/cohens_d.csv"
-    output_file = r"./dataset/lastfm/top50_neuron_indices.txt"
+    file1 = r"./dataset/ml-1m/neuron_activations.csv"
+    file2 = r"./dataset/ml-1m/cohens_d.csv"
+    output_file = r"./dataset/ml-1m/top50_neuron_indices.txt"
 
     # Load CSVs with first column as index
     df1 = pd.read_csv(file1, index_col=0)
@@ -2211,7 +2211,7 @@ def extract_sort_top_neurons():
         raise KeyError("'cohen_d' column not found in cohens_d.csv")
 
     # Get top 500 by activation count
-    top500 = df1['count'].nlargest(500).index
+    top500 = df1['count'].nlargest(400).index
 
     # Retrieve corresponding Cohen's d values
     try:
