@@ -50,7 +50,8 @@ from recbole.utils.utils import (
     process_and_save_movies,
     get_movie_info,
     sample_users_interactions,
-    plot_interaction_distribution
+    plot_interaction_distribution,
+    extract_sort_top_neurons
 )
 from recbole.utils.enum_type import *
 from recbole.utils.argument_list import *
@@ -117,5 +118,6 @@ __all__ = [
     "get_movie_info",
     "sample_users_interactions",
     "plot_interaction_distribution",
-    "fair_rerank_exact"
+    "fair_rerank_exact",
+    "extract_sort_top_neurons"
 ]

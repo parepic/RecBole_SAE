@@ -2186,3 +2186,52 @@ def plot_interaction_distribution(file_path):
     plt.grid(True)
     plt.show()
 
+
+
+def extract_sort_top_neurons():
+    """
+    Reads neuron activations and Cohen's d CSVs.
+    Extracts indices of the top 500 neurons by 'count', then retrieves their 'cohen_d' values,
+    sorts these indices by descending cohen_d, checks that the top 50 have strictly positive values,
+    saves them to a file, and returns the output file path.
+    Raises ValueError if any of the top-50 cohen_d values are non-positive or KeyError if required data is missing.
+    """
+    file1 = r"./dataset/lastfm/neuron_activations.csv"
+    file2 = r"./dataset/lastfm/cohens_d.csv"
+    output_file = r"./dataset/lastfm/top50_neuron_indices.txt"
+
+    # Load CSVs with first column as index
+    df1 = pd.read_csv(file1, index_col=0)
+    df2 = pd.read_csv(file2, index_col=0)
+
+    # Verify required columns
+    if 'count' not in df1.columns:
+        raise KeyError("'count' column not found in neuron_activations.csv")
+    if 'cohen_d' not in df2.columns:
+        raise KeyError("'cohen_d' column not found in cohens_d.csv")
+
+    # Get top 500 by activation count
+    top500 = df1['count'].nlargest(500).index
+
+    # Retrieve corresponding Cohen's d values
+    try:
+        cohen_d_series = df2.loc[top500, 'cohen_d']
+    except KeyError as e:
+        missing = list(set(top500) - set(df2.index))
+        raise KeyError(f"Indices {missing} from activations not found in cohens_d.csv") from e
+
+    # Sort indices by descending Cohen's d and select top 50
+    sorted_indices = cohen_d_series.sort_values(ascending=False).index.to_list()
+    top50 = sorted_indices[:50]
+
+    # Ensure all top-50 Cohen's d values are positive
+    non_positive = [idx for idx in top50 if cohen_d_series.loc[idx] <= 0]
+    if non_positive:
+        raise ValueError(f"Non-positive Cohen's d values found among top 50 indices: {non_positive}")
+
+    # Save top 50 indices to file
+    with open(output_file, 'w') as f:
+        for idx in top50:
+            f.write(f"{idx}\n")
+
+    return output_file

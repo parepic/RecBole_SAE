@@ -38,7 +38,8 @@ from recbole.utils import (
     search_movies,
     process_and_save_movies,
     sample_users_interactions,
-    plot_interaction_distribution
+    plot_interaction_distribution, 
+    extract_sort_top_neurons
 )
 
 
@@ -875,17 +876,17 @@ def create_visualizations_neurons():
     )  
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [3.0278200786570557]  # from 'ARP@10'
-    ndcgs = [0.1212]  # from 'ndcg@10'
-    hits = [0.2412]  # from 'hit@10'
-    coverages = [0.6569086651053864]  # from 'coverage@10'
-    lt_coverages = [0.6451710566151984]  # from 'LT_coverage@10'
-    deep_lt_coverages = [0.48591864103710325]  # from 'Deep_LT_coverage@10'
+    arps = [4.002]
+    ndcgs = [0.6273]
+    hits = [0.6725]
+    coverages = [0.892436974789916]
+    lt_coverages = [0.8908966928060007]
+    deep_lt_coverages = [0.8716216216216216]
     dampen_percs = [0.0]  # still no value provided
-    ginis = [0.7572878507064535]  # from 'Gini_coef@10'
-    ndcg_heads = [0.1848]  # from 'ndcg-head@10'
-    ndcg_mids = [0.1234]  # from 'ndcg-mid@10'
-    ndcg_tails = [0.0621]  # from 'ndcg-tail@10'
+    ginis = [0.5849518873628745]
+    ndcg_heads = [0.6589]
+    ndcg_mids = [0.5763]
+    ndcg_tails = [0.6798]
     neuron_count = 0
     count = 0
     # tochange = np.linspace(0, 4096, 17).tolist()
@@ -1020,6 +1021,8 @@ if __name__ == "__main__":
     
     # save_mean_SD()
     # exit()
+    # extract_sort_top_neurons()
+    # exit()
     parser = argparse.ArgumentParser()
     
     
@@ -1115,8 +1118,8 @@ if __name__ == "__main__":
             #         corr_file=args.corr_file, neuron_count=args.neuron_count,
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
-            tune_hyperparam_pmmf()
-            # create_visualizations_neurons()
+            # tune_hyperparam_pmmf()
+            create_visualizations_neurons()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     valid_data, model_file=args.path, show_progress=config["show_progress"]

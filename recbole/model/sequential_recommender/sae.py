@@ -106,21 +106,30 @@ class SAE(nn.Module):
 
 	
 
-	def topk_activation(self, x, sequences, save_result):
+	def topk_activation(self, x, sequences, save_result, k=None):
+		"""
+		Performs top-k activation on tensor x.
+		If k is not None, reads the first k indices from the previously saved indices file
+		and sets their activations in x to -10 before computing top-k.
+		Returns a sparse tensor with only the top-k activations.
+		"""
+		# If specified, mask out the first k indices from file by setting to -10
+		if k is not None:
+			idx_file = r"./dataset/lastfm/top50_neuron_indices.txt"
+			try:
+				with open(idx_file, 'r') as f:
+					all_indices = [int(line.strip()) for line in f if line.strip()]
+			except FileNotFoundError:
+				raise FileNotFoundError(f"Index file not found: {idx_file}")
+			mask_indices = all_indices[:k]
+			# Clone x to avoid modifying original
+			x = x.clone()
+			# Set masked indices to a low value
+			x[:, mask_indices] = 0
+
+		# Compute top-k as before
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
-		# y_idx = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
-		# y_idx = torch.tensor(y_idx, dtype=torch.long, device=x.device)  # now a LongTensor
-
-		# # slice out only the allowed columns
-		# x_sub = x.index_select(1, y_idx)                             # shape (B, M)
-
-		# # top‑k within that subset
-		# topk_vals, topk_in_sub = x_sub.topk(self.k, dim=1)           # both are (B, k)
-
-		# # map back into the original column space
-		# topk_idx = y_idx[topk_in_sub]     
-
-		flat_indices = topk_indices.view(-1)  # shape (B * N)
+		flat_indices = topk_indices.view(-1)
 
 		# Count occurrences of each index
 		counts = torch.bincount(flat_indices, minlength=self.hidden_dim)
@@ -128,24 +137,21 @@ class SAE(nn.Module):
 		# Update activation count
 		self.activation_count += counts.to(self.activation_count.device)
 		self.activate_latents.update(topk_indices.cpu().numpy().flatten())
-		# Update highest activations
 
+		# Save epoch activations if needed
 		if save_result:
+			values_np = topk_values.detach().cpu().numpy()
+			inds_np = topk_indices.detach().cpu().numpy()
 			if self.epoch_activations["indices"] is None:
-				self.epoch_activations["indices"] = topk_indices.detach().cpu().numpy()
-				self.epoch_activations["values"] = topk_values.detach().cpu().numpy()
+				self.epoch_activations["indices"] = inds_np
+				self.epoch_activations["values"] = values_np
 			else:
-				self.epoch_activations["indices"] = np.concatenate(
-					(self.epoch_activations["indices"], topk_indices.detach().cpu().numpy()), axis=0
-				)
-				self.epoch_activations["values"] = np.concatenate(
-					(self.epoch_activations["values"], topk_values.detach().cpu().numpy()), axis=0
-		  		)
-		# print("these are k values, ", topk_values[0])
-		# print("these are k indices, ", topk_indices[0])
-		# (print("topk indices", topk_idx[0]))
-		# (print("topk values", topk_vals[0]))
-  
+				self.epoch_activations["indices"] = np.concatenate((
+					self.epoch_activations["indices"], inds_np), axis=0)
+				self.epoch_activations["values"] = np.concatenate((
+					self.epoch_activations["values"], values_np), axis=0)
+
+		# Build sparse output
 		sparse_x = torch.zeros_like(x)
 		sparse_x.scatter_(1, topk_indices, topk_values.to(self.dtype))
 		return sparse_x
@@ -179,6 +185,8 @@ class SAE(nn.Module):
      
 					# Update the recommendations for this sequence
 					data["recommendations"].append(topk_indices.tolist())
+
+
 
 
 
@@ -245,63 +253,18 @@ class SAE(nn.Module):
 				pre_acts[:, neuron_idx] -= weight * pop_sd
     
 		return pre_acts
-		
      
      
-		if self.unpopular_only:
-			if(self.neuron_count == 0): 
-				return pre_acts
-			unpop_indexes = utils.get_top_n_neuron_indexes(self.neuron_count).to(self.device)
-
-			# Create a scaling vector: linearly spaced from 2 (most unpop-biased) to 0 (least)
-			scales = torch.linspace(2.0, 0.0, steps=self.neuron_count, device=self.device)  # shape: (neuron_count,)
-
-			# Find which of the selected indexes are active (non-zero) in pre_acts
-			nonzero_mask = pre_acts[:, unpop_indexes] > 0  # shape: (batch_size, neuron_count)
-
-			# Apply damping only where activation > 0
-			pre_acts[:, unpop_indexes] = torch.where(
-				nonzero_mask,
-				pre_acts[:, unpop_indexes] + scales,  # multiply by scaling factor
-				pre_acts[:, unpop_indexes]            # else leave unchanged
-			)
-
-			# pre_acts[:, unpop_indexes] *= (1 + self.damp_percent)
-   
-			# unpop_indexes, unpop_values = zip(*utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only))
-			# print("peyser ", self.neuron_count, ' ', self.unpopular_only, ' ', self.damp_percent, ' ', self.corr_file)
-			# pre_acts[:, unpop_indexes] *= (1 + self.damp_percent)
-   			# differences = utils.get_difference_values(unpop_idxs)
-			# # Convert to PyTorch tensors
-			# unpop_idxs = torch.tensor(unpop_idxs, dtype=torch.long, device=self.device)  # Ensure correct indexing type
-			# differences = torch.tensor(differences, dtype=pre_acts.dtype, device=self.device)  # Ensure correct dtype & device
-			# scale = (1 - differences * self.damp_percent)
-			# print(differences)  # Debugging
-
-			# # Reshape differences to match pre_acts[:, unpop_idxs] for broadcasting
-			# differences = differences.view(1, -1)  # Reshape to (1, F) where F = len(unpop_idxs)
-
-			# # Create a mask where pre_acts is not zero
-			# mask = pre_acts[:, unpop_idxs] != 0  # Boolean mask
-
-			# Apply the operation only where pre_acts is nonzero
-			# pre_acts[:, unpop_indexes] *= (1 + scale_values)  # Element-wise masking
-
-		else:
-			pop_idxs, unpop_idxs = utils.get_extreme_correlations(self.corr_file, self.neuron_count, self.unpopular_only)
-			pre_acts[:, pop_idxs] *= (1 - self.damp_percent)
-			pre_acts[:, unpop_idxs] *= (1 + self.damp_percent)
-		return pre_acts	
-
-
+     
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
+		
 		pre_acts = nn.functional.relu(pre_acts)   
-		z = self.topk_activation(pre_acts, sequences, save_result=False)
+		z = self.topk_activation(pre_acts, sequences, save_result=False, k=10)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
