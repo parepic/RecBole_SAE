@@ -403,7 +403,7 @@ class SASRec(SequentialRecommender):
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
-        scores = self.online_p_mmf(scoress=scores, probs=[0.33, 0.33, 0.34], lam=0.5)
+        scores = self.online_p_mmf(scoress=scores, lam=0.5)
         # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
@@ -644,7 +644,6 @@ class SASRec(SequentialRecommender):
     def online_p_mmf(
         self,
         scoress: torch.Tensor,
-        probs,
         *,
         K: int = 10,
         lam: float = 1.0,        # trade–off coefficient λ
