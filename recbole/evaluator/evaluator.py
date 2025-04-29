@@ -59,7 +59,7 @@ class Evaluator(object):
         import numpy as np
         import matplotlib.pyplot as plt
 
-        file = r'./dataset/ml-1m/item_popularity_labels_with_titles.csv'
+        file = r'./dataset/lastfm/item_popularity_labels_with_titles.csv'
         # Load item metadata
         item_data = pd.read_csv(file)
 

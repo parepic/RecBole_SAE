@@ -101,7 +101,7 @@ class SASRec_SAE(SASRec):
         # nonzero_idxs = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
         # save_batch_activations(self.sae_module.last_activations, self.sae_module.hidden_dim) 
         # self.sae_module.update_highest_activations(item_seq, top_recs, None)
-        
+
         if hasattr(self.sae_module, 'auxk_loss'):
             self.total_loss += (self.sae_module.fvu + self.sae_module.auxk_loss / 32)
         

@@ -609,7 +609,7 @@ class Trainer(AbstractTrainer):
                 if sae:
                     self.model.set_sae_mode("test")
                 self.model.full_sort_predict(interaction)
-        # self.model.sae_module.save_highest_activations()
+        self.model.sae_module.save_highest_activations()
 
 
 
@@ -926,8 +926,6 @@ class Trainer(AbstractTrainer):
         Returns:
             collections.OrderedDict: eval result, key is the eval metric and value in the corresponding metric value.
         """
-        
-        
         
         if not eval_data:
             return

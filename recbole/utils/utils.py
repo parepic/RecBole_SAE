@@ -1165,7 +1165,7 @@ def get_extreme_correlations(file_name: str, unpopular_only: bool):
     
 
     # 1) load
-    df = pd.read_csv(f"./dataset/ml-1m/{file_name}")
+    df = pd.read_csv(f"./dataset/lastfm/{file_name}")
     # indices = pd.read_csv(r"./dataset/ml-1m/nonzero_activations_sasrecsae_k48-32.csv")["index"].tolist()
     # # 2) if they passed a subset of row positions, slice with .iloc
     # if indices is not None:
@@ -1327,7 +1327,7 @@ def get_popularity_label_indices(id_tensor):
                       each item in id_tensor.
     """
     # Read the CSV that maps item IDs to popularity labels.
-    df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv", encoding='latin1')
+    df = pd.read_csv(r"./dataset/lastfm/item_popularity_labels_with_titles.csv", encoding='latin1')
     
     # Create a mapping from item ID to popularity label.
     id_to_label = dict(zip(df['item_id:token'], df['popularity_label']))

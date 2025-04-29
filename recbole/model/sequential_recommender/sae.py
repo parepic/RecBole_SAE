@@ -198,8 +198,8 @@ class SAE(nn.Module):
 		combined_sorted = sorted(combined_neurons, key=lambda x: abs(x[1]), reverse=True)
 		top_neurons = combined_sorted[:int(self.N)]
 		# Load the corresponding statistics files.
-		stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
-		stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
+		stats_unpop = pd.read_csv(r"./dataset/lastfm/row_stats_popular.csv")
+		stats_pop = pd.read_csv(r"./dataset/lastfm/row_stats_unpopular.csv")
 
 		# Create tensors of the absolute Cohen's d values for the selected neurons.
 		abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
@@ -572,7 +572,7 @@ class SAE(nn.Module):
 		# 			f.write("\n")
 
 
-	def save_highest_activations2(self, filename=r"./dataset/ml-1m/neuron_activations_unpopular.csv"):		
+	def save_highest_activations2(self, filename=r"./dataset/lastfm/neuron_activations_unpopular.csv"):		
 			"""
 			Save the top 5 highest activations and their corresponding sequences to a file.
 			"""
@@ -580,7 +580,7 @@ class SAE(nn.Module):
 				'index': np.arange(len(self.activation_count)),
 				'count': self.activation_count.cpu().numpy()
 			})
-
+   
 			# Save to CSV
 			df.to_csv(filename, index=False)
 	
