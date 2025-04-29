@@ -765,7 +765,7 @@ def tune_hyperparam_pmmf():
     
 
     # 2) build your grid
-    all_Ns   = [0]
+    all_Ns   = [1e6]
     betas   = [5e-1, 5e-2, 5e-3]
 
     # 3) baseline & bookkeeping (updated values)
@@ -779,6 +779,8 @@ def tune_hyperparam_pmmf():
             'arp':              3.0278,
             'time':             0.0
             }
+    
+    
     best_diff = 0.0
     best_pair = None
     it_num    = 0
