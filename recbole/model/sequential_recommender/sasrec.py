@@ -402,9 +402,9 @@ class SASRec(SequentialRecommender):
         # print(scores[:, 0:20])
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
-        scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
+        # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
+        scores = self.online_p_mmf(probs=[0.04, 0.31, 0.65], lam=0.5)
         # scores = self.random_reranker(scores=scores, top_k=param1)
-        print(param1, " blyat")
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
         for key in top_recs.flatten():
@@ -637,3 +637,129 @@ class SASRec(SequentialRecommender):
                 reranked[u, j] = bump + r
 
         return torch.as_tensor(reranked, dtype=scores.dtype, device=scores.device) if isinstance(scores, torch.Tensor) else reranked
+    
+    
+
+
+    def online_p_mmf(
+        self,
+        scores: torch.Tensor,
+        labels: torch.Tensor,
+        probs,
+        *,
+        K: int = 10,
+        lam: float = 1.0,        # trade–off coefficient λ
+        eta: float = 5e-2,       # dual learning-rate η
+        alpha: float = 0.4,      # momentum coefficient α  (0≤α<1)
+    ):
+        """
+        One pass of the online P-MMF algorithm (Algorithm 1, Xu et al., WWW ’23).
+
+        Parameters
+        ----------
+        scores : FloatTensor [B, N+1]
+            Relevance scores.  Column 0 is a dummy item and is ignored.
+        labels : LongTensor  [N]
+            Group label of every real item n∈{1…N}.  Values ∈{-1,0,1}.
+        probs  : list/tuple/1-D Tensor length 3
+            Target exposure shares for the three groups; must sum to 1.
+        K      : int
+            Length of the ranking list produced for each user (default 10).
+        lam    : float
+            Fairness–utility trade-off coefficient λ (paper Eq.(3)).
+        eta    : float
+            Step size for the dual update (paper line 12).
+        alpha  : float
+            Momentum term (paper line 11).
+
+        Returns
+        -------
+        new_scores : FloatTensor [B, N+1]
+            `scores` with the chosen top-K items boosted so they remain on top.
+        topk_idx   : LongTensor [B, K]
+            Indices of the items shown to every user in their final order.
+        """
+
+        ###############################################################
+        # Pre-processing & static structures
+        ###############################################################
+        csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+        df = pd.read_csv(csv_path)
+
+        # Convert item IDs to int (in case they are strings)
+        df['item_id:token'] = df['item_id:token'].astype(int)
+        
+        # Extract item IDs and popularity labels
+        item_ids = df['item_id:token'].values
+        labels = df['popularity_labels'].values
+
+        # Determine number of items
+        N = item_ids.max() + 1
+
+        # Create tensor and assign labels
+        labels = torch.empty(N, dtype=torch.long)
+        labels[item_ids] = torch.tensor(labels, dtype=torch.long)
+        
+        B, NN1 = scores.shape                       # batch size, N+1
+        N      = NN1 - 1
+        device = scores.device
+
+        # Map labels {-1,0,1} ➔ group indices {0,1,2}
+        group_of_item = (labels + 1).to(torch.long).to(device)  # [N]
+
+        probs = torch.as_tensor(probs, dtype=scores.dtype, device=device)
+        assert torch.isclose(probs.sum(), torch.tensor(1., device=device)), "`probs` must sum to 1"
+
+        # Initialise dual parameters and remaining resources
+        mu     = torch.zeros(3, device=device)                    # μ₁…μ₃   (paper line 2)
+        beta   = (probs * K * B).clone()                          # β₁…β₃   (paper line 2)
+        g_prev = torch.zeros_like(mu)                             # momentum g₀  (line 2)
+
+        ###############################################################
+        # Per-user loop (Algorithm 1, outer for-loop over t)
+        ###############################################################
+        topk_all = torch.empty((B, K), dtype=torch.long, device=device)
+
+        for t in range(B):
+            row              = scores[t]                 # [N+1]
+            row_real_items   = row[1:]                   # ignore dummy
+            g_items          = group_of_item             # alias, [N]
+
+            # (line 5) mask providers with exhausted quota
+            m = torch.where(beta > 0, 0., float('inf'))  # length 3
+
+            # (line 7) compute objective  sᵢ − λ(μ + m)_grp(i)
+            adjusted = row_real_items - lam * (mu[g_items] + m[g_items])
+
+            # pick the Top-K
+            topk_rel = torch.topk(adjusted, K).indices           # indices in 0…N-1
+            topk_idx = (topk_rel + 1)                            # add 1 → real ids
+            topk_all[t] = topk_idx
+
+            # ------------------------------------------------------------------
+            # Dual & state updates (lines 8–12)
+            # ------------------------------------------------------------------
+            # exposure counts for this user
+            counts = torch.bincount(g_items[topk_rel], minlength=3).to(beta.dtype)
+
+            beta = torch.clamp(beta - counts, min=0.)            # (line 8)
+
+            # e_t  is γ  (Lemma 1); γ = total target resources per group
+            e_t = (probs * K).to(beta.dtype)
+
+            g_tilde = -counts + e_t                              # (line 10)
+            g_curr  = alpha * g_tilde + (1 - alpha) * g_prev     # (line 11)
+            g_prev  = g_curr
+
+            mu = mu - eta * g_curr                               # gradient step (line 12)
+            mu = torch.clamp(mu, min=0.)                         # cheap projection
+
+            # ------------------------------------------------------------------
+            # Boost chosen items so they stay on top in this row
+            # ------------------------------------------------------------------
+            max_before = row_real_items.max()
+            for rank, item_id in enumerate(topk_idx):
+                boost = K - rank               # higher rank ⇒ larger boost
+                row[item_id] = max_before + boost
+
+        return scores, topk_all
