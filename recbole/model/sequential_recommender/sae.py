@@ -106,7 +106,7 @@ class SAE(nn.Module):
 
 	
 
-	def topk_activation(self, x, sequences, save_result, k=None):
+	def topk_activation(self, x, sequences, save_result, k=0):
 		"""
 		Performs top-k activation on tensor x.
 		If k is not None, reads the first k indices from the previously saved indices file
@@ -114,8 +114,8 @@ class SAE(nn.Module):
 		Returns a sparse tensor with only the top-k activations.
 		"""
 		# If specified, mask out the first k indices from file by setting to -10
-		if k is not None:
-			idx_file = r"./dataset/lastfm/top50_neuron_indices.txt"
+		if k != 0:
+			idx_file = r"./dataset/ml-1m/top50_neuron_indices.txt"
 			try:
 				with open(idx_file, 'r') as f:
 					all_indices = [int(line.strip()) for line in f if line.strip()]
@@ -264,7 +264,7 @@ class SAE(nn.Module):
 			pre_acts = self.dampen_neurons(pre_acts)
 		
 		pre_acts = nn.functional.relu(pre_acts)   
-		z = self.topk_activation(pre_acts, sequences, save_result=False)
+		z = self.topk_activation(pre_acts, sequences, save_result=False, k=self.N)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x

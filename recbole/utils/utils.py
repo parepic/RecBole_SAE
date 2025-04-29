@@ -2222,7 +2222,7 @@ def extract_sort_top_neurons():
 
     # Sort indices by descending Cohen's d and select top 50
     sorted_indices = cohen_d_series.sort_values(ascending=False).index.to_list()
-    top50 = sorted_indices[:50]
+    top50 = sorted_indices[:100]
 
     # Ensure all top-50 Cohen's d values are positive
     non_positive = [idx for idx in top50 if cohen_d_series.loc[idx] <= 0]
