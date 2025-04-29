@@ -690,7 +690,7 @@ class SASRec(SequentialRecommender):
         
         # Extract item IDs and popularity labels
         item_ids = df['item_id:token'].values
-        labels = df['popularity_labels'].values
+        labels = df['popularity_label'].values
 
         # Determine number of items
         N = item_ids.max() + 1
