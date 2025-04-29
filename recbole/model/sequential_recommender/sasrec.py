@@ -689,11 +689,11 @@ class SASRec(SequentialRecommender):
         df['item_id:token'] = df['item_id:token'].astype(int)
         
         # Extract item IDs and popularity labels
-        item_ids = df['item_id:token'].values
+        item_ids = df['item_id:token'].values - 1
         labels = df['popularity_label'].values
 
         # Determine number of items
-        N = item_ids.max() + 1
+        N = item_ids.max()
 
         # Create tensor and assign labels
         labels = torch.empty(N, dtype=torch.long)
