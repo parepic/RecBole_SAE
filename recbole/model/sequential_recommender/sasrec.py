@@ -648,7 +648,7 @@ class SASRec(SequentialRecommender):
         *,
         K: int = 10,
         lam: float = 1.0,        # trade–off coefficient λ
-        eta: float = 5e-4,       # dual learning-rate η
+        eta: float = 5e-2,       # dual learning-rate η
         alpha: float = 0.4,      # momentum coefficient α  (0≤α<1)
     ):
         """
@@ -692,14 +692,14 @@ class SASRec(SequentialRecommender):
         
         # Extract item IDs and popularity labels
         item_ids = df['item_id:token'].values - 1
-        labels = df['popularity_label'].values
+        labelss = df['popularity_label'].values
 
         # Determine number of items
         bla = item_ids.max() + 1
 
         # Create tensor and assign labels
         labels = torch.empty(bla, dtype=torch.long)
-        labels[item_ids] = torch.tensor(labels, dtype=torch.long)
+        labels[item_ids] = torch.tensor(labelss, dtype=torch.long)
         
         B, NN1 = scores.shape                       # batch size, N+1
         N      = NN1 - 1
