@@ -645,46 +645,6 @@ class SASRec(SequentialRecommender):
     
     
 
-
-    def powerset(self, iterable):
-        s = list(iterable)
-        return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
-
-    def compute_e_t(self, mu, y, lambda_param):
-        P = y.size(0)
-        mu_np = mu.numpy()
-        y_np = y.numpy()
-        lambda_np = float(lambda_param)
-
-        def objective(e):
-            return - (np.min(e / y_np) + (mu_np @ e) / lambda_np)
-
-        bounds = [(0, float(y_p)) for y_p in y_np]
-        e_init = y_np / 2
-
-        result = minimize(objective, e_init, bounds=bounds, method='SLSQP')
-        return torch.tensor(result.x)
-
-    def project_mu(self, v, y, lambda_param):
-        P = y.size(0)
-        v_np = v.numpy()
-        y_np = y.numpy()
-        lambda_np = float(lambda_param)
-
-        def objective(mu):
-            return np.sum(y_np**2 * (mu - v_np)**2)
-
-        constraints = []
-        for S in self.powerset(range(P)):
-            S = list(S)
-            constraints.append({
-                'type': 'ineq',
-                'fun': lambda mu, S=S: np.sum(y_np[S] * mu[S]) + lambda_np
-            })
-
-        result = minimize(objective, v_np, constraints=constraints, method='SLSQP')
-        return torch.tensor(result.x)
-
     def online_p_mmf(self, scoress, y=torch.tensor([0.33, 0.33, 0.34]), lambda_param=0.5, K=10, eta=0.1, alpha=0.5):
         """
         Online recommendation algorithm with boosting logic.
@@ -778,3 +738,166 @@ class SASRec(SequentialRecommender):
         scores = scores.to(device)
         topk_all = topk_all.to(device)
         return scores
+
+
+
+    def p_mmf_re_ranking(self, scoresss, K, lambd=0.1, eta=0.1, alpha=0.9):
+        """
+        Modifies a scores tensor using the P-MMF algorithm to ensure fairness across three groups.
+        
+        Args:
+            scores (torch.Tensor): Tensor of size [B, N+1], where B is batch size, N is number of items.
+                                scores[b, n] is the relevance of item n (1 to N) for user b, with
+                                scores[b, 0] as a dummy item to ignore. Scores can be negative.
+            labels (torch.Tensor): Tensor of size [N], with values in {1, 0, -1}, indicating the group
+                                of each item (items 1 to N).
+            K (int): Number of items to recommend per user.
+            lambd (float): Fairness constraint parameter (default: 0.1).
+            eta (float): Step size for dual variable updates (default: 0.1).
+            alpha (float): Momentum parameter for gradient updates (default: 0.9).
+        
+        Returns:
+            torch.Tensor: Modified scores tensor of size [B, N+1], with top-K items per user boosted.
+        """
+        
+        csv_path = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
+        df = pd.read_csv(csv_path)
+        y = y.cpu()
+        # Convert item IDs to int (in case they are strings)
+        df['item_id:token'] = df['item_id:token'].astype(int)
+        
+        # Extract item IDs and popularity labels
+        item_ids = df['item_id:token'].values - 1
+        labelss = df['popularity_label'].values
+
+        # Determine number of items
+        bla = item_ids.max() + 1
+
+        # Create tensor and assign labels
+        labels = torch.empty(bla, dtype=torch.long)
+        labels[item_ids] = torch.tensor(labelss, dtype=torch.long)
+        # Convert inputs to numpy for processing
+        scores_np = scoresss.cpu().numpy()
+        labels_np = labels.cpu().numpy()
+        
+        B, N1 = scores_np.shape
+        N = N1 - 1  # Actual number of items, excluding dummy item at index 0
+        
+        # Map labels {1, 0, -1} to group indices {0, 1, 2}
+        # 1 -> 0, 0 -> 1, -1 -> 2
+        group_of_item = 1 - labels_np  # Shape: [N], values in {0, 1, 2}
+        
+        # Compute number of items per group
+        num_items_per_group = np.bincount(group_of_item, minlength=3)  # Shape: [3]
+        
+        # Compute rho: proportion of items per group adjusted by eta
+        rho = (1 + 1/3) * num_items_per_group / N  # Shape: [3]
+        
+        # Initialize dual variables and budget
+        mu_t = np.zeros(3)  # Dual variables for 3 groups
+        B_t = B * K * rho   # Remaining budget per group, Shape: [3]
+        gradient_cusum = np.zeros(3)  # Cumulative gradient for momentum
+        
+        # Store selected items for each user
+        selected_items = []
+        
+        # Process each user sequentially as a timestamp
+        for t in range(B):
+            # Compute adjusted scores: subtract dual variables based on group membership
+            adjusted_scores = scores_np[t, 1:] - mu_t[group_of_item]  # Shape: [N]
+            
+            # Apply mask: exclude items from groups with exhausted budget
+            mask = np.zeros(N)
+            mask[B_t[group_of_item] <= 0] = -10000  # Large negative value to exclude items
+            
+            # Select top-K items based on adjusted scores
+            x_title = adjusted_scores + mask
+            x = np.argsort(x_title)[::-1][:K]  # Indices of top-K items (0 to N-1)
+            
+            # Reorder selected items by original scores
+            original_scores = scores_np[t, 1 + x]
+            re_allocation = np.argsort(original_scores)[::-1]
+            x_allocation = x[re_allocation]
+            
+            # Store selected item indices (shifted by +1 to match item IDs 1 to N)
+            selected_items.append(x_allocation + 1)
+            
+            # Update remaining budget B_t
+            counts = np.bincount(group_of_item[x_allocation], minlength=3)  # Items per group
+            B_t -= counts
+            
+            # Compute gradient
+            gradient = -counts / K + B_t / (B * K)
+            
+            # Apply momentum to gradient
+            gradient = alpha * gradient + (1 - alpha) * gradient_cusum
+            gradient_cusum = gradient
+            
+            # Update dual variables using projection
+            mu_t = self.compute_next_dual(eta, rho, mu_t, gradient, lambd)
+        
+        # Modify scores tensor: boost scores of selected top-K items
+        for t in range(B):
+            max_before = np.max(scores_np[t, 1:])  # Max score excluding dummy item
+            for rank, item in enumerate(selected_items[t]):
+                # Boost scores to ensure top-K items rank highest, decreasing with rank
+                scores_np[t, item] = max_before + (K - rank)
+        
+        # Convert back to PyTorch tensor and return
+        modified_scores = torch.from_numpy(scores_np).to(scoresss.device)
+        return modified_scores
+
+    def compute_next_dual(self, eta, rho, dual, gradient, lambd):
+        """
+        Computes the next dual variables by projecting onto the feasible set.
+        
+        Args:
+            eta (float): Step size.
+            rho (np.ndarray): Proportion of items per group, Shape: [3].
+            dual (np.ndarray): Current dual variables, Shape: [3].
+            gradient (np.ndarray): Gradient for update, Shape: [3].
+            lambd (float): Fairness constraint parameter.
+        
+        Returns:
+            np.ndarray: Updated dual variables, Shape: [3].
+        """
+        # Compute unprojected dual update
+        tilde_dual = dual - eta * gradient / rho / rho
+        
+        # Sort by tilde_dual * rho for projection
+        order = np.argsort(tilde_dual * rho)
+        ordered_tilde_dual = tilde_dual[order]
+        ordered_rho = rho[order]
+        
+        # Project using CVXPY
+        ordered_next_dual = self.cpu_layer(ordered_tilde_dual, ordered_rho, lambd)
+        
+        # Revert to original order
+        return ordered_next_dual[np.argsort(order)]
+
+    def cpu_layer(self, ordered_tilde_dual, rho, lambd):
+        """
+        Projects dual variables onto the feasible set using convex optimization.
+        
+        Args:
+            ordered_tilde_dual (np.ndarray): Sorted unprojected dual variables.
+            rho (np.ndarray): Sorted group proportions.
+            lambd (float): Fairness constraint parameter.
+        
+        Returns:
+            np.ndarray: Projected dual variables.
+        """
+        m = len(rho)
+        answer = cp.Variable(m)
+        
+        # Objective: minimize distance to unprojected duals
+        objective = cp.Minimize(cp.sum_squares(cp.multiply(rho, answer) - cp.multiply(rho, ordered_tilde_dual)))
+        
+        # Constraints: cumulative sums >= -lambd
+        constraints = [cp.sum(cp.multiply(rho[:i], answer[:i])) >= -lambd for i in range(1, m + 1)]
+        
+        # Solve optimization problem
+        prob = cp.Problem(objective, constraints)
+        prob.solve()
+        
+        return answer.value
