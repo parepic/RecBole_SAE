@@ -926,6 +926,34 @@ def create_visualizations_neurons():
                          arps, ndcg_heads, ndcg_mids, ndcg_tails)
 
 
+def ablate1():
+    Ns = np.linspace(0, 10, 11)     
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_file=args.path,
+        sae=(args.model == 'SASRec_SAE'),
+        device=device
+    )
+    records = []
+    trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)       
+    for n in Ns:
+        res = trainer.evaluate(
+                    valid_data,
+                    model_file=args.path,
+                    show_progress=config["show_progress"],
+                    N=n)
+        records.append({
+            'N': n,
+            'ndcg': res['ndcg@10'], 'gini': res['Gini_coef@10'],
+            'Deep long tail coverage': res.get('Deep_LT_coverage@10'),
+            'arp': res.get('ARP@10'),
+        })
+    df = pd.DataFrame(records)
+    out_csv = getattr(args, 'output_csv', 'interpretation.csv')
+    df.to_csv(out_csv, index=False)
+    print(f"Results saved to {out_csv}")
+
+
+
 from scipy.stats import pearsonr
 import h5py
 from itertools import combinations
@@ -1096,11 +1124,11 @@ if __name__ == "__main__":
             group_offset=args.group_offset,
         )
     else:
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
-        )  
+        # config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        #     model_file=args.path, sae=(args.model=='SASRec_SAE'), device=device
+        # )  
         
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
+        # trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
         # trainer.save_neuron_activations3(model_file=args.path)
         # exit()
         # trainer.fit_gate( 
@@ -1119,7 +1147,7 @@ if __name__ == "__main__":
             #         damp_percent=args.damp_percent, unpopular_only = args.unpopular_only
             #     )            
             # tune_hyperparam_pmmf()
-            create_visualizations_neurons()
+            ablate1()
             # create_visualizations_neurons()
             # test_result = trainer.evaluate(
             #     valid_data, model_file=args.path, show_progress=config["show_progress"]
@@ -1140,29 +1168,3 @@ if __name__ == "__main__":
                 show_progress=True,
                 # sasrec_sae_file=r"./recbole/saved/SASRec_SAE-Apr-26-k32-64-lastfm.pth"
                 )
-
-    def ablate1():
-        Ns = np.linspace(0, 10, 11)     
-        config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
-            model_file=args.path,
-            sae=(args.model == 'SASRec_SAE'),
-            device=device
-        )
-        records = []
-        trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)       
-        for n in Ns:
-            res = trainer.evaluate(
-                        valid_data,
-                        model_file=args.path,
-                        show_progress=config["show_progress"],
-                        N=n)
-            records.append({
-                'N': n,
-                'ndcg': res['ndcg@10'], 'gini': res['Gini_coef@10'],
-                'Deep long tail coverage': res.get('Deep_LT_coverage@10'),
-                'arp': res.get('ARP@10'),
-            })
-        df = pd.DataFrame(records)
-        out_csv = getattr(args, 'output_csv', 'interpretation.csv')
-        df.to_csv(out_csv, index=False)
-        print(f"Results saved to {out_csv}")
