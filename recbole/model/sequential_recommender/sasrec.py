@@ -739,7 +739,6 @@ class SASRec(SequentialRecommender):
 
             # (line 7) compute objective  sᵢ − λ(μ + m)_grp(i)
             adjusted = row_real_items - lam * (mu[g_items] + m[g_items])
-            print("adjusted min:", adjusted.min().item(), "max:", adjusted.max().item())
 
             # pick the Top-K
             topk_rel = torch.topk(adjusted, K).indices           # indices in 0…N-1
