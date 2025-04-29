@@ -267,7 +267,7 @@ class SASRec(SequentialRecommender):
         scores = scores.detach().cpu()
 
         # ---- load popularity labels (unchanged) -----------------------
-        df   = pd.read_csv("./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        df   = pd.read_csv("./dataset/lastfm/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values
         labs = df["popularity_label"].astype(int).values
         max_id = ids.max()
@@ -433,8 +433,8 @@ class SASRec(SequentialRecommender):
         top_neurons = combined_sorted[:int(self.N)]
 
         # Load the corresponding statistics files.
-        stats_unpop = pd.read_csv(r"./dataset/ml-1m/row_stats_unpopular.csv")
-        stats_pop = pd.read_csv(r"./dataset/ml-1m/row_stats_popular.csv")
+        stats_unpop = pd.read_csv(r"./dataset/lastfm/row_stats_unpopular.csv")
+        stats_pop = pd.read_csv(r"./dataset/lastfm/row_stats_popular.csv")
 
         # Create tensors of the absolute Cohen's d values for the selected neurons.
         abs_cohens = torch.tensor([abs(c) for _, c, _ in top_neurons], device=pre_acts.device)
@@ -536,7 +536,7 @@ class SASRec(SequentialRecommender):
             looked‑up in `niche_labels` to derive the fraction internally.
         """
         
-        df = pd.read_csv(r"./dataset/ml-1m/item_popularity_labels_with_titles.csv")
+        df = pd.read_csv(r"./dataset/lastfm/item_popularity_labels_with_titles.csv")
         ids  = df["item_id:token"].astype(int).values      # e.g. [1, 2, 3, …, 3417]
         labs = df["popularity_label"].astype(int).values   # e.g. [1, 0, 1, …, 0]
 
@@ -685,7 +685,7 @@ class SASRec(SequentialRecommender):
         ###############################################################
         scores = scoress.clone()
         scores = scores.detach().cpu()
-        csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+        csv_path = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
         df = pd.read_csv(csv_path)
 
         # Convert item IDs to int (in case they are strings)
