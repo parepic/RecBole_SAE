@@ -769,28 +769,28 @@ def tune_hyperparam_pmmf():
     betas   = [1e-4, 1e-3, 1e-2]
 
     # 3) baseline & bookkeeping (updated values)
-    # baseline_stats = {
-    #         'ndcg@10':          0.1212,
-    #         'Gini_coef@10':     0.7573,
-    #         'Deep_LT_coverage@10': 0.4859,
-    #         'ndcg-head@10':     0.1848,
-    #         'ndcg-mid@10':      0.1234,
-    #         'ndcg-tail@10':     0.0621,
-    #         'arp':              3.0278,
-    #         'time':             0.0
-    #         }
-    
-    
     baseline_stats = {
-        'ndcg@10':               0.6273,
-        'Gini_coef@10':          0.5849518873628745,
-        'Deep_LT_coverage@10':   0.8716216216216216,
-        'ndcg-head@10':          0.6589,
-        'ndcg-mid@10':           0.5763,
-        'ndcg-tail@10':          0.6798,
-        'arp':                   0.00035533782557826705,
-        'time':                  0.24
-    }
+            'ndcg@10':          0.1212,
+            'Gini_coef@10':     0.7573,
+            'Deep_LT_coverage@10': 0.4859,
+            'ndcg-head@10':     0.1848,
+            'ndcg-mid@10':      0.1234,
+            'ndcg-tail@10':     0.0621,
+            'arp':              3.0278,
+            'time':             0.0
+            }
+    
+    
+    # baseline_stats = {
+    #     'ndcg@10':               0.6273,
+    #     'Gini_coef@10':          0.5849518873628745,
+    #     'Deep_LT_coverage@10':   0.8716216216216216,
+    #     'ndcg-head@10':          0.6589,
+    #     'ndcg-mid@10':           0.5763,
+    #     'ndcg-tail@10':          0.6798,
+    #     'arp':                   0.00035533782557826705,
+    #     'time':                  0.24
+    # }
     
     
     

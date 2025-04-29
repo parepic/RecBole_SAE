@@ -664,7 +664,7 @@ class SASRec(SequentialRecommender):
             torch.Tensor: Modified scores tensor of size [B, N+1], with top-K items per user boosted.
         """
         
-        csv_path = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
+        csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
         df = pd.read_csv(csv_path)
         # Convert item IDs to int (in case they are strings)
         df['item_id:token'] = df['item_id:token'].astype(int)
