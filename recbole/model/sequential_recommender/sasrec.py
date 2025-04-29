@@ -219,7 +219,7 @@ class SASRec(SequentialRecommender):
         Returns:
         adjusted_scores (np.ndarray): Adjusted scores with same shape as input.
         """
-        csv_file = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
+        csv_file = r"./dataset/lastfm/item_popularity_labels_with_titles.csv"
         # Load the CSV file
         df = pd.read_csv(csv_file)
         
