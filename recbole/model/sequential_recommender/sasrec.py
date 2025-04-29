@@ -17,6 +17,8 @@ Reference:
 
 from __future__ import annotations
 
+
+import cvxpy as cp
 import math
 import torch
 from torch import nn
@@ -737,6 +739,7 @@ class SASRec(SequentialRecommender):
 
             # (line 7) compute objective  sᵢ − λ(μ + m)_grp(i)
             adjusted = row_real_items - lam * (mu[g_items] + m[g_items])
+            print("adjusted min:", adjusted.min().item(), "max:", adjusted.max().item())
 
             # pick the Top-K
             topk_rel = torch.topk(adjusted, K).indices           # indices in 0…N-1
@@ -758,8 +761,9 @@ class SASRec(SequentialRecommender):
             g_curr  = alpha * g_tilde + (1 - alpha) * g_prev     # (line 11)
             g_prev  = g_curr
 
-            mu = mu - eta * g_curr                               # gradient step (line 12)
-            mu = torch.clamp(mu, min=0.)                         # cheap projection
+
+            v  = mu - eta * g_curr          # gradient step before projection
+            mu = self._project_mu(v, probs, lam) # exact projection onto D
 
             # ------------------------------------------------------------------
             # Boost chosen items so they stay on top in this row
@@ -770,3 +774,21 @@ class SASRec(SequentialRecommender):
                 row[item_id] = max_before + boost
 
         return torch.tensor(scores, dtype=scoress.dtype, device=scoress.device)
+    
+    def _project_mu(self, v, gamma, lam):
+        """
+        Solve:   min  ∑ (γ_i (μ_i - v_i))²
+                 s.t.  Σ_{i∈S} γ_i μ_i ≥ –λ        ∀ non-empty S⊆{0,1,2}
+        """
+        P  = len(v)                                      # here P = 3 groups
+        μ  = cp.Variable(P)
+        obj = cp.Minimize(cp.sum_squares(cp.multiply(gamma, μ - v)))
+        # enumerate all 2^P−1 non-empty subsets  (P is tiny so this is fine)
+        constr = []
+        from itertools import combinations
+        for r in range(1, P + 1):
+            for S in combinations(range(P), r):
+                constr.append(cp.sum(cp.multiply(gamma[list(S)], μ[list(S)])) >= -lam)
+        prob = cp.Problem(obj, constr)
+        prob.solve(warm_start=True, solver=cp.ECOS)      # ECOS is the light default
+        return torch.as_tensor(μ.value, dtype=v.dtype, device=v.device)
