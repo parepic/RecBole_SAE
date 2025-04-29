@@ -111,18 +111,14 @@ class Evaluator(object):
         # ARP calculation (scaled for readability)
         # Total interactions and overall average
         total_interactions = item_data['interaction_count'].sum()
-        overall_average = total_interactions / num_items if num_items > 0 else 0
+        item_data['normalized_popularity'] = item_data['interaction_count'] / total_interactions
 
-        # Create a lookup for interaction counts
-        interaction_lookup = dict(zip(item_data['item_id:token'], item_data['interaction_count']))
+        popularity_lookup = dict(zip(item_data['item_id:token'], item_data['normalized_popularity']))
 
-        # Compute weighted sum of interaction counts and total recommendations
-        total_rec = sum(recommendation_count[i - offset] for i in recommended_items)
-        weighted_sum = sum(recommendation_count[i - offset] * interaction_lookup.get(i, 0) for i in recommended_items)
+        # Look up the popularity for each recommended item
+        popularity_scores = [popularity_lookup.get(item_id, 0.0) for item_id in recommended_items]
 
-        # Scaled ARP as average interaction count of recommended items
-        scaled_arp = weighted_sum / total_rec if total_rec > 0 else 0
-
+        arp = float(np.mean(popularity_scores)) if len(popularity_scores) > 0 else 0.0
         # ARP as a ratio to overall average (readable popularity bias metric)
         # arp_ratio = scaled_arp / overall_average if overall_average > 0 else 0
         return {
@@ -130,5 +126,5 @@ class Evaluator(object):
             'Deep_LT_coverage@10': deep_long_tail_coverage,
             'coverage@10': coverage,
             'Gini_coef@10': gini_coefficient,
-            'ARP@10': (scaled_arp)
+            'ARP@10': arp
         }
