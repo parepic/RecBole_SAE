@@ -115,7 +115,7 @@ class SAE(nn.Module):
 		"""
 		# If specified, mask out the first k indices from file by setting to -10
 		if k != 0:
-			idx_file = r"./dataset/ml-1m/top50_neuron_indices_small.txt"
+			idx_file = r"./dataset/ml-1m/top50_neuron_indices.txt"
 			try:
 				with open(idx_file, 'r') as f:
 					all_indices = [int(line.strip()) for line in f if line.strip()]
