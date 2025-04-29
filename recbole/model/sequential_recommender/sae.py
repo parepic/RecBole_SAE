@@ -121,7 +121,8 @@ class SAE(nn.Module):
 					all_indices = [int(line.strip()) for line in f if line.strip()]
 			except FileNotFoundError:
 				raise FileNotFoundError(f"Index file not found: {idx_file}")
-			mask_indices = all_indices[:k]
+			print(k, " blya ")
+			mask_indices = all_indices[:int(k)]
 			# Clone x to avoid modifying original
 			x = x.clone()
 			# Set masked indices to a low value
