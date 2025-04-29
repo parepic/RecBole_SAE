@@ -124,11 +124,11 @@ class Evaluator(object):
         scaled_arp = weighted_sum / total_rec if total_rec > 0 else 0
 
         # ARP as a ratio to overall average (readable popularity bias metric)
-        arp_ratio = scaled_arp / overall_average if overall_average > 0 else 0
+        # arp_ratio = scaled_arp / overall_average if overall_average > 0 else 0
         return {
             'LT_coverage@10': long_tail_coverage,
             'Deep_LT_coverage@10': deep_long_tail_coverage,
             'coverage@10': coverage,
             'Gini_coef@10': gini_coefficient,
-            'ARP@10': arp_ratio
+            'ARP@10': (scaled_arp * 1000)
         }
