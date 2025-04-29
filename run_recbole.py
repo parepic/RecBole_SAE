@@ -765,7 +765,7 @@ def tune_hyperparam_pmmf():
     
 
     # 2) build your grid
-    all_Ns   = [0.01, 0.1, 1, 10, 100]
+    all_Ns   = [0.0001, 0.001]
     betas   = [1e-4, 1e-3, 1e-2]
 
     # 3) baseline & bookkeeping (updated values)
