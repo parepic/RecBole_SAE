@@ -704,7 +704,7 @@ class SASRec(SequentialRecommender):
         - topk_all: torch.Tensor of size [B, K], indices of top-K items per user (1 to N).
         """
         device = scoress.device
-        scores = scores.clone().detach().cpu()
+        scores = scoress.clone().detach().cpu()
         B, N1 = scores.shape
         N = N1 - 1  # Actual number of items (excluding dummy)
         P = 3  # Number of groups: 1, 0, -1
