@@ -403,7 +403,7 @@ class SASRec(SequentialRecommender):
         # scores = torch.tensor(self.simple_reranker(scores)).to(self.device)
         # scores = self.FAIR(scores, p=param1, alpha=param2).to(self.device)
         # scores = self.pct_rerank(scores=scores, user_interest=item_seq, p=param1, lambda_=param2)
-        scores = self.online_p_mmf(scores=scores, probs=[0.04, 0.31, 0.65], lam=0.5)
+        scores = self.online_p_mmf(scoress=scores, probs=[0.04, 0.31, 0.65], lam=0.5)
         # scores = self.random_reranker(scores=scores, top_k=param1)
         # scores = fair_rerank_exact(torch.sigmoid(scores), alpha=0.1)
         top_recs = torch.argsort(scores, dim=1, descending=True)[:, :10]
@@ -643,7 +643,7 @@ class SASRec(SequentialRecommender):
 
     def online_p_mmf(
         self,
-        scores: torch.Tensor,
+        scoress: torch.Tensor,
         probs,
         *,
         K: int = 10,
@@ -682,6 +682,8 @@ class SASRec(SequentialRecommender):
         ###############################################################
         # Pre-processing & static structures
         ###############################################################
+        scores = scoress.clone()
+        scores = scores.detach().cpu()
         csv_path = r"./dataset/ml-1m/item_popularity_labels_with_titles.csv"
         df = pd.read_csv(csv_path)
 
@@ -765,4 +767,4 @@ class SASRec(SequentialRecommender):
                 boost = K - rank               # higher rank ⇒ larger boost
                 row[item_id] = max_before + boost
 
-        return scores, topk_all
+        return torch.tensor(scores, dtype=scoress.dtype, device=scoress.device), topk_all
