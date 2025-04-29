@@ -671,7 +671,6 @@ class Trainer(AbstractTrainer):
         
         ending = '_eval' if eval_data else ''
         # self.model.sae_module.save_highest_activations()
-
     
 
     @torch.no_grad()

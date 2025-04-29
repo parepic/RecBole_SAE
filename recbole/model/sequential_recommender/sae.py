@@ -478,7 +478,7 @@ class SAE(nn.Module):
 
     
     
-	def save_highest_activations(self, filename=r"./dataset/ml-1m/neuron_activations_SASREC_SAE_eval.csv"):		
+	def save_highest_activations(self, filename=r"./dataset/ml-1m/neuron_activations.csv"):		
 		"""
 		Save the top 5 highest activations and their corresponding sequences to a file.
 		"""
