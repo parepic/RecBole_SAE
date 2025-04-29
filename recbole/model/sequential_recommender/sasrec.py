@@ -705,6 +705,13 @@ class SASRec(SequentialRecommender):
         N      = NN1 - 1
         device = scores.device
 
+        counts = torch.tensor([
+            (labels == -1).sum().item(),
+            (labels == 0).sum().item(),
+            (labels == 1).sum().item()
+        ], dtype=torch.float32, device=device)
+
+        probs = counts / counts.sum()   # [p(1), p(0), p(-1)]
         # Map labels {-1,0,1} ➔ group indices {0,1,2}
         group_of_item = (labels + 1).to(torch.long).to(device)  # [N]
 
