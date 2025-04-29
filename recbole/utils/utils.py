@@ -2198,7 +2198,7 @@ def extract_sort_top_neurons():
     """
     file1 = r"./dataset/ml-1m/neuron_activations.csv"
     file2 = r"./dataset/ml-1m/cohens_d.csv"
-    output_file = r"./dataset/ml-1m/top50_neuron_indices_small.txt"
+    output_file = r"./dataset/ml-1m/top50_neuron_indices.txt"
 
     # Load CSVs with first column as index
     df1 = pd.read_csv(file1, index_col=0)
