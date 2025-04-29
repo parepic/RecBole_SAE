@@ -648,7 +648,7 @@ class SASRec(SequentialRecommender):
         *,
         K: int = 10,
         lam: float = 1.0,        # trade–off coefficient λ
-        eta: float = 1,       # dual learning-rate η
+        eta: float = 5e-1,       # dual learning-rate η
         alpha: float = 0.4,      # momentum coefficient α  (0≤α<1)
     ):
         """
