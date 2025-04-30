@@ -104,7 +104,6 @@ class SAE(nn.Module):
 		norm = torch.norm(self.W_dec.data, dim=1, keepdim=True)
 		self.W_dec.data /= norm + eps
 
-	
 
 	def topk_activation(self, x, sequences, save_result, k=0):
 		"""

@@ -793,7 +793,7 @@ class Trainer(AbstractTrainer):
                 {"epoch": epoch_idx, "train_loss": train_loss, "train_step": epoch_idx},
                 head="train",
             )
-
+            
             # eval
             if self.eval_step <= 0 or not valid_data:
                 if saved:
