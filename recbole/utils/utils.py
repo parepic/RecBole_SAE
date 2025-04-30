@@ -2215,7 +2215,7 @@ def extract_sort_top_neurons(dataset_name):
         raise KeyError(f"'cohen_d' column not found in {file2}")
 
     # Select top 400 by activation count
-    top400 = df1['count'].nlargest(400).index
+    top400 = df1['count'].nlargest(1000).index
 
     # Retrieve Cohen's d values
     try:
