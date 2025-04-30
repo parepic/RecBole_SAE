@@ -122,7 +122,7 @@ class SAE(nn.Module):
 			except FileNotFoundError:
 				raise FileNotFoundError(f"Index file not found: {idx_file}")
 			all_indices = df_idx.index.astype(int).tolist()
-			mask_indices = all_indices[:k]
+			mask_indices = all_indices[:int(k)]
 			x = x.clone()
 			x[:, mask_indices] = 0
 
