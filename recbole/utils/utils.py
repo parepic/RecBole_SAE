@@ -2188,49 +2188,49 @@ def plot_interaction_distribution(file_path):
 
 
 
+
 def extract_sort_top_neurons(dataset_name):
     """
     Reads neuron activations and Cohen's d CSVs for a given dataset.
-    Extracts indices of the top 400 neurons by 'count', then splits them based on sign of their 'cohen_d' values:
+    Extracts all neurons whose activation 'count' exceeds 500, then splits them based on the sign of their 'cohen_d' values:
     1. Positive Cohen's d: sorted by descending absolute value and written to a CSV.
     2. Negative Cohen's d: sorted by descending absolute value and written to a separate CSV.
     Returns a tuple of the positive and negative output file paths.
     Raises KeyError if required columns are missing or indices are not found.
     """
-    # Construct file paths using dataset_name
     base_path = f"./dataset/{dataset_name}"
-    file1 = f"{base_path}/neuron_activations.csv"
-    file2 = f"{base_path}/cohens_d.csv"
+    activations_file = f"{base_path}/neuron_activations.csv"
+    cohens_file = f"{base_path}/cohens_d.csv"
     pos_output = f"{base_path}/positive_cohens_d.csv"
     neg_output = f"{base_path}/negative_cohens_d.csv"
 
-    # Load data
-    df1 = pd.read_csv(file1, index_col=0)
-    df2 = pd.read_csv(file2, index_col=0)
+    # Load CSVs with index as first column
+    df1 = pd.read_csv(activations_file, index_col=0)
+    df2 = pd.read_csv(cohens_file, index_col=0)
 
     # Verify required columns
     if 'count' not in df1.columns:
-        raise KeyError(f"'count' column not found in {file1}")
+        raise KeyError(f"'count' column not found in {activations_file}")
     if 'cohen_d' not in df2.columns:
-        raise KeyError(f"'cohen_d' column not found in {file2}")
+        raise KeyError(f"'cohen_d' column not found in {cohens_file}")
 
-    # Select top 400 by activation count
-    top400 = df1['count'].nlargest(400).index
+    # Select all indices with activation count > 500
+    selected = df1.loc[df1['count'] > 500].index
 
-    # Retrieve Cohen's d values
+    # Retrieve Cohen's d values for selected indices
     try:
-        cohen_d = df2.loc[top400, 'cohen_d']
+        cohen_d = df2.loc[selected, 'cohen_d']
     except KeyError as e:
-        missing = list(set(top400) - set(df2.index))
-        raise KeyError(f"Indices {missing} from activations not found in {file2}") from e
+        missing = list(set(selected) - set(df2.index))
+        raise KeyError(f"Indices {missing} from activations not found in {cohens_file}") from e
 
-    # Positive Cohen's d
+    # Positive Cohen's d: sort by absolute value and save
     pos = cohen_d[cohen_d > 0].to_frame(name='cohen_d')
     pos['abs_cohen_d'] = pos['cohen_d'].abs()
     pos = pos.sort_values('abs_cohen_d', ascending=False).drop(columns='abs_cohen_d')
     pos.to_csv(pos_output)
 
-    # Negative Cohen's d
+    # Negative Cohen's d: sort by absolute value and save
     neg = cohen_d[cohen_d < 0].to_frame(name='cohen_d')
     neg['abs_cohen_d'] = neg['cohen_d'].abs()
     neg = neg.sort_values('abs_cohen_d', ascending=False).drop(columns='abs_cohen_d')

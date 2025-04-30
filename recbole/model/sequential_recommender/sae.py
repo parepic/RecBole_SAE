@@ -113,17 +113,17 @@ class SAE(nn.Module):
 		Returns a sparse tensor with only the top-k activations.
 		"""
 		# If specified, mask out the first k indices from file by setting to -10
-		# dataset_name="lastfm"	
-		# if k > 0:
-		# 	idx_file = f"./dataset/{dataset_name}/negative_cohens_d.csv"
-		# 	try:
-		# 		df_idx = pd.read_csv(idx_file, index_col=0)
-		# 	except FileNotFoundError:
-		# 		raise FileNotFoundError(f"Index file not found: {idx_file}")
-		# 	all_indices = df_idx.index.astype(int).tolist()
-		# 	mask_indices = all_indices[:int(k)]
-		# 	x = x.clone()
-		# 	x[:, mask_indices] = 0
+		dataset_name="lastfm"	
+		if k > 0:
+			idx_file = f"./dataset/{dataset_name}/negative_cohens_d.csv"
+			try:
+				df_idx = pd.read_csv(idx_file, index_col=0)
+			except FileNotFoundError:
+				raise FileNotFoundError(f"Index file not found: {idx_file}")
+			all_indices = df_idx.index.astype(int).tolist()
+			mask_indices = all_indices[:int(k)]
+			x = x.clone()
+			x[:, mask_indices] = 0
 
 		# Compute top-k as before
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
@@ -262,7 +262,7 @@ class SAE(nn.Module):
 			pre_acts = self.dampen_neurons(pre_acts)
 		
 		pre_acts = nn.functional.relu(pre_acts)   
-		z = self.topk_activation(pre_acts, sequences, save_result=False, k=0)
+		z = self.topk_activation(pre_acts, sequences, save_result=False, k=self.N)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
