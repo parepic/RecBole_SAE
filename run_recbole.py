@@ -930,7 +930,7 @@ def create_visualizations_neurons():
 
 
 def ablate1():
-    Ns = np.linspace(0, 122, 123)     
+    Ns = np.linspace(0, 356, 357)     
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
         model_file=args.path,
         sae=(args.model == 'SASRec_SAE'),
@@ -1052,7 +1052,7 @@ if __name__ == "__main__":
     
     # save_mean_SD()
     # exit()
-    # extract_sort_top_neurons("ml-1m")
+    # extract_sort_top_neurons("lastfm")
     # exit()
     parser = argparse.ArgumentParser()
     

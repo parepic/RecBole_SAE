@@ -114,7 +114,7 @@ class SAE(nn.Module):
 		Returns a sparse tensor with only the top-k activations.
 		"""
 		# If specified, mask out the first k indices from file by setting to -10
-		dataset_name="ml-1m"	
+		dataset_name="lastfm"	
 		if k > 0:
 			idx_file = f"./dataset/{dataset_name}/positive_cohens_d.csv"
 			try:
