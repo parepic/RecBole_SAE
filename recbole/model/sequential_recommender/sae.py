@@ -116,7 +116,7 @@ class SAE(nn.Module):
 		# If specified, mask out the first k indices from file by setting to -10
 		dataset_name="ml-1m"	
 		if k > 0:
-			idx_file = f"./dataset/{dataset_name}/negative_cohens_d.csv"
+			idx_file = f"./dataset/{dataset_name}/positive_cohens_d.csv"
 			try:
 				df_idx = pd.read_csv(idx_file, index_col=0)
 			except FileNotFoundError:
