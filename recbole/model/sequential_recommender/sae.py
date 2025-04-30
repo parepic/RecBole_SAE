@@ -114,18 +114,16 @@ class SAE(nn.Module):
 		Returns a sparse tensor with only the top-k activations.
 		"""
 		# If specified, mask out the first k indices from file by setting to -10
-		if k != 0:
-			idx_file = r"./dataset/ml-1m/top50_neuron_indices.txt"
+		dataset_name="lastfm"	
+		if k > 0:
+			idx_file = f"./dataset/{dataset_name}/positive_cohens_d.csv"
 			try:
-				with open(idx_file, 'r') as f:
-					all_indices = [int(line.strip()) for line in f if line.strip()]
+				df_idx = pd.read_csv(idx_file, index_col=0)
 			except FileNotFoundError:
 				raise FileNotFoundError(f"Index file not found: {idx_file}")
-			print(k, " blya ")
-			mask_indices = all_indices[:int(k)]
-			# Clone x to avoid modifying original
+			all_indices = df_idx.index.astype(int).tolist()
+			mask_indices = all_indices[:k]
 			x = x.clone()
-			# Set masked indices to a low value
 			x[:, mask_indices] = 0
 
 		# Compute top-k as before

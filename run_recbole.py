@@ -1049,7 +1049,7 @@ if __name__ == "__main__":
     
     # save_mean_SD()
     # exit()
-    extract_sort_top_neurons()
+    extract_sort_top_neurons("lastfm")
     exit()
     parser = argparse.ArgumentParser()
     
