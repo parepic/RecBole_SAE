@@ -256,7 +256,7 @@ class SAE(nn.Module):
      
     
 	def add_noise(self, pre_acts, std):
-		if self.N is None or self.noise_std == 0:
+		if self.N is None:
 			return pre_acts
 
 		# pick N unique neurons
