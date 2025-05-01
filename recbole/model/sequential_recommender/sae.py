@@ -279,7 +279,7 @@ class SAE(nn.Module):
 		self.last_activations = pre_acts
 		print("suka blya ", self.corr_file)
 		if self.corr_file:
-			pre_acts = self.dampen_neurons(pre_acts)
+			pre_acts = self.add_noise(pre_acts)
 		
 		pre_acts = nn.functional.relu(pre_acts)   
 		z = self.topk_activation(pre_acts, sequences, save_result=False)
