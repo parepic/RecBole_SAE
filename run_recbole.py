@@ -876,17 +876,17 @@ def create_visualizations_neurons():
     )  
     
     trainer = get_trainer(config["MODEL_TYPE"], config["model"])(config, model)
-    arps = [4.002]
-    ndcgs = [0.6273]
-    hits = [0.6725]
-    coverages = [0.892436974789916]
-    lt_coverages = [0.8908966928060007]
-    deep_lt_coverages = [0.8716216216216216]
+    arps = [3.0278] 
+    ndcgs = [0.1212]
+    hits = [0.0]  # No value provided in baseline_stats
+    coverages = [0.0]  # No value provided in baseline_stats
+    lt_coverages = [0.0]  # No value provided in baseline_stats
+    deep_lt_coverages = [0.4859]
     dampen_percs = [0.0]  # still no value provided
-    ginis = [0.5849518873628745]
-    ndcg_heads = [0.6589]
-    ndcg_mids = [0.5763]
-    ndcg_tails = [0.6798]
+    ginis = [0.7573]
+    ndcg_heads = [0.1848]
+    ndcg_mids = [0.1234]
+    ndcg_tails = [0.0621]
     neuron_count = 0
     count = 0
     tochange = np.linspace(0, 4096, 9).tolist()
