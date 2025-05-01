@@ -260,7 +260,7 @@ class SAE(nn.Module):
 			return pre_acts
 
 		# Generate a list of self.N unique random indices from 0 to self.hidden - 1
-		top_neurons = random.sample(range(self.hidden), self.N)
+		top_neurons = random.sample(range(self.hidden_dim), self.N)
 
 		# For each selected neuron, add a random weight between -1 and 1
 		for i, elem in enumerate(top_neurons):
