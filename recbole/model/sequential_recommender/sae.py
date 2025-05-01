@@ -256,6 +256,7 @@ class SAE(nn.Module):
      
     
 	def add_noise(self, pre_acts, std):
+		pre_actss = pre_acts.detach().cpu()
 		if self.N is None:
 			return pre_acts
 
@@ -264,7 +265,7 @@ class SAE(nn.Module):
 
 		# add Gaussian noise to each selected neuron
 		# pre_acts shape: (batch_size, hidden_dim)
-		batch_size = pre_acts.shape[0]
+		batch_size = pre_actss.shape[0]
 		for idx in top_neurons:
 			# draw a vector of Gaussian noise
 			noise = np.random.normal(
@@ -272,9 +273,9 @@ class SAE(nn.Module):
 				scale=std,
 				size=(batch_size,)
 			)
-			pre_acts[:, idx] += noise
+			pre_actss[:, idx] += noise
 
-		return pre_acts
+		return pre_actss.to(self.device)
      
      
      
