@@ -277,7 +277,7 @@ class SAE(nn.Module):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
-		if self.corr_file:
+		if self.N:
 			pre_acts = self.add_noise(pre_acts)
 		
 		pre_acts = nn.functional.relu(pre_acts)   
