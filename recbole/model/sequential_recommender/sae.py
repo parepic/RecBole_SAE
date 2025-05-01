@@ -9,6 +9,7 @@ from tqdm import tqdm
 import logging
 from recbole.utils import utils
 import pandas as pd
+import random
 
 class SAE(nn.Module):
 	# @staticmethod
@@ -113,17 +114,17 @@ class SAE(nn.Module):
 		Returns a sparse tensor with only the top-k activations.
 		"""
 		# If specified, mask out the first k indices from file by setting to -10
-		dataset_name="ml-1m"	
-		if k > 0:
-			idx_file = f"./dataset/{dataset_name}/negative_cohens_d.csv"
-			try:
-				df_idx = pd.read_csv(idx_file, index_col=0)
-			except FileNotFoundError:
-				raise FileNotFoundError(f"Index file not found: {idx_file}")
-			all_indices = df_idx.index.astype(int).tolist()
-			mask_indices = all_indices[:int(k)]
-			x = x.clone()
-			x[:, mask_indices] = 0
+		# dataset_name="ml-1m"	
+		# if k > 0:
+		# 	idx_file = f"./dataset/{dataset_name}/negative_cohens_d.csv"
+		# 	try:
+		# 		df_idx = pd.read_csv(idx_file, index_col=0)
+		# 	except FileNotFoundError:
+		# 		raise FileNotFoundError(f"Index file not found: {idx_file}")
+		# 	all_indices = df_idx.index.astype(int).tolist()
+		# 	mask_indices = all_indices[:int(k)]
+		# 	x = x.clone()
+		# 	x[:, mask_indices] = 0
 
 		# Compute top-k as before
 		topk_values, topk_indices = torch.topk(x, self.k, dim=1)
@@ -253,16 +254,34 @@ class SAE(nn.Module):
 		return pre_acts
      
      
+    
+	def add_noise(self, pre_acts):
+		if self.N is None:
+			return pre_acts
+
+		# Generate a list of self.N unique random indices from 0 to self.hidden - 1
+		top_neurons = random.sample(range(self.hidden), self.N)
+
+		# For each selected neuron, add a random weight between -1 and 1
+		for i, elem in enumerate(top_neurons):
+			weight = random.uniform(-1, 1)  # Random value between -1 and 1
+			pre_acts[:, elem] += weight    # Add weight to the column for this neuron
+
+		return pre_acts
+		
+     
+     
+     
      
 	def forward(self, x, sequences=None, train_mode=False, save_result=False, epoch=None):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
 		if self.corr_file:
-			pre_acts = self.dampen_neurons(pre_acts)
+			pre_acts = self.add_noise(pre_acts)
 		
 		pre_acts = nn.functional.relu(pre_acts)   
-		z = self.topk_activation(pre_acts, sequences, save_result=False, k=self.N)
+		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
 		x_reconstructed = z @ self.W_dec + self.b_dec
 		e = x_reconstructed - x
