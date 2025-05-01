@@ -258,13 +258,12 @@ class SAE(nn.Module):
 	def add_noise(self, pre_acts):
 		if self.N is None:
 			return pre_acts
-		print(self.N, "blya")
 		# Generate a list of self.N unique random indices from 0 to self.hidden - 1
 		top_neurons = random.sample(range(self.hidden_dim), int(self.N))
 
 		# For each selected neuron, add a random weight between -1 and 1
 		for i, elem in enumerate(top_neurons):
-			weight = random.uniform(-4, 4)  # Random value between -1 and 1
+			weight = random.uniform(-2, 2)  # Random value between -1 and 1
 			pre_acts[:, elem] += weight    # Add weight to the column for this neuron
 
 		return pre_acts
@@ -280,7 +279,6 @@ class SAE(nn.Module):
 		print("suka blya ", self.corr_file)
 		if self.corr_file:
 			pre_acts = self.add_noise(pre_acts)
-		
 		pre_acts = nn.functional.relu(pre_acts)   
 		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
