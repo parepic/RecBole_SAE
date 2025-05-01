@@ -258,7 +258,7 @@ class SAE(nn.Module):
 	def add_noise(self, pre_acts):
 		if self.N is None:
 			return pre_acts
-
+		print(self.N, "blya")
 		# Generate a list of self.N unique random indices from 0 to self.hidden - 1
 		top_neurons = random.sample(range(self.hidden_dim), int(self.N))
 
