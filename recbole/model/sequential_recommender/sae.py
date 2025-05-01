@@ -285,7 +285,8 @@ class SAE(nn.Module):
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
 		if self.corr_file:
-			pre_acts = self.add_noise(pre_acts, std=self.beta)
+			pre_acts = self.dampen_neurons(pre_acts)
+			# pre_acts = self.add_noise(pre_acts, std=self.beta)
 		pre_acts = nn.functional.relu(pre_acts)   
 		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
