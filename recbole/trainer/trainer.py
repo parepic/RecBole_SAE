@@ -962,7 +962,7 @@ class Trainer(AbstractTrainer):
         num_sample = 0
         
         if isinstance(self.model, SASRec_SAE):
-            self.model.set_dampen_hyperparam(corr_file=None, N=N, 
+            self.model.set_dampen_hyperparam(corr_file='cohens_d.csv', N=N, 
                                         beta=beta, unpopular_only=False)
             self.model.sae_module.activation_count.zero_()
             self.model.total_loss = 0
