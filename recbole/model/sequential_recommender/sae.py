@@ -192,7 +192,7 @@ class SAE(nn.Module):
 	def dampen_neurons(self, pre_acts):
 		if self.N is None:
 			return pre_acts
-
+		print(" why why")
 		pop_neurons, unpop_neurons = utils.get_extreme_correlations(self.corr_file, self.unpopular_only)
   
 		# Combine both groups into one list while labeling the group type.
@@ -277,6 +277,7 @@ class SAE(nn.Module):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
+		print("suka blya ", self.corr_file)
 		if self.corr_file:
 			pre_acts = self.dampen_neurons(pre_acts)
 		
