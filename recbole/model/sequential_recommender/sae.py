@@ -264,7 +264,7 @@ class SAE(nn.Module):
 
 		# For each selected neuron, add a random weight between -1 and 1
 		for i, elem in enumerate(top_neurons):
-			weight = random.uniform(-2, 2)  # Random value between -1 and 1
+			weight = random.uniform(-4, 4)  # Random value between -1 and 1
 			pre_acts[:, elem] += weight    # Add weight to the column for this neuron
 
 		return pre_acts
