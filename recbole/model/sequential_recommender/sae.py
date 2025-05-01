@@ -284,9 +284,8 @@ class SAE(nn.Module):
 		sae_in = x - self.b_dec
 		pre_acts = self.encoder(sae_in)
 		self.last_activations = pre_acts
-		print("suka blya ", self.corr_file)
 		if self.corr_file:
-			pre_acts = self.add_noise(pre_acts, self.beta)
+			pre_acts = self.add_noise(pre_acts, std=self.beta)
 		pre_acts = nn.functional.relu(pre_acts)   
 		z = self.topk_activation(pre_acts, sequences, save_result=False)
 
